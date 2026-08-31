@@ -8,6 +8,7 @@ import {
   providerWebhookRuntimeReadinessRequiredEvidence,
   preferenceMutationRequiredControls,
   preferenceCenterRuntimeReadinessRequiredCommands,
+  preferenceCenterRuntimeReadinessRequiredControls,
   preferenceCenterRuntimeReadinessRequiredEvidence,
   notificationProviderHandoffWorkerRequiredControls,
   notificationSchedulerRuntimeReadinessRequiredControls,
@@ -138,7 +139,7 @@ describe("notification delivery planning", () => {
 
     expect(bouncedEmail.shouldUpdateDeliveryLog).toBe(true);
     expect(bouncedEmail.shouldSuppressDestination).toBe(true);
-    expect(bouncedEmail.idempotencyKey).toBe("notification-provider-event:resend:evt_email_1");
+    expect(bouncedEmail.idempotencyKey).toMatch(/^notification-provider-event:[0-9a-f]{64}$/);
     expect(bouncedEmail.requiredChecks.some((check) => check.includes("replay protection"))).toBe(true);
 
     const stopSms = buildProviderEventReconciliationPlan({
@@ -209,7 +210,7 @@ describe("notification delivery planning", () => {
       status: "ready",
       provider: "resend",
       normalizedStatus: "failed",
-      idempotencyKey: "notification-provider-event:resend:evt_email_complained",
+      idempotencyKey: expect.stringMatching(/^notification-provider-event:[0-9a-f]{64}$/),
       shouldUpdateDeliveryLog: true,
       shouldSuppressDestination: true,
       requiredWrites: ["ProviderEvent", "NotificationDelivery", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"],
@@ -285,7 +286,7 @@ describe("notification delivery planning", () => {
       status: "ready",
       provider: "twilio",
       normalizedStatus: "queued",
-      idempotencyKey: "notification-provider-event:twilio:evt_sms_stop",
+      idempotencyKey: expect.stringMatching(/^notification-provider-event:[0-9a-f]{64}$/),
       shouldUpdateDeliveryLog: false,
       shouldSuppressDestination: true,
       shouldCreateInboundThread: false,
@@ -324,6 +325,7 @@ describe("notification delivery planning", () => {
     expect(plan.blockers).toEqual([
       "Tenant scope is required before SMS webhook reconciliation.",
       "Provider event id was already processed.",
+      "Provider message id is required to update an existing delivery log.",
       "Raw SMS webhook body must be captured before signature verification.",
       "Twilio signature header is required.",
       "Twilio webhook verifier must be configured before trusting callback payloads.",
@@ -471,7 +473,7 @@ describe("notification delivery planning", () => {
       status: "ready",
       provider: "expo",
       channel: "push",
-      idempotencyKey: "expo-push:tenant_001:notification_001:req_push_001",
+      idempotencyKey: expect.stringMatching(/^expo-push:[0-9a-f]{64}$/),
       requiredWrites: ["NotificationDelivery", "ProviderEvent", "AuditLog"],
       payloadPreview: {
         deepLinkPath: "/bookings/booking_001",
@@ -516,7 +518,7 @@ describe("notification delivery planning", () => {
       status: "ready",
       provider: "resend",
       channel: "email",
-      idempotencyKey: "email-send:tenant_001:delivery_001:req_email_001",
+      idempotencyKey: expect.stringMatching(/^email-send:[0-9a-f]{64}$/),
       requiredWrites: ["NotificationDelivery", "ProviderEvent", "SuppressionCheck", "AuditLog", "IdempotencyKey"],
     });
     expect(plan.toMasked).toBe("av***@example.com");
@@ -608,7 +610,7 @@ describe("notification delivery planning", () => {
       status: "ready",
       provider: "twilio",
       channel: "sms",
-      idempotencyKey: "sms-send:tenant_001:delivery_sms_001:req_sms_001",
+      idempotencyKey: expect.stringMatching(/^sms-send:[0-9a-f]{64}$/),
       requiredWrites: ["NotificationDelivery", "ProviderEvent", "SuppressionCheck", "ConsentSnapshot", "AuditLog", "IdempotencyKey"],
     });
     expect(plan.toMasked).toBe("***-***-0123");
@@ -715,7 +717,7 @@ describe("notification delivery planning", () => {
       normalizedStatus: "delivered",
       shouldUpdateDeliveryLog: true,
       shouldMarkPushTokenInactive: false,
-      idempotencyKey: "expo-receipt:tenant_001:receipt_001:req_receipt_001",
+      idempotencyKey: expect.stringMatching(/^expo-receipt:[0-9a-f]{64}$/),
     });
     expect(delivered.requiredWrites).toEqual(["NotificationDelivery", "ProviderEvent", "PushToken", "AuditLog", "IdempotencyKey"]);
     expect(invalidToken).toMatchObject({
@@ -841,7 +843,7 @@ describe("notification delivery planning", () => {
     expect(ready).toMatchObject({
       status: "ready",
       routePath: "/bookings/booking_001",
-      idempotencyKey: "expo-push-tap:tenant_001:notification_push_001:req_tap_001",
+      idempotencyKey: expect.stringMatching(/^expo-push-tap:[0-9a-f]{64}$/),
       requiredWrites: ["NotificationInteraction", "AuditLog", "IdempotencyKey"],
     });
     expect(ready.requiredControls).toBe(expoPushTapRoutingRequiredControls);
@@ -904,6 +906,7 @@ describe("notification delivery planning", () => {
     expect(plan.requiredEvidence).toEqual([
       mobilePushRuntimeReadinessRequiredEvidence[0],
       mobilePushRuntimeReadinessRequiredEvidence[1],
+      mobilePushRuntimeReadinessRequiredEvidence[2],
       mobilePushRuntimeReadinessRequiredEvidence[3],
     ]);
     expect(allMissingEvidencePlan.requiredEvidence).toBe(mobilePushRuntimeReadinessRequiredEvidence);
@@ -948,9 +951,22 @@ describe("notification delivery planning", () => {
     expect(message.writes.map((write) => write.model)).toEqual(["Message", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
     expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
       action: "append_message",
-      threadId: "thread_001",
-      messageId: "message_001",
+      threadIdHash: expect.any(String),
+      messageIdHash: expect.any(String),
+      clientIdHash: expect.any(String),
+      actorIdHash: expect.any(String),
+      idempotencyKeyHash: expect.any(String),
+      rawThreadIdStored: false,
+      rawMessageIdStored: false,
+      rawClientIdStored: false,
+      rawActorIdStored: false,
+      rawIdempotencyKeyStored: false,
     });
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("threadId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("messageId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("clientId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("actorId");
+    expect(message.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("idempotencyKey");
   });
 
   it("plans notification delivery persistence, status transitions, and read-state writes", () => {
@@ -992,8 +1008,33 @@ describe("notification delivery planning", () => {
 
     expect(delivery.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
     expect(delivery.writes.find((write) => write.model === "NotificationDelivery")?.payload.destinationHash).toMatch(/^masked_/);
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "record_delivery",
+      notificationIdHash: expect.any(String),
+      deliveryIdHash: expect.any(String),
+      destinationHashPresent: true,
+      destinationHashHash: expect.any(String),
+      idempotencyKeyHash: expect.any(String),
+      rawNotificationIdStored: false,
+      rawDeliveryIdStored: false,
+      rawDestinationHashStored: false,
+      rawIdempotencyKeyStored: false,
+    });
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("notificationId");
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("deliveryId");
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("destinationHash");
+    expect(delivery.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("idempotencyKey");
     expect(statusUpdate.writes.map((write) => write.model)).toEqual(["NotificationDelivery", "NotificationAuditLog", "IdempotencyKey"]);
     expect(readState.writes.map((write) => write.model)).toEqual(["NotificationReadState", "MessageThread", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(readState.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "mark_thread_read",
+      threadIdHash: expect.any(String),
+      clientIdHash: expect.any(String),
+      idempotencyKeyHash: expect.any(String),
+      rawThreadIdStored: false,
+      rawClientIdStored: false,
+      rawIdempotencyKeyStored: false,
+    });
     expect(readState.requiredControls).toBe(notificationPersistenceRequiredControls);
   });
 
@@ -1130,7 +1171,7 @@ describe("notification delivery planning", () => {
     expect(claim).toMatchObject({
       status: "ready",
       nextState: "processing",
-      idempotencyKey: "notification-provider-handoff:tenant_001:in_app:handoff_001:delivery_001:claim_due_handoff:2026-06-08T10:00:00.000Z",
+      idempotencyKey: expect.stringMatching(/^notification-provider-handoff:[0-9a-f]{64}$/),
       blockers: [],
     });
     expect(delivered).toMatchObject({
@@ -1469,6 +1510,15 @@ describe("notification delivery planning", () => {
     expect(issued.status).toBe("ready");
     expect(issued.tokenHash).toBe(buildPreferenceTokenHash(token));
     expect(issued.writes.map((write) => write.model)).toEqual(["PreferenceToken", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(issued.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "issue_preference_token",
+      tokenHashPresent: true,
+      tokenHashHash: expect.any(String),
+      rawTokenHashStored: false,
+      rawIdempotencyKeyStored: false,
+    });
+    expect(issued.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("tokenHash");
+    expect(issued.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("idempotencyKey");
     expect(unsubscribe.status).toBe("ready");
     expect(unsubscribe.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]);
     expect(unsubscribe.writes.find((write) => write.model === "SuppressionListEntry")?.payload).toMatchObject({
@@ -1476,6 +1526,18 @@ describe("notification delivery planning", () => {
       marketingOptIn: false,
       transactionalAllowed: true,
     });
+    expect(unsubscribe.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "unsubscribe_email",
+      emailHashPresent: true,
+      emailHashHash: expect.any(String),
+      tokenHashPresent: true,
+      tokenHashHash: expect.any(String),
+      rawEmailHashStored: false,
+      rawTokenHashStored: false,
+      rawIdempotencyKeyStored: false,
+    });
+    expect(unsubscribe.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("emailHash");
+    expect(unsubscribe.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("tokenHash");
   });
 
   it("plans SMS STOP and START preference mutations with legal consent gates", () => {
@@ -1507,6 +1569,16 @@ describe("notification delivery planning", () => {
 
     expect(stop.status).toBe("ready");
     expect(stop.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "SuppressionListEntry", "NotificationAuditLog", "IdempotencyKey"]);
+    expect(stop.writes.find((write) => write.model === "NotificationAuditLog")?.payload).toMatchObject({
+      action: "record_sms_stop",
+      phoneHashPresent: true,
+      phoneHashHash: expect.any(String),
+      tokenHashPresent: true,
+      rawPhoneHashStored: false,
+      rawTokenHashStored: false,
+    });
+    expect(stop.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("phoneHash");
+    expect(stop.writes.find((write) => write.model === "NotificationAuditLog")?.payload).not.toHaveProperty("tokenHash");
     expect(start.status).toBe("ready");
     expect(start.writes.map((write) => write.model)).toEqual(["ClientNotificationPreference", "NotificationAuditLog", "IdempotencyKey"]);
   });
@@ -1777,6 +1849,7 @@ describe("notification delivery planning", () => {
       spamModerationTestsPassed: true,
       auditLogPersistenceAvailable: true,
       idempotencyStoreAvailable: true,
+      secretSafeArtifactsReviewed: true,
       postgresRetentionIntegrationTestsPassed: true,
     });
 

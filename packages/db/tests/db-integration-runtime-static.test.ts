@@ -23,7 +23,7 @@ import {
   persistDbIntegrationRun
 } from "../src/db-integration-runtime";
 
-const root = process.cwd();
+const root = join(__dirname, "../../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const packageJson = read("packages/db/package.json");
 const dbManifest = read("testing/manifests/db-integration-test-manifest.json");
@@ -78,9 +78,10 @@ describe("GAP-107 DB integration runtime wiring", () => {
     for (const script of ["db:validate", "db:generate", "db:migrate", "db:seed", "db:verify-seed"]) {
       expect(packageJson).toContain(`"${script}"`);
     }
-    for (const command of dbIntegrationRuntimeCommands.slice(0, 5)) {
+    for (const command of dbIntegrationRuntimeCommands.slice(0, 4)) {
       expect(dbManifest).toContain(command);
     }
+    expect(dbManifest).toContain("pnpm db:verify-seed");
     expect(dbManifest).toContain("db-prisma-schema-lifecycle");
     expect(dbManifest).toContain("db-tenant-isolation");
     expect(dbManifest).toContain("db-workflow-audit");
@@ -179,7 +180,7 @@ describe("GAP-107 DB integration runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/db-command-transcript-redacted.log");
     expect(ciWorkflow).toContain("test-results/db-integration-runtime");
     expect(unitManifest).toContain("unit-db-integration-runtime-static");
-    expect(unitManifest).toContain("DbIntegrationRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("DbIntegrationRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("packages/db/src/db-integration-runtime.ts");
     expect(gapTracker).toContain("DB integration evidence classifier wired and Postgres proof gated");
     expect(gapTracker).toContain("GAP-107 is db-integration-runtime-matrix wired with evidence classifier");
@@ -326,6 +327,15 @@ describe("GAP-107 DB integration runtime wiring", () => {
       commandTranscript: "DATABASE_URL=postgresql://secret run migrate",
       headers: ["Authorization: Bearer db-secret-token"],
       stack: "Error: db integration failed",
+      migrationOutput: "Migration applied against tenant_private_123",
+      seedLog: "Seeded audit_log_private_123",
+      prismaError: "Prisma error with workflow_private_123",
+      environment: { DATABASE_URL: "postgresql://env:password@example.com:5432/inkroute" },
+      rollbackNotes: "rollback touched record_private_123",
+      destructiveResetProof: "reset blocked for database_private_123",
+      tenantId: "tenant_private_123",
+      auditLogId: "audit_log_private_123",
+      workflowRunId: "workflow_private_123",
     };
 
     const redacted = buildRedactedDbIntegrationRuntimeArtifact(rawArtifact);
@@ -339,6 +349,12 @@ describe("GAP-107 DB integration runtime wiring", () => {
     expect(serialized).not.toContain("coverage/private-db-transcript.log");
     expect(serialized).not.toContain("/actions/runs/private");
     expect(serialized).not.toContain("db-secret-token");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("audit_log_private_123");
+    expect(serialized).not.toContain("workflow_private_123");
+    expect(serialized).not.toContain("postgresql://env:password@example.com");
+    expect(serialized).not.toContain("record_private_123");
+    expect(serialized).not.toContain("database_private_123");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(dbIntegrationRuntimeArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

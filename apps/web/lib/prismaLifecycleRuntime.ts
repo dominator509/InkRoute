@@ -379,7 +379,7 @@ export const prismaLifecycleRuntimeMatrix = [
   },
 ] as const satisfies readonly PrismaLifecycleRuntimeMatrixEntry[];
 
-export const prismaLifecycleReadiness = buildPrismaSchemaLifecycleReadinessPlan({
+const prismaLifecyclePackageReadiness = buildPrismaSchemaLifecycleReadinessPlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
@@ -406,6 +406,11 @@ export const prismaLifecycleReadiness = buildPrismaSchemaLifecycleReadinessPlan(
   commandEvidenceCaptured: false,
   ciEvidenceCaptured: false,
 });
+
+export const prismaLifecycleReadiness = {
+  ...prismaLifecyclePackageReadiness,
+  requiredCommands: prismaLifecycleCommands,
+} as const;
 
 export const prismaLifecycleReadinessRequiredEvidence = prismaLifecycleReadiness.requiredEvidence;
 
@@ -588,7 +593,11 @@ function redactPrismaLifecycleEvidenceArtifact(value: unknown): unknown {
   if (value && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => {
-        if (/(database|direct|url|connection|sql|token|secret|password|actor|email|log|output|environment|env)/i.test(key)) {
+        if (
+          /(database|direct|url|uri|dsn|connection|sql|token|secret|password|authorization|cookie|actor|tenant|user|account|email|phone|log|output|stdout|stderr|transcript|environment|env|artifact|path|file|manifest|payload|body|command|schema|prisma|client|generate|migration|migrate|seed|drift|destructive|reset|rollback|production|ci|workflow|run|commit|branch|provider|row|query|table|key|id)/i.test(
+            key,
+          )
+        ) {
           return [key, "[REDACTED]"];
         }
         return [key, redactPrismaLifecycleEvidenceArtifact(entry)];
@@ -600,7 +609,13 @@ function redactPrismaLifecycleEvidenceArtifact(value: unknown): unknown {
       .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED]")
       .replace(/postgres(?:ql)?:\/\/\S+/gi, "[REDACTED]")
       .replace(/https?:\/\/\S+/gi, "[REDACTED]")
-      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]");
+      .replace(/\b(?:github_pat|ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+\b/g, "[REDACTED]")
+      .replace(/\b(?:coverage|artifacts|test-results|reports|docs|packages)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED]")
+      .replace(
+        /\b(?:tenant|user|account|run|commit|workflow|ci|artifact|database|direct|schema|prisma|migration|migrate|seed|drift|reset|rollback|query|table|row|branch|provider|env|sql|client|generate|destructive|production|guard)[-_:/]?[A-Za-z0-9_.-]{6,}\b/gi,
+        "[REDACTED]",
+      )
+      .replace(/\b[A-Za-z0-9_-]{24,}\b/g, "[REDACTED]");
   }
   return value;
 }
@@ -612,7 +627,44 @@ export function buildPrismaLifecycleRedactedEvidenceBundle(
     status: "redacted-evidence-bundle-ready",
     artifactPath: "coverage/prisma-lifecycle-redacted-evidence-bundle.json",
     redactedArtifact: redactPrismaLifecycleEvidenceArtifact(artifact),
-    redactions: ["database", "direct", "url", "connection", "sql", "token", "secret", "password", "actor", "email", "log", "output", "environment"],
+    redactions: [
+      "database",
+      "direct",
+      "url",
+      "connection",
+      "sql",
+      "token",
+      "secret",
+      "password",
+      "authorization",
+      "actor",
+      "email",
+      "tenant",
+      "log",
+      "output",
+      "environment",
+      "artifact",
+      "path",
+      "manifest",
+      "payload",
+      "command",
+      "schema",
+      "prisma",
+      "client",
+      "migration",
+      "seed",
+      "drift",
+      "destructive",
+      "reset",
+      "rollback",
+      "production",
+      "ci",
+      "workflow",
+      "run",
+      "commit",
+      "query",
+      "row",
+    ],
     requiredArtifacts: prismaLifecycleArtifactPaths,
     requiredExternalEvidence: prismaLifecycleRequiredExternalEvidence,
     databaseExecutionAllowed: false,

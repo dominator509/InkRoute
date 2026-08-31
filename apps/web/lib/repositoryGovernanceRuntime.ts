@@ -245,15 +245,17 @@ export const repositoryGovernanceRuntimeExecutionPolicy: RepositoryGovernanceRun
 };
 
 const sensitiveRepositoryGovernanceKeyPattern =
-  /(token|secret|password|authorization|cookie|github|branchProtection|requiredChecks|codeowners|security|dependabot|mergeRules|enforcementPr|artifactUrl|ciRunUrl|actor|tenantId|userId|runId|email|phone|payload)/i;
+  /(token|secret|password|authorization|cookie|github|repository|settings|branchProtection|requiredChecks|checkRun|statusCheck|codeowners|reviewer|review|security|secretScanning|dependabot|alert|mergeRules|bypass|enforcementPr|pullRequest|prUrl|artifact|artifactUrl|path|ciRun|ciRunUrl|workflow|commit|branch|diff|log|output|transcript|stack|error|actor|account|tenantId|userId|runId|email|phone|payload|raw|response|request)/i;
 
 const sensitiveRepositoryGovernanceStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:ghp|gho|ghu|ghs|sk|pk|rk|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|artifact|run|branch|check|pr)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|project|provider|artifact|run|branch|check|pr|github|repository|codeowners|reviewer|review|security|secret|dependabot|alert|merge|rule|bypass|workflow|ci|commit)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|artifacts|test-results|reports)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export function buildRepositoryGovernanceRuntimeExecutionPlan(): RepositoryGovernanceRuntimeExecutionPlan {

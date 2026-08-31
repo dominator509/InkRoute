@@ -21,13 +21,61 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultFormId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("formId" in result)) {
-    return null;
-  }
+function buildIntakeFormResponseProjection() {
+  return {
+    intakeFormResponseAllowlisted: true,
+    formIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { formId?: unknown }).formId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildIntakeFormDuplicateResponseProjection() {
+  return {
+    intakeFormDuplicateResponseAllowlisted: true,
+    formIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    existingFormIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeIntakeFormResponse(result: {
+  status: "created" | "replayed";
+  form: {
+    key: string;
+    title: string;
+    description: string | null;
+    status: string;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildIntakeFormResponseProjection(),
+    intakeForm: {
+      key: result.form.key,
+      title: result.form.title,
+      description: result.form.description,
+      status: result.form.status,
+      version: result.form.version,
+      createdAt: result.form.createdAt.toISOString(),
+      updatedAt: result.form.updatedAt.toISOString(),
+    },
+    persistenceReceipt: {
+      intakeFormPersisted: true,
+      auditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -85,13 +133,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "PROVIDER_INTAKE_FORM_PERSISTENCE_NOT_CONFIGURED",
             message: "Production intake form creation requires DB-backed dashboard auth, tenant-scoped IntakeForm persistence, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
           },
           productionBoundary: { localIntakeFormMutationFallbackDisabled: true },
+          responseProjection: buildIntakeFormResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -101,11 +150,12 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         error: {
           code: "DATABASE_REQUIRED",
           message: "Intake form creation requires database-backed dashboard auth so IntakeForm and AuditLog rows can be persisted.",
         },
+        responseProjection: buildIntakeFormResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -144,10 +194,9 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayFormId = idempotency.status === "completed" ? resultFormId(idempotency.result) : null;
-      if (replayFormId) {
+      if (idempotency.status === "completed") {
         const form = await tx.intakeForm.findFirst({
-          where: { id: replayFormId, tenantId },
+          where: { tenantId, key: input.key, version: input.version },
           select: {
             id: true,
             tenantId: true,
@@ -205,10 +254,13 @@ export async function POST(request: NextRequest) {
           entityId: form.id,
           metadata: {
             source: "dashboard-api",
-            key: form.key,
+            formKeyHash: hashIdempotencySubject(form.key),
+            rawFormKeyStored: false,
             version: form.version,
             status: form.status,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             boundary: "Question authoring and response persistence are separate form workflow surfaces.",
           },
         },
@@ -220,12 +272,13 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            formId: form.id,
-            auditId: audit.id,
+            intakeFormPersisted: true,
+            auditLogged: true,
             created: true,
             rawQuestionsStoredInResult: false,
             rawResponsesStoredInResult: false,
             privacyReviewCompleted: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -235,7 +288,15 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "exists") {
       return NextResponse.json(
-        { ok: false, error: { code: "INTAKE_FORM_EXISTS", message: "An intake form with this key and version already exists for this tenant.", formId: result.formId } },
+        {
+          ok: false,
+          error: { code: "INTAKE_FORM_EXISTS", message: "An intake form with this key and version already exists for this tenant." },
+          responseProjection: buildIntakeFormDuplicateResponseProjection(),
+          persistenceReceipt: {
+            duplicateDetected: true,
+            idempotencyPersisted: true,
+          },
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -244,16 +305,9 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        intakeForm: {
-          ...result.form,
-          createdAt: result.form.createdAt.toISOString(),
-          updatedAt: result.form.updatedAt.toISOString(),
-        },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeIntakeFormResponse(result),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
         boundary: "Dashboard intake form creation is tenant-scoped, no-store, idempotency-backed, and audited; question authoring, response persistence, privacy review, and integration tests remain evidence-gated.",
       },
@@ -265,8 +319,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "DATABASE_UNAVAILABLE", message: "Intake form creation requires the dashboard database connection." },
+          responseProjection: buildIntakeFormResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -275,7 +330,11 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof Error && /Unique constraint/i.test(error.message)) {
       return NextResponse.json(
-        { ok: false, error: { code: "INTAKE_FORM_EXISTS", message: "An intake form with this key and version already exists for this tenant." } },
+        {
+          ok: false,
+          error: { code: "INTAKE_FORM_EXISTS", message: "An intake form with this key and version already exists for this tenant." },
+          responseProjection: buildIntakeFormDuplicateResponseProjection(),
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }

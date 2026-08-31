@@ -9,6 +9,13 @@ import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildTimezoneQaResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
             "Production timezone QA requires Temporal/date-library proof, persistence-boundary validation, DST/recurrence artifacts, Google/ICS render smokes, and seeded persistence evidence; diagnostic-only QA responses are disabled.",
           gapIds: ["GAP-009", "GAP-058", "GAP-059"],
         },
-        tenantId,
+        ...buildTimezoneQaResponseProjection(),
         boundaryResults: results,
         qaPlan: dashboardTimezoneRecurrenceQaContract.qaPlan,
         readiness: dashboardTimezoneRecurrenceQaContract.readiness,
@@ -77,7 +84,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(
     {
       ok: failed.length === 0,
-      tenantId,
+      ...buildTimezoneQaResponseProjection(),
       boundaryResults: results,
       qaPlan: dashboardTimezoneRecurrenceQaContract.qaPlan,
       readiness: dashboardTimezoneRecurrenceQaContract.readiness,

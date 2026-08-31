@@ -1,4 +1,7 @@
-﻿import { buildMobileDeploymentRuntimeReadinessPlan } from "@inkroute/deployment";
+﻿import {
+  buildMobileDeploymentRuntimeReadinessPlan,
+  mobileDeploymentRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 
 export type MobileDeploymentRuntimeStatus =
   | "wired"
@@ -85,23 +88,7 @@ export const mobileDeploymentRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const mobileDeploymentRuntimeCommands = [
-  "pnpm deploy:verify-mobile",
-  "eas build --profile development",
-  "eas build --profile preview --platform ios",
-  "eas build --profile preview --platform android",
-  "eas build --profile production --platform ios",
-  "eas build --profile production --platform android",
-  "eas update --channel preview",
-  "mobile device QA checklist",
-  "mobile push token smoke",
-  "mobile synthetic crash capture",
-  "OTA rollback rehearsal",
-  "verify native signing credentials outside source control",
-  "review App Store Connect and Google Play readiness labels",
-  "record redacted mobile build artifact labels",
-  "capture CI mobile deployment artifacts"
-] as const;
+export const mobileDeploymentRuntimeCommands = mobileDeploymentRuntimeRequiredCommands;
 
 export const mobileDeploymentRuntimeRequiredExternalEvidence = [
   "EAS build, OTA update, and rollback artifacts must be captured outside Codex with build URLs, tokens, and project IDs redacted.",
@@ -239,15 +226,18 @@ export interface MobileDeploymentRuntimeArtifactReview {
 }
 
 const sensitiveMobileDeploymentKeyPattern =
-  /(token|secret|password|authorization|cookie|credential|provisioning|certificate|keystore|store|appStore|playStore|eas|expo|sentry|push|device|installUrl|buildUrl|otaUrl|ciRunUrl|projectId|tenantId|userId|runId|email|phone|udid|bundleId|packageName)/i;
+  /(token|secret|password|authorization|cookie|credential|provisioning|certificate|keystore|store|appStore|playStore|eas|expo|sentry|push|device|installUrl|buildUrl|otaUrl|ciRunUrl|projectId|tenantId|userId|runId|email|phone|udid|bundleId|packageName|raw|payload|body|stack|error|log|output|env|database|dsn|artifact|screenshot|video|trace|ota|update|rollback|runtime|channel|profile|buildId|submission|native|accessibility|qa|crash|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const sensitiveMobileDeploymentStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|build|device|eas|expo|sentry|ota|run)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|project|build|device|eas|expo|sentry|ota|run|update|submission|appstore|playstore|provisioning|certificate|keystore|bundle|package|profile|channel|workflow|ci|commit|repository|repo|branch|pull|pr|reviewer|codeowner)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:com\.[A-Za-z0-9_.-]+|[A-Za-z0-9_.-]+\.mobile)\b/g, "[REDACTED_PACKAGE]"],
+  [/\b(?:artifacts|screenshots|videos|traces|private)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export type MobileDeploymentRunRecordInput = MobileDeploymentRuntimeEvidenceInput & {

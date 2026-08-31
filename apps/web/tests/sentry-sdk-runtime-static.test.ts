@@ -164,6 +164,10 @@ describe("GAP-080 Sentry SDK runtime implementation", () => {
         message: "Client email avery@example.com token sk_live_secret phone +1 555 010 5555",
         privateStack: "Error: private booking note",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_sentry_sdk",
+      reviewerHandle: "reviewer_sentry_owner",
+      codeownerSelector: "CODEOWNER:observability-platform-team",
     };
 
     const redacted = buildRedactedSentrySdkImplementationArtifact(rawArtifact);
@@ -175,6 +179,10 @@ describe("GAP-080 Sentry SDK runtime implementation", () => {
     expect(serialized).not.toContain("sk_live_secret");
     expect(serialized).not.toContain("+1 555 010 5555");
     expect(serialized).not.toContain("private booking note");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_sentry_sdk");
+    expect(serialized).not.toContain("reviewer_sentry_owner");
+    expect(serialized).not.toContain("CODEOWNER:observability-platform-team");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
     expect(review.requiredArtifactPath).toBe("coverage/sentry-provider-no-pii-proof-redacted.json");

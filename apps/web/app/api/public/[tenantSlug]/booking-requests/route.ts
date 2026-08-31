@@ -20,7 +20,7 @@ import {
 import {
   checkRateLimit,
   getBookingPostPersistWorkflows,
-  getClientIp,
+  getClientIpFromHeaders,
   executeBookingPostPersistWorkflowConsumers,
   persistBookingPostPersistWorkflow,
   persistBookingRequest,
@@ -75,10 +75,15 @@ interface ParsedBotProof {
 }
 
 interface PostPersistWorkflowSummary {
-  id: string;
   type: "notification" | "reference-upload" | "deposit" | "calendar";
   status: "pending" | "queued" | "blocked";
   payload: Record<string, unknown>;
+  responseProjection: {
+    workflowRecordIdEchoed: false;
+    bookingRequestIdEchoed: false;
+    tenantIdEchoed: false;
+    internalPersistenceIdsEchoed: false;
+  };
 }
 
 type BookingInput = BookingRequestInput & {
@@ -195,7 +200,8 @@ function buildBotProofFailureDetails(check: BotProofResult) {
     required: check.required,
     hasHeader: check.hasHeader,
     secretConfigured: check.secretConfigured,
-    bodyHash: check.bodyHash,
+    bodyHashComputed: Boolean(check.bodyHash),
+    bodyHashEchoed: false,
   };
 }
 
@@ -276,7 +282,7 @@ async function evaluateBotProof(request: NextRequest, tenantSlug: string, bodyTe
     };
   }
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const message = `${tenantSlug}|${clientIp}|${parsed.issuedAt}|${parsed.nonce}|${parsed.bodyHash}`;
   const expectedSignature = await computeHmacSha256Hex(secret, message);
   if (!safeEquals(expectedSignature, parsed.signature)) {
@@ -442,7 +448,7 @@ function buildReferenceUploadContract(tenantSlug: string, bookingRequestId: stri
       "Production should require authenticated user OR protected upload token and provider signature on intent creation.",
       isDbScope
         ? "Production should persist signed intent contract + queue message before upload is accepted."
-        : "Local runtime should persist intent contract and return signedUploadUrl/intent contract fields from local runtime state.",
+        : "Local runtime should persist intent contract but public booking responses must return only ID-free handoff proof, not signedUploadUrl fields.",
     ],
     gapIds: ["GAP-005", "GAP-021", "GAP-033", "GAP-096", "GAP-097"],
   };
@@ -512,6 +518,25 @@ function buildCalendarQueueContract(input: BookingInput) {
   };
 }
 
+function sanitizeReferenceUploadContractForResponse(contract: ReturnType<typeof buildReferenceUploadContract>) {
+  const { handoffReference, ...rest } = contract;
+  const { requiredBookingRequestId: _requiredBookingRequestId, ...safeHandoffReference } = handoffReference;
+  return {
+    ...rest,
+    handoffReference: {
+      ...safeHandoffReference,
+      bookingRequestLinked: true,
+      bookingRequestIdEchoed: false,
+    },
+    responseProjection: {
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      signedUploadUrlEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
 function buildProviderFailureHandlingContract(tenantId: string, bookingRequestId: string) {
   const failedAt = new Date().toISOString();
   return {
@@ -555,6 +580,108 @@ function buildProviderFailureHandlingContract(tenantId: string, bookingRequestId
   };
 }
 
+function buildPublicProviderFailureHandlingContract(tenantId: string, bookingRequestId: string) {
+  const contract = buildProviderFailureHandlingContract(tenantId, bookingRequestId);
+  const redactPlan = (plan: ReturnType<typeof buildBookingProviderFailurePlan>) => ({
+    ...plan,
+    auditPayload: {
+      failedWorkflow: plan.auditPayload.failedWorkflow,
+      provider: plan.auditPayload.provider,
+      providerErrorCode: plan.auditPayload.providerErrorCode,
+      failedAt: plan.auditPayload.failedAt,
+      retryable: plan.auditPayload.retryable,
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  });
+  return {
+    ...contract,
+    auditPayloadProjection: {
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+    plans: {
+      referenceUpload: redactPlan(contract.plans.referenceUpload),
+      deposit: redactPlan(contract.plans.deposit),
+      notification: redactPlan(contract.plans.notification),
+      calendar: redactPlan(contract.plans.calendar),
+    },
+  };
+}
+
+function sanitizeBookingPostSubmitPlanForResponse(plan: ReturnType<typeof buildBookingPostSubmitPlan>) {
+  return {
+    ...plan,
+    workflows: plan.workflows.map((workflow) => {
+      const {
+        tenantId: _tenantId,
+        bookingRequestId: _bookingRequestId,
+        payload,
+        ...safeWorkflow
+      } = workflow;
+      const { tenantId: _payloadTenantId, bookingRequestId: _payloadBookingRequestId, ...safePayload } = payload;
+      return {
+        ...safeWorkflow,
+        payload: {
+          ...safePayload,
+          tenantIdEchoed: false,
+          bookingRequestIdEchoed: false,
+        },
+        responseProjection: {
+          tenantIdEchoed: false,
+          bookingRequestIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
+      };
+    }),
+  };
+}
+
+function sanitizeWorkflowPayloadForResponse(type: PostPersistWorkflowSummary["type"], payload: Record<string, unknown>) {
+  if (type === "reference-upload") {
+    return sanitizeReferenceUploadContractForResponse(payload as ReturnType<typeof buildReferenceUploadContract>);
+  }
+  const { tenantId: _tenantId, bookingRequestId: _bookingRequestId, ...safePayload } = payload;
+  return {
+    ...safePayload,
+    tenantIdEchoed: false,
+    bookingRequestIdEchoed: false,
+  };
+}
+
+function sanitizeWorkflowExecutionForResponse(execution: ReturnType<typeof executeBookingPostPersistWorkflowConsumers>[number]) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    bookingRequestId: _bookingRequestId,
+    workflowRecordId: _workflowRecordId,
+    result,
+    ...safeExecution
+  } = execution;
+  const { bookingRequestId: _resultBookingRequestId, expectedHandoff, ...safeResult } = result;
+  return {
+    ...safeExecution,
+    result: {
+      ...safeResult,
+      ...(expectedHandoff
+        ? { expectedHandoff: sanitizeWorkflowPayloadForResponse(execution.type, expectedHandoff as Record<string, unknown>) }
+        : {}),
+      bookingRequestIdEchoed: false,
+      tenantIdEchoed: false,
+      workflowRecordIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+    responseProjection: {
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      workflowRecordIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
 function normalizeBookingInput(input: BookingInput) {
   return {
     ...input,
@@ -568,10 +695,15 @@ function normalizeTenantSlug(value: string): string {
 
 function buildWorkflowSummary(records: ReturnType<typeof getBookingPostPersistWorkflows>): PostPersistWorkflowSummary[] {
   return records.map((record) => ({
-    id: record.id,
     type: record.type,
     status: record.status,
-    payload: record.payload,
+    payload: sanitizeWorkflowPayloadForResponse(record.type, record.payload),
+    responseProjection: {
+      workflowRecordIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      tenantIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
   }));
 }
 
@@ -758,7 +890,7 @@ async function persistBookingRequestToDatabase(
         note: "Booking request persisted from public route and workflow local contracts recorded.",
         metadata: { workflowCount },
       },
-      select: { id: true, type: true, actorUserId: true, toStatus: true, note: true, createdAt: true, metadata: true },
+      select: { id: true, type: true, actorUserId: true, toStatus: true, note: true, createdAt: true },
     });
 
     const audit = await tx.auditLog.create({
@@ -811,7 +943,7 @@ async function persistBookingRequestToDatabase(
     return {
       booking,
       event,
-      auditId: audit.id,
+      auditLogged: Boolean(audit.id),
       readinessScore: booking.readinessScore,
       source: "database",
       workflowCount,
@@ -836,7 +968,7 @@ function buildResponseBase(
     deposit: buildDepositQueueContract(input),
     calendar: buildCalendarQueueContract(input),
   };
-  const providerFailureHandling = buildProviderFailureHandlingContract(resolvedTenant.tenantId, bookingRequestId ?? "pending");
+  const providerFailureHandling = buildPublicProviderFailureHandlingContract(resolvedTenant.tenantId, bookingRequestId ?? "pending");
   const antiBotDetails = {
     requiredFor: antiBot.requiredFor,
     status: antiBot.status,
@@ -844,7 +976,8 @@ function buildResponseBase(
     reason: antiBot.reason,
     hasHeader: antiBot.hasHeader,
     header: BOT_PROOF_HEADER,
-    bodyHash: antiBot.bodyHash,
+    bodyHashComputed: Boolean(antiBot.bodyHash),
+    bodyHashEchoed: false,
     secretConfigured: antiBot.secretConfigured,
     proofWindowSeconds: BOT_PROOF_TTL_SECONDS,
     requestNowUnixSeconds: antiBot.nowUnixSeconds,
@@ -871,16 +1004,22 @@ function buildResponseBase(
 
   return {
     tenantSlug,
-    tenantId: resolvedTenant.tenantId,
+    tenantScope: {
+      resolved: true,
+      source: resolvedTenant.source,
+      tenantIdEchoed: false,
+    },
     antiBot: antiBotDetails,
     encryption: encryptionDetails,
     workflows: {
-      packagePostSubmitPlan: buildBookingPostSubmitPlan({
-        tenantId: resolvedTenant.tenantId,
-        bookingRequestId: bookingRequestId ?? "pending",
-        submittedAt: new Date().toISOString(),
-        draft: buildBookingDraftFromInput(input),
-      }),
+      packagePostSubmitPlan: sanitizeBookingPostSubmitPlanForResponse(
+        buildBookingPostSubmitPlan({
+          tenantId: resolvedTenant.tenantId,
+          bookingRequestId: bookingRequestId ?? "pending",
+          submittedAt: new Date().toISOString(),
+          draft: buildBookingDraftFromInput(input),
+        }),
+      ),
       providerHandoffRuntimeEvidencePlan: buildBookingProviderHandoffRuntimeEvidencePlan({
         packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
         bookingTestsPassed: false,
@@ -907,9 +1046,69 @@ function buildResponseBase(
         ...postPersistWorkflows,
         providerFailureHandling,
         referenceUpload: shouldCollectReferenceUpload(input)
-          ? buildReferenceUploadContract(tenantSlug, bookingRequestId ?? "pending", resolvedTenant.source)
+          ? sanitizeReferenceUploadContractForResponse(buildReferenceUploadContract(tenantSlug, bookingRequestId ?? "pending", resolvedTenant.source))
           : undefined,
       },
+    },
+  };
+}
+
+function buildSafeBookingReceipt(
+  booking: {
+    id: string;
+    tenantId?: string | null;
+    artistId?: string | null;
+    clientId?: string | null;
+    travelCityId?: string | null;
+    status: string;
+    preferredCity: string;
+    preferredDate?: Date | string | null;
+    style: string;
+    placement: string;
+    sizeEstimate: string;
+    budgetMinCents?: number | null;
+    budgetMaxCents?: number | null;
+    budgetMin?: number;
+    budgetMax?: number;
+    policyAcceptedAt?: Date | string | null;
+    policyAccepted?: boolean;
+    portfolioAttributionId?: string | null;
+    createdAt?: Date | string;
+  },
+  readinessScore: number,
+) {
+  const preferredDate = booking.preferredDate instanceof Date ? booking.preferredDate.toISOString() : booking.preferredDate;
+  const createdAt = booking.createdAt instanceof Date ? booking.createdAt.toISOString() : booking.createdAt;
+
+  return {
+    status: booking.status,
+    preferredCity: booking.preferredCity,
+    ...(preferredDate ? { preferredDate } : {}),
+    style: booking.style,
+    placement: booking.placement,
+    sizeEstimate: booking.sizeEstimate,
+    ...(booking.budgetMinCents !== undefined && booking.budgetMinCents !== null ? { budgetMin: booking.budgetMinCents } : {}),
+    ...(booking.budgetMaxCents !== undefined && booking.budgetMaxCents !== null ? { budgetMax: booking.budgetMaxCents } : {}),
+    ...(booking.budgetMin !== undefined ? { budgetMin: booking.budgetMin } : {}),
+    ...(booking.budgetMax !== undefined ? { budgetMax: booking.budgetMax } : {}),
+    readinessScore,
+    policyAccepted: booking.policyAccepted ?? Boolean(booking.policyAcceptedAt),
+    portfolioAttributionLinked: Boolean(booking.portfolioAttributionId),
+    ...(createdAt ? { createdAt } : {}),
+    responseProjection: {
+      bookingResponseAllowlisted: true,
+      bookingRequestIdEchoed: false,
+      tenantIdEchoed: false,
+      artistIdEchoed: false,
+      clientIdEchoed: false,
+      travelCityIdEchoed: false,
+      portfolioAttributionIdEchoed: false,
+      clientNameEchoed: false,
+      clientEmailEchoed: false,
+      rawContactFieldsEchoed: false,
+      rawIdeaSummaryEchoed: false,
+      medicalNotesEchoed: false,
+      internalPersistenceIdsEchoed: false,
     },
   };
 }
@@ -945,19 +1144,19 @@ function buildLocalResponse(
   const referenceUpload = workflowReference
     ? workflowReference.payload
     : shouldCollectReferenceUpload(input)
-      ? buildReferenceUploadContract(tenantSlug, persisted.request.id, "local-fallback")
+      ? sanitizeReferenceUploadContractForResponse(buildReferenceUploadContract(tenantSlug, persisted.request.id, "local-fallback"))
       : undefined;
   return {
     ...responseBase,
     persistence: "local-runtime",
-    booking: persisted.request,
+    booking: buildSafeBookingReceipt(persisted.request, persisted.readinessScore),
     readinessScore: persisted.readinessScore,
     events: persisted.events,
     workflows: {
       ...responseBase.workflows,
       planned: workflowPlanned,
       referenceUpload,
-      executed: workflowExecutions,
+      executed: workflowExecutions.map(sanitizeWorkflowExecutionForResponse),
     },
     warning: "Database was unavailable or unresolved at request time; booking request persisted in local runtime.",
     gapIds: ["GAP-004", "GAP-017", "GAP-021", "GAP-031", "GAP-033"],
@@ -1186,7 +1385,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     }
   }
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const rateLimit = checkRateLimit("public-booking-submit", normalizedTenantSlug, `${clientIp}:${resolvedTenant.tenantId}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -1282,39 +1481,24 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           ...responseBase,
           persistence: "database",
           booking: {
-            id: persisted.booking.id,
-            tenantId: persisted.booking.tenantId,
-            artistId: persisted.booking.artistId,
-            clientId: persisted.booking.clientId,
-            ...(persisted.booking.travelCityId ? { travelCityId: persisted.booking.travelCityId } : {}),
-            status: persisted.booking.status,
-            clientName: persisted.booking.clientNameSnapshot,
-            clientEmail: persisted.booking.clientEmailSnapshot,
-            preferredCity: persisted.booking.preferredCity,
-            ...(persisted.booking.preferredDate ? { preferredDate: persisted.booking.preferredDate.toISOString() } : {}),
-            style: persisted.booking.style,
-            placement: persisted.booking.placement,
-            sizeEstimate: persisted.booking.sizeEstimate,
-            ...(persisted.booking.budgetMinCents !== null ? { budgetMin: persisted.booking.budgetMinCents } : {}),
-            ...(persisted.booking.budgetMaxCents !== null ? { budgetMax: persisted.booking.budgetMaxCents } : {}),
-            ideaSummary: persisted.booking.ideaSummary,
-            readinessScore: persisted.readinessScore,
-            policyAccepted: Boolean(persisted.booking.policyAcceptedAt),
-            ...(persisted.booking.portfolioAttributionId ? { portfolioAttributionId: persisted.booking.portfolioAttributionId } : {}),
-            createdAt: persisted.booking.createdAt.toISOString(),
+            ...buildSafeBookingReceipt(persisted.booking, persisted.readinessScore),
           },
-          auditId: persisted.auditId,
           event: {
-            id: persisted.event.id,
             eventType: persisted.event.type,
             actor: "client",
             at: persisted.event.createdAt.toISOString(),
             note: persisted.event.note ?? "Booking request persisted from public route.",
+            auditIdEchoed: false,
+            stateEventIdEchoed: false,
+            actorUserIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
+            stateEventMetadataSelectedFromDatabase: false,
+            rawStateEventMetadataEchoed: false,
           },
           workflows: {
             ...responseBase.workflows,
             planned: buildWorkflowSummary(workflowRecords),
-            executed: workflowExecutions,
+            executed: workflowExecutions.map(sanitizeWorkflowExecutionForResponse),
           },
           antiBot: responseBase.antiBot,
           encryption: {

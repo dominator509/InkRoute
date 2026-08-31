@@ -166,12 +166,15 @@ const browserOrDeviceSurfaceIds = new Set<Phase9RuntimeSurfaceId>([
   "booking-to-notification-runtime-smoke",
 ]);
 
-const sensitiveRuntimeArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|email|phone|expo|device|push|stripe|twilio|resend)/i;
+const sensitiveRuntimeArtifactKeyPattern =
+  /(token|secret|password|authorization|cookie|provider|payload|email|phone|expo|device|push|stripe|twilio|resend|tenant|client|booking|deposit|appointment|message|body|route|url|html|dom|screenshot|trace|log|command|ci|artifactUrl|runId|commitSha|stack|raw)/i;
 const sensitiveRuntimeArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
   /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
   /\b(?:expo|device|push|stripe|twilio|resend|provider)[\w:./?=&-]*/gi,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /<[^>]+>/g,
 ];
 
 export function buildRedactedPhase9RuntimeArtifact(input: unknown): unknown {

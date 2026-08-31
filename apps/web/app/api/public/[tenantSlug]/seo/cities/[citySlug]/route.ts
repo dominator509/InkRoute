@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   buildLocalPublicContentResponse,
   buildPublicContentProductionBoundary,
+  buildSafeLocalPublicContentPageResponse,
   isPublicContentDatabaseUnavailable,
   publicContentNoStoreHeaders,
   readPublicSeoCityPage,
@@ -49,12 +50,12 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
           ok: true,
           data: {
             tenantSlug,
-            tenantId: tenant.tenantId,
             source: tenant.source,
             persistence: "database",
             collection: "cityPages",
             data: page,
             redactedFields: ["tenantId", "travelCityId", "internalLinks.private", "draftBody"],
+            responseProjection: { tenantIdEchoed: false, internalPersistenceIdsEchoed: false, rawPrivateFieldsEchoed: false },
             cachePolicy: { strategy: "tenant-revalidated", revalidateSeconds: 300 },
             boundary: "Public city SEO page reads published tenant-scoped database content only.",
             gapIds: ["GAP-026", "GAP-071", "GAP-072", "GAP-076"],
@@ -71,7 +72,7 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
         { status: 404, headers: publicContentNoStoreHeaders },
       );
     }
-    return NextResponse.json({ ok: true, data: { ...local, data: local.data[0] } }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: buildSafeLocalPublicContentPageResponse(local) }, { headers: publicContentNoStoreHeaders });
   } catch (error) {
     if (!isPublicContentDatabaseUnavailable(error)) throw error;
 
@@ -103,6 +104,6 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
         { status: 503, headers: publicContentNoStoreHeaders },
       );
     }
-    return NextResponse.json({ ok: true, data: { ...local, data: local.data[0] } }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: buildSafeLocalPublicContentPageResponse(local) }, { headers: publicContentNoStoreHeaders });
   }
 }

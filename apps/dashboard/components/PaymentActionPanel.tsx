@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type PaymentActionPanelProps = {
   readonly bookingId: string;
@@ -27,7 +28,7 @@ export function PaymentActionPanel({ bookingId }: PaymentActionPanelProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "request_deposit",
-          idempotencyKey: `dashboard-payment-deposit-${bookingId}-${Date.now()}`,
+          idempotencyKey: createClientRequestKey("dashboard-payment-deposit"),
           note: "Dashboard payment page requested a credential-free deposit-session draft.",
         }),
       });

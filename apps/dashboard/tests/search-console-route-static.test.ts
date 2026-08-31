@@ -74,6 +74,21 @@ describe("GAP-075 Search Console provider boundary", () => {
     expect(routeSource).toContain("idempotency-key");
     expect(routeSource).toContain("prisma.auditLog.create");
     expect(routeSource).toContain('entityType: "SearchConsoleOperation"');
+    expect(routeSource).toContain("idempotencyPersisted: true");
+    expect(routeSource).toContain("rawIdempotencyKeyStored: false");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).toContain("plan: buildSafeSearchConsolePlanResponse(plan)");
+    expect(routeSource).toContain("rawSiteUrlEchoed: false");
+    expect(routeSource).toContain("rawSitemapUrlEchoed: false");
+    expect(routeSource).toContain("rawStepSummaryEchoed: false");
+    expect(routeSource).toContain("siteUrlConfigured: Boolean(searchConsoleSiteUrl())");
+    expect(routeSource).toContain("rawSiteUrlEchoed: false");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("rawCredentialsEchoed: false");
+    expect(routeSource).toContain("rawPrivateKeyEchoed: false");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
+    expect(routeSource).not.toContain("siteUrl: searchConsoleSiteUrl()");
+    expect(routeSource).not.toContain("idempotencyKey,");
     expect(routeSource).toContain("PROVIDER_SEARCH_CONSOLE_AUDIT_NOT_CONFIGURED");
     expect(routeSource).toContain("localSearchConsolePlanFallbackDisabled");
   });
@@ -352,6 +367,12 @@ describe("GAP-075 Search Console provider boundary", () => {
       artifacts: [
         {
           path: "coverage/search-console-provider-sandbox-redacted.json",
+          tenantId: "tenant_private",
+          runId: "search-console:tenant_private:import:2026-06-01",
+          siteUrl: "https://private.example",
+          sitemapUrl: "https://private.example/sitemap.xml",
+          idempotencyKey: "search-console:private-idempotency",
+          importedRows: [{ query: "private tattoo search", page: "https://private.example/cities/private" }],
           googlePrivateKey: "-----BEGIN PRIVATE KEY-----searchconsole-token-----END PRIVATE KEY-----",
           providerPayload: { authorization: "Bearer provider-token", client_email: "ari@example.test" },
           nested: [{ phone: "+1 206 555 0142", secret: "provider-secret" }],
@@ -361,6 +382,10 @@ describe("GAP-075 Search Console provider boundary", () => {
 
     expect(review.status).toBe("passed");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("PRIVATE KEY");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("tenant_private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("private.example");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("private-idempotency");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("private tattoo search");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("provider-token");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("ari@example.test");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("206 555 0142");

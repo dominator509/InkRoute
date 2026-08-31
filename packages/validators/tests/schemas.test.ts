@@ -13,6 +13,17 @@ import {
   consentFormInputSchema,
   consentSignatureInputSchema,
   medicalSafetyAcknowledgmentInputSchema,
+  intakeQuestionInputSchema,
+  intakeResponseInputSchema,
+  messageInputSchema,
+  notificationInputSchema,
+  notificationPreviewInputSchema,
+  providerWebhookPreviewInputSchema,
+  errorReportInputSchema,
+  errorReportFilterSchema,
+  tenantMemberInputSchema,
+  customRoleInputSchema,
+  tenantSettingsMutationSchema,
   seoCityPageInputSchema,
   seoStylePageInputSchema,
   releaseCreateInputSchema,
@@ -184,6 +195,103 @@ describe("validator happy/error paths", () => {
         clientId: "client_1",
         acknowledgments: { hasSkinCondition: false },
         flaggedReasons: ["no known conditions"],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("covers messaging, notification, and provider webhook malformed payload edges", () => {
+    expect(
+      messageInputSchema.safeParse({
+        threadId: "thread_1",
+        body: "A client-safe notification draft.",
+        providerMessageId: "provider_msg_1",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      notificationInputSchema.safeParse({
+        clientId: "client_1",
+        type: "appointment_prep_24h",
+        title: "Prep reminder",
+        body: "Please review aftercare and prep instructions before the appointment.",
+        scheduledFor: "2026-09-10T10:00:00.000Z",
+      }).success,
+    ).toBe(true);
+
+    expect(
+      notificationPreviewInputSchema.safeParse({
+        templateKey: "deposit_request",
+        channels: ["email", "sms"],
+        artistName: "Ink Route",
+        clientName: "Ari Test",
+        depositUrl: "not-a-url",
+        consent: { email: "ari@example.com", emailOptIn: true },
+      }).success,
+    ).toBe(false);
+
+    expect(
+      providerWebhookPreviewInputSchema.safeParse({
+        provider: "unknown-provider",
+        eventType: "message.delivered",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("covers observability report and filter edge cases", () => {
+    const report = errorReportInputSchema.safeParse({
+      tenantId: "tenant_1",
+      source: "mobile",
+      runtime: "react-native",
+      environment: "production",
+      message: "Mobile screen failed to load appointment details.",
+      statusCode: 503,
+      tags: { screen: "appointments" },
+      metadata: { handledByFallback: true },
+    });
+    const filter = errorReportFilterSchema.safeParse({
+      tenantId: "tenant_1",
+      status: "triaged",
+      source: "mobile",
+      limit: "25",
+    });
+
+    expect(report.success).toBe(true);
+    expect(filter.success).toBe(true);
+    if (filter.success) expect(filter.data.limit).toBe(25);
+    expect(errorReportInputSchema.safeParse({ message: "x", statusCode: 700 }).success).toBe(false);
+    expect(errorReportFilterSchema.safeParse({ limit: 1000 }).success).toBe(false);
+  });
+
+  it("covers tenancy/auth and dynamic form edge cases with sensitive-field denial", () => {
+    expect(tenantMemberInputSchema.safeParse({ userId: "user_1", role: "artist" }).success).toBe(true);
+    expect(customRoleInputSchema.safeParse({ key: "front-desk", label: "Front Desk", permissions: ["booking:read"] }).success).toBe(true);
+    expect(
+      tenantSettingsMutationSchema.safeParse({
+        tenantId: "tenant_1",
+        publicSiteName: "Ink Route",
+        defaultTimezone: "America/Los_Angeles",
+        stripeSecretKey: "sk_live_should_not_be_accepted",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      intakeQuestionInputSchema.safeParse({
+        formId: "form_1",
+        key: "placement",
+        label: "Where should this tattoo be placed?",
+        type: "single_select",
+        options: [{ label: "Forearm", value: "forearm" }],
+      }).success,
+    ).toBe(true);
+    expect(intakeQuestionInputSchema.safeParse({ formId: "form_1", key: "x", label: "?", type: "text" }).success).toBe(false);
+    expect(
+      intakeResponseInputSchema.safeParse({
+        formId: "form_1",
+        clientId: "client_1",
+        answers: {
+          placement: "forearm",
+          medicalDisclosure: "requires encryption/redaction before persistence",
+        },
       }).success,
     ).toBe(true);
   });

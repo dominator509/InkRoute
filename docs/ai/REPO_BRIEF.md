@@ -1,6 +1,6 @@
 # Repo Brief
 
-Truth-pass date: 2026-06-08. Keep this concise and stable. Do not duplicate `docs/ai/repomix-summary.xml`.
+Truth-pass date: 2026-06-27. Keep this concise and stable. Do not duplicate `docs/ai/repomix-summary.xml`.
 
 ## Purpose
 
@@ -83,10 +83,18 @@ InkRoute Suite is a multi-tenant tattoo artist SaaS platform:
 
 ## Agent Workflow
 
+- This file is the compact durable repo brief for Serena startup context and Obsidian linking.
 - Use `docs/ai/SERENA_OBSIDIAN_WORKFLOW.md` as the operational playbook for semantic navigation and project memory.
 - Serena is for targeted code ownership, references, call sites, and impact checks before broad reads.
 - Obsidian is for specific InkRoute decisions, reviews, and handoffs only; repo files remain authoritative.
 - Do not delay credential-free gap closure for broad Serena or Obsidian context gathering.
+
+## Serena / Obsidian Notes
+
+- Serena config lives in `.serena/project.yml`; it is memory-writable, LSP-backed, and excludes generated/local-state folders. Do not use Serena source-editing tools in this repo.
+- Serena memories should store dense routing facts, not copies of this brief.
+- Local Obsidian bootstrap support lives in `scripts/bootstrap-obsidian-vault.ps1` and `docs/ai/*` workflow notes.
+- TODO: Refresh this brief after provider-backed production evidence changes materially.
 
 ## Do Not Touch Without Approval
 

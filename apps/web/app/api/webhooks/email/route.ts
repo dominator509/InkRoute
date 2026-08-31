@@ -16,6 +16,39 @@ function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
   return inkrouteDemoTenant.slug;
 }
 
+function omitRawProviderWebhookIdentifiers<T extends Record<string, unknown>>(value: T) {
+  const {
+    tenantId: _tenantId,
+    eventId: _eventId,
+    providerMessageId: _providerMessageId,
+    ...safeValue
+  } = value as T & { tenantId?: unknown; eventId?: unknown; providerMessageId?: unknown };
+  return {
+    ...safeValue,
+    tenantIdEchoed: false,
+    rawProviderEventIdEchoed: false,
+    rawProviderMessageIdEchoed: false,
+  };
+}
+
+function buildSafeLocalProviderWebhookReceipt(storedWebhook: ReturnType<typeof persistWebhookEvent>) {
+  return {
+    source: storedWebhook.source,
+    eventType: storedWebhook.eventType,
+    receivedSignatureHeader: storedWebhook.receivedSignatureHeader,
+    payloadLength: storedWebhook.payloadLength,
+    createdAt: storedWebhook.createdAt,
+    responseProjection: {
+      webhookIdEchoed: false,
+      tenantIdEchoed: false,
+      rawProviderEventIdEchoed: false,
+      rawProviderMessageIdEchoed: false,
+      rawProviderSignatureEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("resend-signature") ?? request.headers.get("svix-signature");
@@ -131,6 +164,8 @@ export async function POST(request: NextRequest) {
     reconciliation,
   });
   const interpretation = interpretEmailWebhook(eventType);
+  const responseReadiness = omitRawProviderWebhookIdentifiers(readiness as unknown as Record<string, unknown>);
+  const responseReconciliation = omitRawProviderWebhookIdentifiers(reconciliation as unknown as Record<string, unknown>);
 
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
@@ -143,16 +178,26 @@ export async function POST(request: NextRequest) {
           gapIds: ["GAP-010", "GAP-061", "GAP-064", "GAP-066"],
         },
         data: {
-          tenantSlug,
-          eventId,
           eventType,
           interpretation,
-          readiness,
-          reconciliation,
+          readiness: responseReadiness,
+          reconciliation: responseReconciliation,
           signatureVerification,
           durablePersistence: "not-attempted-production-signature-gated",
+          rawProviderSignatureEchoed: false,
+          rawProviderSignaturePersisted: false,
+          tenantSlugEchoed: false,
+          rawProviderEventIdEchoed: false,
+          rawProviderMessageIdEchoed: false,
           providerWebhookBoundary,
           crossProviderReadiness: providerWebhookContract.runtimeReadiness,
+          responseProjection: {
+            tenantSlugEchoed: false,
+            tenantIdEchoed: false,
+            rawProviderEventIdEchoed: false,
+            rawProviderMessageIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           productionBoundary: {
             localEmailWebhookPersistenceDisabled: true,
             requiresDurableProviderEventPersistence: true,
@@ -198,22 +243,38 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       data: {
-        tenantSlug,
-        storedWebhook,
+        storedWebhook: buildSafeLocalProviderWebhookReceipt(storedWebhook),
         interpretation,
-        readiness,
-        reconciliation,
+        readiness: responseReadiness,
+        reconciliation: responseReconciliation,
         signatureVerification,
         durablePersistence: persistenceResult.persistence,
-        providerEventId: persistenceResult.providerEventId,
-        auditLogId: persistenceResult.auditLogId,
-        deliveryId: persistenceResult.deliveryId,
-        deliveryStatusTransitionId: persistenceResult.deliveryStatusTransitionId,
+        rawProviderSignatureEchoed: false,
+        rawProviderSignaturePersisted: false,
+        rawIdempotencyKeyEchoed: false,
+        tenantSlugEchoed: false,
+        rawProviderEventIdEchoed: false,
+        rawProviderMessageIdEchoed: false,
+        providerEventPersisted: persistenceResult.providerEventPersisted,
+        auditLogged: persistenceResult.auditLogged,
+        deliveryMatched: persistenceResult.deliveryMatched,
+        deliveryStatusTransitionPersisted: persistenceResult.deliveryStatusTransitionPersisted,
         deliveryStatusMutated: persistenceResult.deliveryStatusMutated,
-        suppressionId: persistenceResult.suppressionId,
+        suppressionPersisted: persistenceResult.suppressionPersisted,
         suppressionWritten: persistenceResult.suppressionWritten,
         replayDetected: persistenceResult.replayDetected,
-        idempotencyKey: persistenceResult.idempotencyKey,
+        responseProjection: {
+          tenantSlugEchoed: false,
+          tenantIdEchoed: false,
+          rawProviderEventIdEchoed: false,
+          rawProviderMessageIdEchoed: false,
+          providerEventIdEchoed: false,
+          auditLogIdEchoed: false,
+          deliveryIdEchoed: false,
+          deliveryStatusTransitionIdEchoed: false,
+          suppressionIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         providerWebhookBoundary,
         crossProviderReadiness: providerWebhookContract.runtimeReadiness,
         rawBodyBytes: rawBody.length,

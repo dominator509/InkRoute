@@ -375,7 +375,9 @@ export const buildBookingProviderHandoffExecutionPlan = (): BookingProviderHando
 });
 
 const bookingProviderHandoffSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|sms|push|upload|reference|booking|session|cookie|webhook|idempotency|audit|rollback)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|provider|stripe|payment|deposit|medical|note|email|phone|calendar|notification|sms|push|upload|reference|booking|session|cookie|webhook|idempotency|audit|rollback|retry|operator|review|worker|queue|job|delivery|handoff|appointment|hold|event|transcript|sandbox|payload|body|request|response|artifact|path|command|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner|key|id)/i;
+const bookingProviderHandoffSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|tok|pi|stripe|provider|webhook|gh[psuor]|github_pat)_[A-Za-z0-9_-]+|provider-token[^"'\s]*|webhook_secret[^"'\s]*|(?:tenant|client|booking|handoff|worker|queue|job|notification|delivery|calendar|appointment|event|hold|deposit|payment|stripe|provider|rollback|retry|audit|idempotency|sandbox|trace|artifact|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|medical:[^"'\n\r]+|private-file|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedBookingProviderHandoffArtifact = (
   artifact: unknown,
@@ -400,6 +402,17 @@ export const buildRedactedBookingProviderHandoffArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        bookingProviderHandoffSensitiveArtifactValuePattern,
+        "[REDACTED_BOOKING_PROVIDER_HANDOFF_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

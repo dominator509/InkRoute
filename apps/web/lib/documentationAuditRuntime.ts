@@ -261,7 +261,7 @@ export const documentationAuditRuntimeExecutionPolicy: DocumentationAuditRuntime
 };
 
 const sensitiveDocumentationAuditKeyPattern =
-  /(token|secret|password|authorization|cookie|provider|projectId|resourceId|legal|attorney|reviewer|contact|ciRunUrl|artifactUrl|tenantId|userId|runId|email|phone|payload)/i;
+  /(token|secret|password|authorization|cookie|provider|projectId|resourceId|legal|attorney|reviewer|privileged|contact|ciRun|ciRunUrl|workflow|commit|artifact|artifactUrl|path|tenantId|userId|runId|email|phone|payload|raw|request|response|markdown|document|doc|link|inventory|consistency|audit|quality|command|output|log|transcript|report|status|stale|url|uri|stack|error|database|dsn|repository|branch|pr|pullrequest|codeowner|check)/i;
 
 const sensitiveDocumentationAuditStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -269,7 +269,9 @@ const sensitiveDocumentationAuditStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:ghp|gho|ghu|ghs|sk|pk|rk|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|artifact|review|legal|run)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
+  [/\b(?:tenant|user|project|provider|artifact|review|legal|run|resource|document|doc|link|inventory|consistency|audit|quality|status|stale|workflow|ci|commit|repository|branch|pr|pullrequest|reviewer|codeowner|check)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export function buildDocumentationAuditRuntimeExecutionPlan(): DocumentationAuditRuntimeExecutionPlan {

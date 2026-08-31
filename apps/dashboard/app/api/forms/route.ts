@@ -39,6 +39,25 @@ function redactQuestionOptions(value: unknown): Record<string, unknown> | null {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildFormListResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    formIdsEchoed: false,
+    questionIdsEchoed: false,
+    medicalAcknowledgmentIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    rawAnswersEchoed: false,
+    signatureFileAssetIdsEchoed: false,
+    medicalAcknowledgmentPayloadsEchoed: false,
+  };
+}
+
+function buildSafeLocalFormRecord(form: Record<string, unknown>) {
+  const { id: _id, tenantId: _tenantId, ...safeForm } = form;
+  return { ...safeForm, responseProjection: buildFormListResponseProjection() };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -61,12 +80,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard form reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
           },
+          responseProjection: buildFormListResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -77,9 +96,9 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        forms: localForms.slice(0, limit),
+        forms: localForms.slice(0, limit).map((form) => buildSafeLocalFormRecord(form)),
+        responseProjection: buildFormListResponseProjection(),
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns redacted demo form metadata only; database mode is required for live intake and consent reads.",
       },
@@ -156,7 +175,6 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         intakeForms: result.intakeForms.map((form: {
           id: string;
@@ -178,7 +196,6 @@ export async function GET(request: NextRequest) {
           }>;
           _count: { responses: number };
         }) => ({
-          id: form.id,
           key: form.key,
           type: "intake",
           title: form.title,
@@ -198,18 +215,17 @@ export async function GET(request: NextRequest) {
             sortOrder: number;
             options: unknown;
           }) => ({
-            id: question.id,
             key: question.key,
             label: question.label,
             helpText: question.helpText,
             type: question.type,
             isRequired: question.isRequired,
             sortOrder: question.sortOrder,
-            options: redactQuestionOptions(question.options),
+          options: redactQuestionOptions(question.options),
           })),
+          responseProjection: buildFormListResponseProjection(),
         })),
         consentForms: result.consentForms.map((form: { id: string; key: string; title: string | null; status: string; version: number; requiresMedicalAcknowledgment: boolean; _count: { signatures: number }; updatedAt: Date }) => ({
-          id: form.id,
           key: form.key,
           type: "consent",
           title: form.title,
@@ -218,16 +234,18 @@ export async function GET(request: NextRequest) {
           requiresMedicalAcknowledgment: form.requiresMedicalAcknowledgment,
           signatureCount: form._count.signatures,
           updatedAt: form.updatedAt.toISOString(),
+          responseProjection: buildFormListResponseProjection(),
         })),
         medicalAcknowledgments: result.medicalAcknowledgments.map((acknowledgment: { id: string; status: string; flaggedReasons: unknown; reviewedAt: Date | null; updatedAt: Date }) => ({
-          id: acknowledgment.id,
           status: acknowledgment.status,
           flaggedReasons: acknowledgment.flaggedReasons,
           reviewedAt: acknowledgment.reviewedAt?.toISOString() ?? null,
           updatedAt: acknowledgment.updatedAt.toISOString(),
           acknowledgments: "[redacted-dashboard-field]",
+          responseProjection: buildFormListResponseProjection(),
         })),
-        auditId: result.audit.id,
+        auditLogged: true,
+        responseProjection: buildFormListResponseProjection(),
         gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         boundary: "Dashboard form reads expose metadata, question structure, counts, and review status only; raw answers, signatures, signer contact data, IP hashes, user agents, file asset ids, and medical acknowledgment payloads remain redacted.",
       },
@@ -239,8 +257,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Form reads require the dashboard database connection." },
+          responseProjection: buildFormListResponseProjection(),
           gapIds: ["GAP-007", "GAP-013", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },

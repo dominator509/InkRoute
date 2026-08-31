@@ -1,5 +1,7 @@
 ﻿import { buildExpoEasRuntimeEvidencePlan } from "@inkroute/releases";
 
+import { expoEasRuntimeEvidenceRequiredCommands as canonicalMobileUpdatesRuntimeCommands } from "@inkroute/releases";
+
 export type MobileUpdatesRuntimeStatus =
   | "wired"
   | "project-gated"
@@ -17,15 +19,7 @@ export interface MobileUpdatesRuntimeMatrixEntry {
   readonly status: MobileUpdatesRuntimeStatus;
 }
 
-export const mobileUpdatesRuntimeCommands = [
-  "pnpm --filter @inkroute/releases typecheck",
-  "pnpm --filter @inkroute/releases test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "eas build --profile preview --platform all",
-  "eas update --channel preview",
-  "eas update:list --channel preview",
-  "eas update --channel preview --message rollback-republish-drill --non-interactive",
-] as const;
+export const mobileUpdatesRuntimeCommands = canonicalMobileUpdatesRuntimeCommands;
 
 export const mobileUpdatesArtifactPaths = [
   "coverage/mobile-updates-runtime.json",
@@ -274,7 +268,7 @@ export const mobileUpdatesRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileUpdatesRuntimeMatrixEntry[];
 
-export const mobileUpdatesRuntimeEvidence = buildExpoEasRuntimeEvidencePlan({
+const mobileUpdatesRuntimeEvidencePlan = buildExpoEasRuntimeEvidencePlan({
   packageScripts: ["test", "typecheck"],
   releasesTestsPassed: false,
   releasesTypecheckPassed: false,
@@ -297,12 +291,20 @@ export const mobileUpdatesRuntimeEvidence = buildExpoEasRuntimeEvidencePlan({
   releaseHealthMonitoringConfigured: false,
 });
 
+export const mobileUpdatesRuntimeEvidence = {
+  ...mobileUpdatesRuntimeEvidencePlan,
+  requiredCommands: mobileUpdatesRuntimeCommands,
+  requiredEvidence: mobileUpdatesEvidenceFlags,
+};
+
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileUpdatesArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|eas|expo|credential|project|update|channel|runtime|device|receipt|rollback|release|health|adoption|monitoring|email|phone|medical|payment)/i;
+const sensitiveMobileUpdatesArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|eas|expo|credential|project|update|channel|runtime|device|receipt|rollback|release|health|adoption|monitoring|email|phone|medical|payment|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveMobileUpdatesArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|expo|eas)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|eas|expo|credential|project|update|channel|runtime|device|receipt|rollback|release|health|adoption|monitoring|provider|artifact|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileUpdatesArtifactValue = (
   value: unknown,
@@ -326,6 +328,13 @@ const redactMobileUpdatesArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileUpdatesArtifactValue.test(value)) {
+    sensitiveMobileUpdatesArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileUpdatesArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileUpdatesArtifactValue.lastIndex = 0;
   return value;
 };
 

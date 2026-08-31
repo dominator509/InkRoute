@@ -1,4 +1,10 @@
-﻿import { buildSeoPublicationMutationPlan, type SeoPublicationAction, type SeoPublishableModel, type SeoRouteRecord } from "@inkroute/seo";
+﻿import {
+  buildSeoPublicationMutationPlan,
+  type SeoPublicationAction,
+  type SeoPublicationMutationPlan,
+  type SeoPublishableModel,
+  type SeoRouteRecord,
+} from "@inkroute/seo";
 import { prisma } from "@inkroute/db";
 import { NextRequest, NextResponse } from "next/server";
 import { dashboardSeoRouteRecords } from "../../../lib/seoDemo";
@@ -82,8 +88,6 @@ const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 type SeoPageStatus = "draft" | "published" | "archived";
 type SeoCityPageRow = {
-  id: string;
-  tenantId: string;
   slug: string;
   city: string;
   region: string;
@@ -97,12 +101,10 @@ type SeoCityPageRow = {
   internalLinks: unknown;
   publishedAt: Date | null;
   updatedAt: Date;
-  featuredPortfolio: { id: string; title: string; slug: string; isPublic: boolean }[];
+  featuredPortfolio: { title: string; slug: string; isPublic: boolean }[];
 };
 
 type SeoStylePageRow = {
-  id: string;
-  tenantId: string;
   slug: string;
   styleName: string;
   title: string;
@@ -114,12 +116,10 @@ type SeoStylePageRow = {
   internalLinks: unknown;
   publishedAt: Date | null;
   updatedAt: Date;
-  featuredPortfolio: { id: string; title: string; slug: string; isPublic: boolean }[];
+  featuredPortfolio: { title: string; slug: string; isPublic: boolean }[];
 };
 
 type SeoRedirectRow = {
-  id: string;
-  tenantId: string;
   fromPath: string;
   toPath: string;
   statusCode: number;
@@ -127,11 +127,53 @@ type SeoRedirectRow = {
   updatedAt: Date;
 };
 
+function buildSafeSeoRevalidationResponse(plan: SeoPublicationMutationPlan) {
+  return {
+    pathCount: plan.revalidation.paths.length,
+    tagCount: plan.revalidation.tags.length,
+    requiresRuntime: plan.revalidation.requiresRuntime,
+    providerBoundary: plan.revalidation.providerBoundary,
+    rawPathsEchoed: false,
+    rawTagsEchoed: false,
+    rawReasonEchoed: false,
+  };
+}
+
+function buildSafeSeoPublicationPlanResponse(plan: SeoPublicationMutationPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    model: plan.model,
+    actorRole: plan.actorRole,
+    targetStatus: plan.targetStatus,
+    canCommit: plan.canCommit,
+    requiresTenantScope: plan.requiresTenantScope,
+    requiresRbac: plan.requiresRbac,
+    requiresAuditLog: plan.requiresAuditLog,
+    requiresTransaction: plan.requiresTransaction,
+    blockers: plan.blockers,
+    writeModels: plan.writes.map((write) => write.model),
+    writeOperations: plan.writes.map((write) => write.operation),
+    revalidation: buildSafeSeoRevalidationResponse(plan),
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawActorIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawWriteSummariesEchoed: false,
+    rawRevalidationPathsEchoed: false,
+    rawRevalidationTagsEchoed: false,
+    rawRoutePayloadEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 function mutationResponse(plan: ReturnType<typeof buildSeoPublicationMutationPlan>, status = 200, extra: Record<string, unknown> = {}) {
   return NextResponse.json(
     {
       ok: plan.canCommit,
-      plan,
+      tenantScope: { actorTenantMatched: true },
+      plan: buildSafeSeoPublicationPlanResponse(plan),
+      tenantIdEchoed: false,
       gapIds: ["GAP-071", "GAP-076"],
       boundary: "SEO publication mutations are tenant-scoped, RBAC-gated, transaction-backed, audited, and revalidation-ready.",
       ...extra,
@@ -153,6 +195,25 @@ function seoPublicationAssociationRows(input: {
     ...input.relatedReviewIds.map((relatedId) => ({ tenantId: input.tenantId, entityType: input.entityType, entityId: input.entityId, relatedKind: "review", relatedId })),
     ...input.relatedImageIds.map((relatedId) => ({ tenantId: input.tenantId, entityType: input.entityType, entityId: input.entityId, relatedKind: "image", relatedId })),
   ];
+}
+
+function buildSeoReadResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    seoPageIdsEchoed: false,
+    redirectIdsEchoed: false,
+    portfolioItemIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeDashboardSeoRouteRecord(record: (typeof dashboardSeoRouteRecords)[number]) {
+  const { relatedPortfolioIds: _relatedPortfolioIds, ...safeRecord } = record;
+  return {
+    ...safeRecord,
+    relatedPortfolioLinked: Array.isArray(record.relatedPortfolioIds) && record.relatedPortfolioIds.length > 0,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -177,13 +238,13 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard SEO reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
           },
           productionBoundary: { localDashboardReadFallbackDisabled: true },
+          ...buildSeoReadResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -193,10 +254,10 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         count: dashboardSeoRouteRecords.length,
-        routes: dashboardSeoRouteRecords.slice(0, limit),
+        routes: dashboardSeoRouteRecords.slice(0, limit).map(buildSafeDashboardSeoRouteRecord),
+        ...buildSeoReadResponseProjection(),
         gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
         boundary: "Local fallback returns demo SEO route records only; database mode is required for live SEO reads.",
       },
@@ -207,13 +268,11 @@ export async function GET(request: NextRequest) {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const [cityPages, stylePages, redirects] = await Promise.all([
-        (tx.seoCityPage as { findMany: (args: unknown) => Promise<SeoCityPageRow[]> }).findMany({
+        tx.seoCityPage.findMany({
           where: { tenantId },
           orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
           take: limit,
           select: {
-            id: true,
-            tenantId: true,
             slug: true,
             city: true,
             region: true,
@@ -227,16 +286,14 @@ export async function GET(request: NextRequest) {
             internalLinks: true,
             publishedAt: true,
             updatedAt: true,
-            featuredPortfolio: { select: { id: true, title: true, slug: true, isPublic: true } },
+            featuredPortfolio: { select: { title: true, slug: true, isPublic: true } },
           },
         }),
-        (tx.seoStylePage as { findMany: (args: unknown) => Promise<SeoStylePageRow[]> }).findMany({
+        tx.seoStylePage.findMany({
           where: { tenantId },
           orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
           take: limit,
           select: {
-            id: true,
-            tenantId: true,
             slug: true,
             styleName: true,
             title: true,
@@ -248,14 +305,14 @@ export async function GET(request: NextRequest) {
             internalLinks: true,
             publishedAt: true,
             updatedAt: true,
-            featuredPortfolio: { select: { id: true, title: true, slug: true, isPublic: true } },
+            featuredPortfolio: { select: { title: true, slug: true, isPublic: true } },
           },
         }),
-        (tx.seoRedirect as { findMany: (args: unknown) => Promise<SeoRedirectRow[]> }).findMany({
+        tx.seoRedirect.findMany({
           where: { tenantId },
           orderBy: { updatedAt: "desc" },
           take: limit,
-          select: { id: true, tenantId: true, fromPath: true, toPath: true, statusCode: true, isActive: true, updatedAt: true },
+          select: { fromPath: true, toPath: true, statusCode: true, isActive: true, updatedAt: true },
         }),
       ]);
 
@@ -280,8 +337,6 @@ export async function GET(request: NextRequest) {
     });
 
     const cityRoutes = result.cityPages.map((page: SeoCityPageRow) => ({
-      id: page.id,
-      tenantId: page.tenantId,
       kind: "city",
       slug: page.slug,
       title: page.title,
@@ -295,13 +350,12 @@ export async function GET(request: NextRequest) {
       heroCopy: page.heroCopy,
       faq: jsonObject(page.faq),
       internalLinks: jsonObject(page.internalLinks),
-      featuredPortfolio: page.featuredPortfolio.filter((item: { id: string; isPublic: boolean; title: string; slug: string }) => item.isPublic).map((item) => ({ id: item.id, title: item.title, slug: item.slug })),
+      featuredPortfolio: page.featuredPortfolio.filter((item) => item.isPublic).map((item) => ({ title: item.title, slug: item.slug })),
+      featuredPortfolioLinked: page.featuredPortfolio.some((item) => item.isPublic),
       publishedAt: page.publishedAt?.toISOString() ?? null,
       updatedAt: page.updatedAt.toISOString(),
     }));
     const styleRoutes = result.stylePages.map((page: SeoStylePageRow) => ({
-      id: page.id,
-      tenantId: page.tenantId,
       kind: "style",
       slug: page.slug,
       title: page.title,
@@ -313,7 +367,8 @@ export async function GET(request: NextRequest) {
       bodyCopy: page.bodyCopy,
       faq: jsonObject(page.faq),
       internalLinks: jsonObject(page.internalLinks),
-      featuredPortfolio: page.featuredPortfolio.filter((item: { id: string; isPublic: boolean; title: string; slug: string }) => item.isPublic).map((item) => ({ id: item.id, title: item.title, slug: item.slug })),
+      featuredPortfolio: page.featuredPortfolio.filter((item) => item.isPublic).map((item) => ({ title: item.title, slug: item.slug })),
+      featuredPortfolioLinked: page.featuredPortfolio.some((item) => item.isPublic),
       publishedAt: page.publishedAt?.toISOString() ?? null,
       updatedAt: page.updatedAt.toISOString(),
     }));
@@ -322,20 +377,18 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: cityRoutes.length + styleRoutes.length,
         routes: [...cityRoutes, ...styleRoutes],
         redirects: result.redirects.map((redirect: SeoRedirectRow) => ({
-          id: redirect.id,
-          tenantId: redirect.tenantId,
           fromPath: redirect.fromPath,
           toPath: redirect.toPath,
           statusCode: redirect.statusCode,
           isActive: redirect.isActive,
           updatedAt: redirect.updatedAt.toISOString(),
         })),
-        auditId: result.audit.id,
+        auditLogged: true,
+        ...buildSeoReadResponseProjection(),
         gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
         boundary: "Dashboard SEO reads are tenant-scoped, no-store, and audited; publish/revalidation/Search Console writes remain gated.",
       },
@@ -347,8 +400,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "SEO reads require the dashboard database connection." },
+          ...buildSeoReadResponseProjection(),
           gapIds: ["GAP-037", "GAP-071", "GAP-072", "GAP-076"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -414,13 +467,14 @@ async function mutateSeoPublication(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          tenantIdEchoed: false,
           error: {
             code: "PROVIDER_DASHBOARD_WRITES_NOT_CONFIGURED",
             message: "Production dashboard SEO publication writes require DB-backed actor resolution and tenant-scoped persistence; local fallback mutation plans are disabled.",
             gapIds: ["GAP-071", "GAP-076"],
           },
-          plan,
+          plan: buildSafeSeoPublicationPlanResponse(plan),
           productionBoundary: { localDashboardWriteFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -442,10 +496,10 @@ async function mutateSeoPublication(request: NextRequest) {
       const idempotencyScope = "seo-publication";
       const existingIdempotency = await tx.idempotencyKey.findUnique({
         where: { tenantId_scope_key: { tenantId, scope: idempotencyScope, key: plan.idempotencyKey } },
-        select: { id: true, result: true },
+        select: { status: true },
       });
       if (existingIdempotency) {
-        return { duplicate: true as const, entityId: stringValue(body.id), auditId: null, idempotencyId: existingIdempotency.id };
+        return { duplicate: true as const, entityPersisted: true, auditLogged: false, idempotencyRecorded: true };
       }
 
       const idempotency = await tx.idempotencyKey.create({
@@ -457,10 +511,12 @@ async function mutateSeoPublication(request: NextRequest) {
           metadata: {
             model,
             action,
-            revalidation: plan.revalidation,
-            relatedFaqIds: stringArray(body.relatedFaqIds),
-            relatedReviewIds: stringArray(body.relatedReviewIds),
-            relatedImageIds: stringArray(body.relatedImageIds),
+            revalidationTagCount: plan.revalidation.length,
+            relatedFaqCount: stringArray(body.relatedFaqIds).length,
+            relatedReviewCount: stringArray(body.relatedReviewIds).length,
+            relatedImageCount: stringArray(body.relatedImageIds).length,
+            rawRevalidationTagsStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true },
@@ -561,12 +617,17 @@ async function mutateSeoPublication(request: NextRequest) {
           entityType: model,
           entityId,
           metadata: {
-            idempotencyKey: plan.idempotencyKey,
-            writes: plan.writes,
-            revalidation: plan.revalidation,
-            relatedFaqIds: stringArray(body.relatedFaqIds),
-            relatedReviewIds: stringArray(body.relatedReviewIds),
-            relatedImageIds: stringArray(body.relatedImageIds),
+            idempotencyPersisted: true,
+            writePlanPersisted: true,
+            writeCount: plan.writes.length,
+            revalidationTagCount: plan.revalidation.length,
+            relatedFaqCount: stringArray(body.relatedFaqIds).length,
+            relatedReviewCount: stringArray(body.relatedReviewIds).length,
+            relatedImageCount: stringArray(body.relatedImageIds).length,
+            rawIdempotencyKeyStored: false,
+            rawWriteSummariesStored: false,
+            rawRevalidationTagsStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true },
@@ -582,9 +643,11 @@ async function mutateSeoPublication(request: NextRequest) {
           status: "queued",
           auditLogId: audit.id,
           metadata: {
-            idempotencyKey: plan.idempotencyKey,
-            idempotencyId: idempotency.id,
-            writes: plan.writes,
+            idempotencyPersisted: true,
+            writePlanPersisted: true,
+            writeCount: plan.writes.length,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
       });
@@ -603,27 +666,35 @@ async function mutateSeoPublication(request: NextRequest) {
 
       await tx.idempotencyKey.update({
         where: { id: idempotency.id },
-        data: { status: "completed", result: { entityId, auditId: audit.id } },
+        data: { status: "completed", result: { entityPersisted: true, auditLogged: true, internalPersistenceIdsStored: false } },
       });
 
-      return { duplicate: false as const, entityId, auditId: audit.id, idempotencyId: idempotency.id };
+      return { duplicate: false as const, entityPersisted: Boolean(entityId), auditLogged: Boolean(audit.id), idempotencyRecorded: Boolean(idempotency.id) };
     });
 
     if (result.duplicate) {
       return mutationResponse(plan, 200, {
         persistence: "database",
         duplicate: true,
-        entityId: result.entityId,
-        idempotencyId: result.idempotencyId,
+        entityPersisted: true,
+        idempotencyReplay: true,
+        entityIdEchoed: false,
+        auditIdEchoed: false,
+        idempotencyKeyIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
       });
     }
 
     return mutationResponse(plan, action === "create" ? 201 : 200, {
       persistence: "database",
-      entityId: result.entityId,
-      auditId: result.auditId,
-      idempotencyId: result.idempotencyId,
-      revalidation: plan.revalidation,
+      entityPersisted: result.entityPersisted,
+      entityIdEchoed: false,
+      auditLogged: result.auditLogged,
+      idempotencyRecorded: result.idempotencyRecorded,
+      auditIdEchoed: false,
+      idempotencyKeyIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+      revalidation: buildSafeSeoRevalidationResponse(plan),
       associationPersistence: "database",
     });
   } catch (error) {
@@ -631,9 +702,10 @@ async function mutateSeoPublication(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          tenantIdEchoed: false,
           error: { code: "DATABASE_UNAVAILABLE", message: "SEO publication writes require the dashboard database connection." },
-          plan,
+          plan: buildSafeSeoPublicationPlanResponse(plan),
           gapIds: ["GAP-071", "GAP-076"],
         },
         { status: 503, headers: noStoreHeaders },

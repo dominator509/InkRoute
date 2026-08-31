@@ -1,4 +1,9 @@
-﻿import { buildDashboardRepositoryRouteEvidencePlan, dashboardDataCollections } from "@inkroute/config";
+﻿import {
+  buildDashboardRepositoryRouteEvidencePlan,
+  dashboardDataCollections,
+  dashboardRepositoryRouteRequiredCommands,
+  dashboardRepositoryRouteRequiredEvidence,
+} from "@inkroute/config";
 
 export type DashboardDataLayerRuntimeStatus =
   | "wired"
@@ -14,17 +19,7 @@ export interface DashboardDataLayerRuntimeMatrixEntry {
   readonly status: DashboardDataLayerRuntimeStatus;
 }
 
-export const dashboardDataLayerRuntimeCommands = [
-  "pnpm --filter @inkroute/config typecheck",
-  "pnpm --filter @inkroute/config test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "seeded database dashboard route smoke",
-  "dashboard repository/API tenant-isolation tests",
-  "dashboard repository/API RBAC and redaction tests",
-  "dashboard sensitive-read AuditLog persistence tests",
-  "GitHub Actions dashboard data repository evidence job",
-] as const;
+export const dashboardDataLayerRuntimeCommands = dashboardRepositoryRouteRequiredCommands;
 
 export const dashboardDataLayerArtifactPaths = [
   "coverage/dashboard-data-layer-runtime.json",
@@ -145,7 +140,7 @@ export const dashboardDataLayerRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardDataLayerRuntimeMatrixEntry[];
 
-export const dashboardDataLayerRuntimeReadiness = buildDashboardRepositoryRouteEvidencePlan({
+const dashboardDataLayerPackageReadiness = buildDashboardRepositoryRouteEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   configTestsPassed: false,
   configTypecheckPassed: false,
@@ -164,6 +159,12 @@ export const dashboardDataLayerRuntimeReadiness = buildDashboardRepositoryRouteE
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const dashboardDataLayerRuntimeReadiness = {
+  ...dashboardDataLayerPackageReadiness,
+  requiredCommands: dashboardDataLayerRuntimeCommands,
+  requiredEvidence: dashboardRepositoryRouteRequiredEvidence,
+} as const;
 
 export const dashboardDataLayerEvidenceFlags = [
   "configTestsPassed",
@@ -352,7 +353,9 @@ export const buildDashboardDataLayerExecutionPlan = (): DashboardDataLayerExecut
 });
 
 const dashboardDataLayerSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|stripe|storage|object|key|booking|message|audit|rbac|role|member|note|file)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|stripe|storage|object|key|booking|message|audit|rbac|role|member|note|file|portfolio|travel|appointment|availability|artist|city|schedule|seo|redirect|metrics|route|request|response|payload|body|repository|prisma|read|redaction|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|id)/i;
+const dashboardDataLayerSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|s3:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|stripe)[A-Za-z0-9_-]*|(?:tenant|client|booking|message|thread|payment|portfolio|travel|appointment|availability|artist|city|schedule|seo|redirect|audit|member|role|route|repository|prisma|artifact|workflow|ci|run|commit|object|file|evidence)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|medical:[^"'\n\r]+|private-object|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedDashboardDataLayerArtifact = (
   artifact: unknown,
@@ -377,6 +380,17 @@ export const buildRedactedDashboardDataLayerArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        dashboardDataLayerSensitiveArtifactValuePattern,
+        "[REDACTED_DASHBOARD_DATA_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

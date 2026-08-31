@@ -8,6 +8,7 @@
   type NotificationSchedulerRuntimeReadinessPlan,
   type NotificationSequenceStep,
 } from "@inkroute/notifications";
+import { createHash } from "node:crypto";
 
 export interface DashboardNotificationSchedulerRepository {
   claimIdempotencyKey(input: { tenantId: string; key: string; action: NotificationSchedulerAction }): Promise<"claimed" | "duplicate">;
@@ -112,11 +113,15 @@ export function buildRedactedNotificationSchedulerMetadata(metadata: Record<stri
 }
 
 function buildSchedulerIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return `scheduler_claim:${createHash("sha256").update(JSON.stringify([input.tenantId, input.key])).digest("hex")}`;
 }
 
 function buildDueJobClaimKey(input: { readonly tenantId: string; readonly jobId: string }): string {
-  return `${input.tenantId}:${input.jobId}`;
+  return `scheduler_due_job:${createHash("sha256").update(JSON.stringify([input.tenantId, input.jobId])).digest("hex")}`;
+}
+
+function buildNotificationSchedulerJobIdempotencyKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
 }
 
 export function createInMemoryNotificationSchedulerRepository(
@@ -251,7 +256,8 @@ export function createPrismaNotificationSchedulerWorkerRepository(
       const tenantId = getPlanTenantId(input.plan);
       const payload = getPlanPayload(input.plan);
       const now = new Date();
-      const idempotencyKey = input.plan.idempotencyKey ?? `${input.plan.action}:${tenantId}`;
+      const idempotencyKey =
+        input.plan.idempotencyKey ?? buildNotificationSchedulerJobIdempotencyKey("notification-scheduler", [input.plan.action, tenantId]);
       const jobs = input.plan.scheduledJobs.length > 0
         ? input.plan.scheduledJobs
         : [
@@ -274,7 +280,7 @@ export function createPrismaNotificationSchedulerWorkerRepository(
           templateKey: job.templateKey,
           channel: job.recommendedChannels[0] ?? "in_app",
           state: "queued",
-          idempotencyKey: `${idempotencyKey}:${index}`,
+          idempotencyKey: buildNotificationSchedulerJobIdempotencyKey("notification-scheduler-job", [idempotencyKey, String(index)]),
           appointmentId: getPlanStringPayload(input.plan, "appointmentId"),
           bookingRequestId: getPlanStringPayload(input.plan, "bookingRequestId"),
           actorUserId: getPlanStringPayload(input.plan, "actorId"),
@@ -459,7 +465,11 @@ export function createPrismaNotificationSchedulerWorkerRepository(
           },
           data: {
             status: "completed",
-            result: { action: input.plan.action, notificationJobId: jobId ?? null },
+            result: {
+              action: input.plan.action,
+              notificationJobPersisted: Boolean(jobId),
+              internalPersistenceIdsStored: false,
+            },
             metadata,
           },
         });
@@ -513,7 +523,7 @@ export function buildDashboardNotificationSchedulerContract(): DashboardNotifica
     schedulePlan: buildNotificationSchedulerPlan({
       ...base,
       action: "schedule_sequence",
-      idempotencyKey: "schedule:booking:demo",
+      idempotencyKey: buildNotificationSchedulerJobIdempotencyKey("notification-scheduler-demo", ["schedule_sequence", "booking_req_demo"]),
       bookingRequestId: "booking_req_demo",
       appointmentStartsAt: demoAppointmentStartsAt,
       sequenceSteps: schedulableSequence(),
@@ -521,14 +531,14 @@ export function buildDashboardNotificationSchedulerContract(): DashboardNotifica
     processPlan: buildNotificationSchedulerPlan({
       ...base,
       action: "process_due_job",
-      idempotencyKey: "process:job_demo",
+      idempotencyKey: buildNotificationSchedulerJobIdempotencyKey("notification-scheduler-demo", ["process_due_job", "job_demo"]),
       jobId: "job_demo",
       providerReady: false,
     }),
     retryPlan: buildNotificationSchedulerPlan({
       ...base,
       action: "retry_failed_job",
-      idempotencyKey: "retry:job_demo:2",
+      idempotencyKey: buildNotificationSchedulerJobIdempotencyKey("notification-scheduler-demo", ["retry_failed_job", "job_demo", "2"]),
       jobId: "job_demo",
       attempt: 2,
       maxAttempts: 5,
@@ -536,7 +546,7 @@ export function buildDashboardNotificationSchedulerContract(): DashboardNotifica
     cancelPlan: buildNotificationSchedulerPlan({
       ...base,
       action: "cancel_scheduled_jobs",
-      idempotencyKey: "cancel:appointment_demo",
+      idempotencyKey: buildNotificationSchedulerJobIdempotencyKey("notification-scheduler-demo", ["cancel_scheduled_jobs", "appointment_demo"]),
       actorId: "user_mara_demo",
       appointmentId: "appointment_demo",
       cancellationReason: "appointment_rescheduled",
@@ -544,7 +554,7 @@ export function buildDashboardNotificationSchedulerContract(): DashboardNotifica
     deadLetterPlan: buildNotificationSchedulerPlan({
       ...base,
       action: "dead_letter_job",
-      idempotencyKey: "dead-letter:job_demo",
+      idempotencyKey: buildNotificationSchedulerJobIdempotencyKey("notification-scheduler-demo", ["dead_letter_job", "job_demo"]),
       actorId: "worker_demo",
       jobId: "job_demo",
       attempt: 5,
@@ -607,14 +617,24 @@ export function buildDashboardSchedulerPlanFromAction(input: {
 export async function executeNotificationSchedulerPlan(
   repository: DashboardNotificationSchedulerRepository,
   plan: NotificationSchedulerPlan,
-): Promise<{ status: "planned" | "duplicate" | "blocked"; plan: NotificationSchedulerPlan }> {
+): Promise<{ status: "planned" | "duplicate" | "blocked" | "missing" | "already_claimed"; plan: NotificationSchedulerPlan }> {
   if (plan.status === "blocked" || !plan.idempotencyKey) return { status: "blocked", plan };
 
   const idempotency = await repository.claimIdempotencyKey({ tenantId: plan.writes[0]?.tenantId ?? "missing_tenant", key: plan.idempotencyKey, action: plan.action });
   if (idempotency === "duplicate") return { status: "duplicate", plan };
 
   if (plan.action === "schedule_sequence") await repository.persistNotificationJobs({ tenantId: plan.writes[0].tenantId, plan });
-  if (plan.action === "process_due_job") await repository.persistNotificationDelivery({ tenantId: plan.writes[0].tenantId, plan });
+  if (plan.action === "process_due_job") {
+    const jobId = getPlanStringPayload(plan, "jobId");
+    if (!jobId) return { status: "missing", plan };
+    const claim = await repository.claimDueNotificationJob({
+      tenantId: plan.writes[0].tenantId,
+      jobId,
+      now: String(plan.writes[0].payload.now ?? new Date().toISOString()),
+    });
+    if (claim !== "claimed") return { status: claim, plan };
+    await repository.persistNotificationDelivery({ tenantId: plan.writes[0].tenantId, plan });
+  }
   if (plan.action === "retry_failed_job") await repository.persistRetry({ tenantId: plan.writes[0].tenantId, plan });
   if (plan.action === "dead_letter_job") await repository.persistDeadLetter({ tenantId: plan.writes[0].tenantId, plan, reason: String(plan.writes[0].payload.cancellationReason ?? "unknown") });
   if (plan.action === "cancel_scheduled_jobs") {

@@ -1,5 +1,7 @@
 ﻿import { buildMobileAuthRuntimeReadinessPlan } from "@inkroute/auth";
 
+import { mobileAuthRuntimeReadinessRequiredCommands } from "@inkroute/auth";
+
 export type MobileAuthRuntimeStatus =
   | "wired"
   | "provider-gated"
@@ -34,14 +36,7 @@ export const mobileAuthSecureSessionLifecycleContract = {
   auditDecisionRequiredForEveryTransition: true,
 } as const satisfies MobileAuthSecureSessionLifecycleContract;
 
-export const mobileAuthRuntimeCommands = [
-  "pnpm --filter @inkroute/auth typecheck",
-  "pnpm --filter @inkroute/auth test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "Expo iOS/Android auth smoke tests",
-  "Expo device biometric unlock test",
-] as const;
+export const mobileAuthRuntimeCommands = mobileAuthRuntimeReadinessRequiredCommands;
 
 export const mobileAuthArtifactPaths = [
   "coverage/mobile-auth-runtime.json",
@@ -364,7 +359,7 @@ export const mobileAuthSurfaceContract = [
   },
 ] as const satisfies readonly MobileAuthSurfaceContractEntry[];
 
-export const mobileAuthRuntimeReadiness = buildMobileAuthRuntimeReadinessPlan({
+const mobileAuthRuntimeReadinessInput = {
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   authTestsPassed: false,
   authTypecheckPassed: false,
@@ -383,14 +378,22 @@ export const mobileAuthRuntimeReadiness = buildMobileAuthRuntimeReadinessPlan({
   crossTenantDenialTested: false,
   secureTokenStorageVerified: false,
   auditLogPersistenceConfigured: false,
-});
+};
+
+export const mobileAuthRuntimeReadiness = {
+  ...buildMobileAuthRuntimeReadinessPlan(mobileAuthRuntimeReadinessInput),
+  requiredCommands: mobileAuthRuntimeCommands,
+  requiredEvidence: mobileAuthEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileAuthArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|securestore|biometric|device|auth|audit|role|member|email|phone|medical|payment)/i;
+const sensitiveMobileAuthArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|securestore|biometric|device|auth|audit|role|member|email|phone|medical|payment|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveMobileAuthArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|role|session|refresh|securestore|biometric|device|auth|audit|provider|artifact|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileAuthArtifactValue = (
   value: unknown,
@@ -414,6 +417,13 @@ const redactMobileAuthArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileAuthArtifactValue.test(value)) {
+    sensitiveMobileAuthArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileAuthArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileAuthArtifactValue.lastIndex = 0;
   return value;
 };
 

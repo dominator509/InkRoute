@@ -23,7 +23,8 @@ describe("mobile OTA update static contract", () => {
     expect(updateSource).toContain("MobileUpdateAdoptionEvent");
     expect(updateSource).toContain("evaluateMobileUpdateRollout");
     expect(updateSource).toContain("MobileUpdateRolloutDecision");
-    expect(updateSource).toContain('deviceId: "device-redacted"');
+    expect(updateSource).toContain("deviceIdHash");
+    expect(updateSource).toContain("rawDeviceIdEchoed: false");
     expect(updateSource).toContain("Preview update id recorded without device PII.");
     expect(updateSource).toContain("redacted adoption counts only");
   });

@@ -4,7 +4,7 @@
 
 **Phase 11 is partially implemented / scaffolded / untested in app runtime.**
 
-InkRoute Suite now has a dependency-light observability package, static dashboard/mobile previews, web/dashboard global error fallback components, and route/webhook boundaries. No live Sentry SDK, OpenTelemetry exporter, alert provider, database persistence, issue creation, or runtime verification is complete.
+InkRoute Suite now has a sandbox dependency-light observability package, static dashboard/mobile previews, web/dashboard global error fallback components, and route/webhook boundaries. No live Sentry SDK, OpenTelemetry exporter, alert provider, database persistence, issue creation, or runtime verification is complete.
 
 ## Phase 11 implemented pieces
 
@@ -63,7 +63,7 @@ Never log or send raw values for:
 - Cookies, authorization headers, provider signatures, access tokens, refresh tokens, API keys, or Sentry/Twilio/Stripe secrets.
 - Private reference image URLs or object keys.
 
-Before production, SDK `beforeSend`/event processors must use equivalent redaction rules to the Phase 11 helpers and must be verified with synthetic sensitive payloads.
+Before production, SDK `beforeSend`/event processors must use gated equivalent redaction rules to the Phase 11 helpers and must be verified with synthetic sensitive payloads.
 
 ## Sentry plan
 

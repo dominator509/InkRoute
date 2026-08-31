@@ -20,13 +20,50 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultPortfolioImageId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("portfolioImageId" in result)) {
-    return null;
-  }
+function buildPortfolioImageAttachResponseProjection() {
+  return {
+    portfolioImageResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    portfolioImageIdEchoed: false,
+    portfolioItemIdEchoed: false,
+    imageUrlEchoed: false,
+    fileAssetIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawImageUrlEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { portfolioImageId?: unknown }).portfolioImageId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafePortfolioImageAttachResponse(result: {
+  status: "attached" | "replayed";
+  image: {
+    altText: string;
+    width: number | null;
+    height: number | null;
+    sortOrder: number;
+    isPrimary: boolean;
+    createdAt: Date;
+  };
+}) {
+  return {
+    image: {
+      altText: result.image.altText,
+      width: result.image.width,
+      height: result.image.height,
+      sortOrder: result.image.sortOrder,
+      isPrimary: result.image.isPrimary,
+      createdAt: result.image.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      portfolioImagePersisted: true,
+      auditPersisted: result.status === "attached",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+    },
+    responseProjection: buildPortfolioImageAttachResponseProjection(),
+  };
 }
 
 export async function POST(request: NextRequest, context: PortfolioImageRouteContext) {
@@ -93,7 +130,8 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioImageAttachResponseProjection(),
           error: {
             code: "PROVIDER_PORTFOLIO_IMAGE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production portfolio image attachment requires DB-backed dashboard auth, tenant-scoped PortfolioImage persistence, and AuditLog rows; local fallback mutations are disabled.",
@@ -109,7 +147,8 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPortfolioImageAttachResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Portfolio image attachment requires database-backed dashboard auth so PortfolioImage and AuditLog rows can be persisted.",
@@ -153,10 +192,16 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
         },
         select: { id: true, status: true, result: true },
       });
-      const replayPortfolioImageId = idempotency.status === "completed" ? resultPortfolioImageId(idempotency.result) : null;
-      if (replayPortfolioImageId) {
+      if (idempotency.status === "completed") {
         const image = await tx.portfolioImage.findFirst({
-          where: { id: replayPortfolioImageId, tenantId, portfolioItemId: portfolioId },
+          where: {
+            tenantId,
+            portfolioItemId: portfolioId,
+            imageUrl: input.imageUrl,
+            fileAssetId: input.fileAssetId ?? null,
+            sortOrder: input.sortOrder,
+            isPrimary: input.isPrimary,
+          },
           select: {
             id: true,
             portfolioItemId: true,
@@ -236,10 +281,12 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
           entityId: image.id,
           metadata: {
             source: "dashboard-api",
-            portfolioItemId: portfolioId,
-            fileAssetId: image.fileAssetId,
+            portfolioItemMatched: true,
+            fileAssetMatched: Boolean(image.fileAssetId),
             isPrimary: image.isPrimary,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             boundary: "Metadata attachment only; signed upload, malware scan, derivative generation, EXIF stripping, CDN proof, and Lighthouse evidence remain gated.",
           },
         },
@@ -251,13 +298,14 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
         data: {
           status: "completed",
           result: toJsonValue({
-            portfolioImageId: image.id,
-            auditId: audit.id,
+            portfolioImagePersisted: true,
+            auditLogged: true,
             attached: true,
             rawImageUrlStoredInResult: false,
             providerUrlMinted: false,
             malwareScanExecuted: false,
             derivativesGenerated: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -266,23 +314,34 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
     });
 
     if (result.status === "portfolio_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "PORTFOLIO_NOT_FOUND", message: "Portfolio item was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "PORTFOLIO_NOT_FOUND", message: "Portfolio item was not found for this tenant." },
+          responseProjection: buildPortfolioImageAttachResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     if (result.status === "file_asset_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "FILE_ASSET_NOT_FOUND", message: "File asset was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "FILE_ASSET_NOT_FOUND", message: "File asset was not found for this tenant." },
+          responseProjection: buildPortfolioImageAttachResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        image: { ...result.image, createdAt: result.image.createdAt.toISOString() },
-        auditId: result.status === "attached" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafePortfolioImageAttachResponse(result),
         gapIds: ["GAP-005", "GAP-007", "GAP-038", "GAP-077"],
         boundary: "Portfolio image metadata attachment is tenant-scoped, no-store, idempotency-backed, and audited; provider storage, scan, derivative, CDN, and performance evidence remain gated.",
       },
@@ -294,7 +353,8 @@ export async function POST(request: NextRequest, context: PortfolioImageRouteCon
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioImageAttachResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Portfolio image attachment requires the dashboard database connection." },
           gapIds: ["GAP-005", "GAP-007", "GAP-038", "GAP-077"],
         },

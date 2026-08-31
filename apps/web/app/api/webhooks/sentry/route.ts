@@ -1,6 +1,6 @@
 ﻿import { prisma } from "@inkroute/db";
 import { buildAgenticBugFixWorkflow, buildGithubIssueDraft, buildObservabilityReportDraft } from "@inkroute/observability";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -35,6 +35,64 @@ function isUniqueConstraintViolation(error: unknown): boolean {
   return Boolean(error && typeof error === "object" && "code" in error && (error as { code?: unknown }).code === "P2002");
 }
 
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function buildSafeSentryWebhookPayloadPreview(payload: Record<string, unknown>) {
+  return {
+    retained: true,
+    fieldNames: Object.keys(payload).sort(),
+    responseProjection: {
+      rawProviderPayloadEchoed: false,
+      rawSanitizedProviderPayloadEchoed: false,
+    },
+  };
+}
+
+function buildSafeSentryWebhookReportResponse(report: ReturnType<typeof buildObservabilityReportDraft>) {
+  return {
+    source: report.source,
+    runtime: report.runtime,
+    environment: report.environment,
+    severity: report.severity,
+    route: report.route,
+    release: report.release,
+    redactedMessage: report.redactedMessage,
+    responseProjection: {
+      rawReportEchoed: false,
+      rawMessageEchoed: false,
+      rawMetadataEchoed: false,
+      rawStackEchoed: false,
+      fingerprintEchoed: false,
+      stackHashEchoed: false,
+    },
+  };
+}
+
+function buildSafeSentryWebhookWorkflowResponse(workflow: ReturnType<typeof buildAgenticBugFixWorkflow>) {
+  return {
+    prepared: workflow.length > 0,
+    stepCount: workflow.length,
+    responseProjection: {
+      rawWorkflowEchoed: false,
+      rawWorkflowPayloadEchoed: false,
+    },
+  };
+}
+
+function buildSafeSentryWebhookIssueDraftResponse(issueDraft: ReturnType<typeof buildGithubIssueDraft>) {
+  return {
+    prepared: Boolean(issueDraft),
+    responseProjection: {
+      rawIssueDraftEchoed: false,
+      rawIssueTitleEchoed: false,
+      rawIssueBodyEchoed: false,
+      rawIssueLabelsEchoed: false,
+    },
+  };
+}
+
 async function persistProviderWebhookReconciliation(input: {
   tenantId: string | null;
   providerDeliveryId: string;
@@ -47,9 +105,9 @@ async function persistProviderWebhookReconciliation(input: {
   if (!input.tenantId) {
     return {
       persistence: "tenant-unresolved",
-      providerWebhookDeliveryId: null,
-      auditLogId: null,
-      matchedErrorReportId: null,
+      providerWebhookDeliveryRecorded: false,
+      auditLogged: false,
+      matchedErrorReportResolved: false,
       statusMutated: false,
       replayProtection: "idempotency-key-returned-no-tenant-write",
     };
@@ -62,7 +120,7 @@ async function persistProviderWebhookReconciliation(input: {
           tenantId: input.tenantId!,
           provider: "sentry",
           providerDeliveryId: input.providerDeliveryId,
-          idempotencyKey: input.idempotencyKey,
+          idempotencyKey: idempotencyStorageFingerprint(input.idempotencyKey),
           providerFingerprint: input.providerFingerprint,
           action: "sentry.webhook.reconcile",
           targetErrorStatus: input.targetErrorStatus,
@@ -99,15 +157,18 @@ async function persistProviderWebhookReconciliation(input: {
           metadata: {
             provider: "sentry",
             providerDeliveryId: input.providerDeliveryId,
-            idempotencyKey: input.idempotencyKey,
+            rawProviderDeliveryIdStored: false,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
             providerFingerprint: input.providerFingerprint,
             targetErrorStatus: input.targetErrorStatus,
             previousErrorStatus: existingErrorReport?.status ?? null,
-            matchedErrorReportId: updatedErrorReport?.id ?? null,
+            matchedErrorReportResolved: Boolean(updatedErrorReport),
             statusMutated: Boolean(updatedErrorReport),
             rawPayloadStored: input.rawPayloadStored,
             sanitizedProviderPayload: input.sanitizedPayload,
-            providerWebhookDeliveryId: providerWebhookDelivery.id,
+            providerWebhookDeliveryRecorded: true,
+            internalPersistenceIdsStored: false,
             replayProtection: "ProviderWebhookDelivery unique provider/idempotency constraint claimed before side effects",
           },
         },
@@ -124,9 +185,9 @@ async function persistProviderWebhookReconciliation(input: {
 
       return {
         persistence: "database-provider-webhook-delivery-transaction",
-        providerWebhookDeliveryId: providerWebhookDelivery.id,
-        auditLogId: auditLog.id,
-        matchedErrorReportId: updatedErrorReport?.id ?? null,
+        providerWebhookDeliveryRecorded: true,
+        auditLogged: true,
+        matchedErrorReportResolved: Boolean(updatedErrorReport),
         statusMutated: Boolean(updatedErrorReport),
         replayProtection: "provider-webhook-delivery-unique-constraint",
       };
@@ -135,9 +196,9 @@ async function persistProviderWebhookReconciliation(input: {
     if (isUniqueConstraintViolation(error)) {
       return {
         persistence: "duplicate-provider-webhook-delivery",
-        providerWebhookDeliveryId: null,
-        auditLogId: null,
-        matchedErrorReportId: null,
+        providerWebhookDeliveryRecorded: false,
+        auditLogged: false,
+        matchedErrorReportResolved: false,
         statusMutated: false,
         replayProtection: "provider-webhook-delivery-unique-constraint-replay-rejected",
       };
@@ -145,9 +206,9 @@ async function persistProviderWebhookReconciliation(input: {
 
     return {
       persistence: isDatabaseUnavailable(error) ? "database-unavailable" : "database-write-rejected",
-      providerWebhookDeliveryId: null,
-      auditLogId: null,
-      matchedErrorReportId: null,
+      providerWebhookDeliveryRecorded: false,
+      auditLogged: false,
+      matchedErrorReportResolved: false,
       statusMutated: false,
       replayProtection: "idempotency-key-returned-transaction-not-committed",
     };
@@ -260,10 +321,20 @@ export async function POST(request: NextRequest) {
         },
         data: {
           receivedSignatureHeader: "present",
-          providerDeliveryId: reconciliationPlan.providerDeliveryId,
-          idempotencyKey: reconciliationPlan.idempotencyKey,
+          providerDeliveryFingerprint: idempotencyStorageFingerprint(reconciliationPlan.providerDeliveryId),
+          responseProjection: {
+            rawIdempotencyKeyEchoed: false,
+            rawProviderDeliveryIdEchoed: false,
+            rawProviderPayloadEchoed: false,
+            providerWebhookDeliveryIdEchoed: false,
+            auditLogIdEchoed: false,
+            matchedErrorReportIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           durablePersistence: persistenceResult.persistence,
-          providerWebhookDeliveryId: persistenceResult.providerWebhookDeliveryId,
+          providerWebhookDeliveryRecorded: persistenceResult.providerWebhookDeliveryRecorded,
+          auditLogged: persistenceResult.auditLogged,
+          matchedErrorReportResolved: persistenceResult.matchedErrorReportResolved,
           replayProtection: persistenceResult.replayProtection,
           ownership: reconciliationPlan.ownership,
           productionBoundary: { providerWebhookDurablePersistenceRequired: true },
@@ -273,34 +344,47 @@ export async function POST(request: NextRequest) {
     );
   }
   const reconciliationContract = buildProviderWebhookReconciliationContract();
+  const workflow = buildAgenticBugFixWorkflow(report);
+  const issueDraft = buildGithubIssueDraft(report);
 
   return NextResponse.json(
     {
       ok: true,
       data: {
         receivedSignatureHeader: "present",
-        providerDeliveryId: reconciliationPlan.providerDeliveryId,
-        idempotencyKey: reconciliationPlan.idempotencyKey,
+        providerDeliveryFingerprint: idempotencyStorageFingerprint(reconciliationPlan.providerDeliveryId),
+        responseProjection: {
+          rawIdempotencyKeyEchoed: false,
+          rawProviderDeliveryIdEchoed: false,
+          rawProviderPayloadEchoed: false,
+          providerWebhookDeliveryIdEchoed: false,
+          auditLogIdEchoed: false,
+          matchedErrorReportIdEchoed: false,
+          rawReportEchoed: false,
+          rawWorkflowEchoed: false,
+          rawIssueDraftEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         reconciliation: {
           provider: reconciliationPlan.provider,
           action: reconciliationPlan.action,
           targetErrorStatus: reconciliationPlan.targetErrorStatus,
           persistence: "durable-provider-webhook-attempt",
           durablePersistence: persistenceResult.persistence,
-          providerWebhookDeliveryId: persistenceResult.providerWebhookDeliveryId,
-          auditLogId: persistenceResult.auditLogId,
-          matchedErrorReportId: persistenceResult.matchedErrorReportId,
+          providerWebhookDeliveryRecorded: persistenceResult.providerWebhookDeliveryRecorded,
+          auditLogged: persistenceResult.auditLogged,
+          matchedErrorReportResolved: persistenceResult.matchedErrorReportResolved,
           statusMutated: persistenceResult.statusMutated,
           replayProtection: persistenceResult.replayProtection,
           ownership: reconciliationPlan.ownership,
           rawPayloadStored: reconciliationPlan.rawPayloadStored,
-          sanitizedProviderPayload: reconciliationPlan.sanitizedPayload,
+          sanitizedProviderPayload: buildSafeSentryWebhookPayloadPreview(reconciliationPlan.sanitizedPayload),
           artifactPaths: providerWebhookReconciliationArtifactPaths,
           contractStatus: reconciliationContract.status,
         },
-        report,
-        workflow: buildAgenticBugFixWorkflow(report),
-        issueDraft: buildGithubIssueDraft(report),
+        report: buildSafeSentryWebhookReportResponse(report),
+        workflow: buildSafeSentryWebhookWorkflowResponse(workflow),
+        issueDraft: buildSafeSentryWebhookIssueDraftResponse(issueDraft),
         requiredNextWork: [
           "Run live Sentry webhook replay/idempotency proof against the configured provider secret.",
           "Promote seeded ErrorReport status-mutation and provider no-PII artifact checks from static coverage to integration evidence.",

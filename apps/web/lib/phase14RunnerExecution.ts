@@ -249,8 +249,12 @@ const phase14RunnerSensitivePatterns = [
   /(scaffold[_-]?diff[_-]?artifact[_-]?path['":=\s]+)[^"',\s}]+/gi,
   /(flaky[_-]?policy[_-]?artifact[_-]?path['":=\s]+)[^"',\s}]+/gi,
   /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /postgres(?:ql)?:\/\/[^\s"'<>]+/gi,
   /(token['":=\s]+)[^"',\s}]+/gi,
   /(secret['":=\s]+)[^"',\s}]+/gi,
+  /\b(?:tenant|user|client|runner|phase14|artifact|triage|scaffold|flaky|coverage|junit|report|trace|screenshot|video|workflow|ci|run|commit|manifest|branch|check)[-_:/]?[A-Za-z0-9_.-]{6,}\b/gi,
+  /\b(?:coverage|test-results|playwright-report|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi,
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
 ] as const;
@@ -271,7 +275,7 @@ export function buildRedactedPhase14RunnerArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|artifactManifest|triageArtifactPath|scaffoldDiffArtifactPath|flakyPolicyArtifactPath|installLog|testOutput/i.test(key)
+        /email|phone|token|secret|authorization|credential|password|raw|body|payload|stack|error|log|output|transcript|command|env|database|dsn|ciRunUrl|commitSha|runId|artifactManifest|triageArtifactPath|scaffoldDiffArtifactPath|flakyPolicyArtifactPath|installLog|testOutput|trace|screenshot|video|playwright|manifest|verifier|branch|protection|coverage|junit|json|report|diff|path|flaky|policy/i.test(key)
           ? "[REDACTED]"
           : buildRedactedPhase14RunnerArtifact(entry),
       ]),

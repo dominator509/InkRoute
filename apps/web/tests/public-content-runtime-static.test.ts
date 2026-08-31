@@ -33,6 +33,8 @@ describe("public content runtime evidence contract", () => {
   const publicTravelRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/travel/route.ts");
   const publicReviewsRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/reviews/route.ts");
   const publicFaqRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/faq/route.ts");
+  const publicSeoCityRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/seo/cities/[citySlug]/route.ts");
+  const publicSeoStyleRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/seo/styles/[styleSlug]/route.ts");
   const dashboardReviewRoute = readRepoFile("apps/dashboard/app/api/reviews/route.ts");
   const dashboardReviewTest = readRepoFile("apps/dashboard/tests/review-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
@@ -81,11 +83,26 @@ describe("public content runtime evidence contract", () => {
     expect(publicContentApiSource).toContain("resolvePublicTenantScope");
     expect(publicContentApiSource).toContain("prismaRuntime.tenant.findUnique");
     expect(publicContentApiSource).toContain('source: "database"');
+    expect(publicContentApiSource).toContain("rows.flatMap");
+    expect(publicContentApiSource).toContain("if (!image?.imageUrl) return []");
+    expect(publicContentApiSource).not.toContain('?? "/demo/portfolio/placeholder.svg"');
+    expect(publicContentApiSource).toContain("tenantIdEchoed: false");
+    expect(publicContentApiSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(publicContentApiSource).toContain("rawPrivateFieldsEchoed: false");
+    expect(publicContentApiSource).toContain("buildSafeLocalPublicContentRouteResponse");
+    expect(publicContentApiSource).toContain("buildSafeLocalPublicContentPageResponse");
+    expect(publicContentApiSource).toContain("rawLocalRuntimeRecordEchoed: false");
     for (const routeSource of [publicPortfolioRoute, publicTravelRoute, publicReviewsRoute, publicFaqRoute]) {
       expect(routeSource).toContain("publicReadQuerySchema.safeParse");
       expect(routeSource).toContain('code: "VALIDATION_FAILED"');
-      expect(routeSource).toContain("query: { limit: query.data.limit }");
-      expect(routeSource).toContain(".slice(0, query.data.limit)");
+      expect(routeSource).toContain("buildSafeLocalPublicContentRouteResponse");
+      expect(routeSource).toContain("tenantIdEchoed: false");
+      expect(routeSource).not.toContain("{ ...local, query");
+      expect(routeSource).not.toContain("tenantId: tenant.tenantId,\n            source");
+    }
+    for (const routeSource of [publicSeoCityRoute, publicSeoStyleRoute]) {
+      expect(routeSource).toContain("buildSafeLocalPublicContentPageResponse");
+      expect(routeSource).not.toContain("{ ...local, data: local.data[0] }");
     }
     expect(dashboardReviewRoute).toContain("reviews");
     expect(dashboardReviewTest).toContain("private");
@@ -224,6 +241,11 @@ describe("public content runtime evidence contract", () => {
       portfolioAssetId: "file_1234567890abcdefghijklmnopqrstuvwxyz",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+        renderedHtml: "<main>client@example.com private portfolio copy</main>",
+        apiJson: { tenantSlug: "tenant-demo", privateReviewBody: "private review text" },
+        cacheRevalidationTag: "tenant-demo:portfolio:private",
+        waitlistRequestBody: "Client wants a private appointment",
+        faqDraftBody: "Private FAQ draft",
         publicSummary: "public content evidence captured",
       },
     });

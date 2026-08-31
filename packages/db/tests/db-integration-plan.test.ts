@@ -50,8 +50,9 @@ describe("database integration test plan", () => {
     };
     const helpers = readWorkspaceFile("packages/db/src/tenant-scope.ts");
 
+    expect(schema).toContain("model Tenant " );
+
     for (const model of [
-      "Tenant",
       "TenantMember",
       "BookingRequest",
       "Appointment",
@@ -76,7 +77,7 @@ describe("database integration test plan", () => {
     expect(schema).toContain("@@unique([tenantId, userId])");
     expect(schema).toContain("@@index([tenantId, status, createdAt])");
     expect(schema).toContain("model AuditLog");
-    expect(schema).toContain("actorId");
+    expect(schema).toContain("actorUserId");
     expect(schema).toContain("entityType");
     expect(schema).toContain("entityId");
   });

@@ -19,6 +19,49 @@ describe("dashboard travel read route contract", () => {
       expect(source).not.toContain('}, { status: 500 });');
     }
     expect(detailRouteSource).not.toContain('}, { status: 404 });');
+    for (const source of [listRouteSource, detailRouteSource]) {
+      expect(source).toContain("auditLogged: true");
+      expect(source).toContain("auditIdEchoed: false");
+      expect(source).toContain("internalPersistenceIdsEchoed: false");
+      expect(source).not.toContain("auditId: result.audit.id");
+    }
+    expect(detailRouteSource).toContain("travelScheduleIdEchoed: false");
+    expect(detailRouteSource).toContain("tenantIdEchoed: false");
+    expect(detailRouteSource).toContain("artistIdEchoed: false");
+    expect(detailRouteSource).toContain("travelCityIdEchoed: false");
+    expect(detailRouteSource).toContain("availabilityWindowIdsEchoed: false");
+    expect(detailRouteSource).toContain("bookingRequestIdsEchoed: false");
+    expect(detailRouteSource).toContain("appointmentIdsEchoed: false");
+    expect(detailRouteSource).toContain("responseProjection: buildTravelDetailResponseProjection()");
+    expect(detailRouteSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(detailRouteSource).toContain("buildSafeLocalTravelStop");
+    expect(detailRouteSource).not.toContain("tenantId,\n        persistence");
+    expect(detailRouteSource).not.toContain("tenantId,\n          travelScheduleId");
+    expect(detailRouteSource).not.toContain("travel,\n        gapIds");
+    expect(listRouteSource).toContain("buildSafeTravelReadRecord");
+    expect(listRouteSource).toContain("function buildTravelListResponseProjection");
+    expect(listRouteSource).toContain("travelScheduleIdsEchoed: false");
+    expect(listRouteSource).toContain("tenantIdEchoed: false");
+    expect(listRouteSource).toContain("artistIdsEchoed: false");
+    expect(listRouteSource).toContain("travelCityIdsEchoed: false");
+    expect(listRouteSource).toContain("availabilityWindowIdsEchoed: false");
+    expect(listRouteSource).toContain("bookingRequestIdsEchoed: false");
+    expect(listRouteSource).toContain("appointmentIdsEchoed: false");
+    expect(listRouteSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(listRouteSource).not.toContain("tenantId,\n          error:");
+    expect(listRouteSource).not.toContain("tenantId,\n        persistence");
+    expect(listRouteSource).not.toContain("id: row.id");
+    expect(listRouteSource).not.toContain("tenantId: row.tenantId");
+    expect(listRouteSource).not.toContain("artistId: row.artistId");
+    expect(listRouteSource).not.toContain("cityId: row.travelCity.id");
+    expect(listRouteSource).not.toContain("id: window.id");
+    expect(detailRouteSource).not.toContain("id: result.row.id");
+    expect(detailRouteSource).not.toContain("tenantId: result.row.tenantId");
+    expect(detailRouteSource).not.toContain("artistId: result.row.artistId");
+    expect(detailRouteSource).not.toContain("cityId: result.row.travelCity.id");
+    expect(detailRouteSource).not.toContain("id: window.id");
+    expect(detailRouteSource).not.toContain("id: booking.id");
+    expect(detailRouteSource).not.toContain("id: appointment.id");
   });
 
   it("uses Prisma travel reads with projection redaction and sensitive-read audit logs", () => {
@@ -33,6 +76,8 @@ describe("dashboard travel read route contract", () => {
       expect(source).toContain("tx.auditLog.create");
       expect(source).toContain('redaction: "buildTenantDashboardView"');
       expect(source).toContain("redactsInternalNotes");
+      expect(source).toContain('internalNotes: window.internalNotes ? "[redacted-dashboard-field]" : null');
+      expect(source).toContain("hasInternalNotes: Boolean(window.internalNotes)");
     }
   });
 

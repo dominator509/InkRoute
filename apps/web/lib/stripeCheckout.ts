@@ -131,9 +131,11 @@ export interface StripeCheckoutRouteContract {
   safeBrowserResponse: {
     provider: "stripe";
     mode: "redirect";
-    checkoutUrl: string | null;
-    providerSessionId: string | null;
-    idempotencyKey: string;
+    providerRedirectValidated: boolean;
+    providerCheckoutUrlEchoed: false;
+    providerSessionIdEchoed: false;
+    idempotencyPersisted: boolean;
+    rawIdempotencyKeyEchoed: false;
   };
   boundary: string;
 }
@@ -155,18 +157,22 @@ export function buildStripeCheckoutSafeBrowserResponse(input: {
     return {
       provider: "stripe",
       mode: "redirect",
-      checkoutUrl: null,
-      providerSessionId: null,
-      idempotencyKey: input.idempotencyKey,
+      providerRedirectValidated: false,
+      providerCheckoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      idempotencyPersisted: Boolean(input.idempotencyKey),
+      rawIdempotencyKeyEchoed: false,
     };
   }
 
   return {
     provider: "stripe",
     mode: "redirect",
-    checkoutUrl: input.providerSession.url,
-    providerSessionId: input.providerSession.id,
-    idempotencyKey: input.idempotencyKey,
+    providerRedirectValidated: true,
+    providerCheckoutUrlEchoed: false,
+    providerSessionIdEchoed: false,
+    idempotencyPersisted: Boolean(input.idempotencyKey),
+    rawIdempotencyKeyEchoed: false,
   };
 }
 
@@ -281,9 +287,11 @@ export function buildStripeCheckoutRouteContract(input: CreateDepositSessionInpu
     safeBrowserResponse: {
       provider: "stripe",
       mode: "redirect",
-      checkoutUrl: null,
-      providerSessionId: null,
-      idempotencyKey: readiness.draft.idempotencyKey,
+      providerRedirectValidated: false,
+      providerCheckoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      idempotencyPersisted: Boolean(readiness.draft.idempotencyKey),
+      rawIdempotencyKeyEchoed: false,
     },
     boundary:
       "Stripe Checkout now has an installed SDK, pinned API-version contract, explicit route adapter, tenant-scoped idempotency/persistence/audit transaction seam, redirect controls, and runtime-readiness contract; Stripe secrets, live provider calls, provider-backed DB execution, and provider transcripts remain gated.",

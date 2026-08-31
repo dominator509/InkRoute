@@ -662,7 +662,9 @@ describe("SEO engine helpers", () => {
     expect(plan.writes.map((write) => write.model)).toEqual(["SeoCityPage", "SeoAssociation", "AuditLog", "RevalidationJob"]);
     expect(plan.auditAction).toBe("seo.SeoCityPage.publish");
     expect(plan.revalidation.paths).toContain("/cities/seattle-wa");
-    expect(plan.idempotencyKey).toContain("tenant_001");
+    expect(plan.idempotencyKey).toMatch(/^seo:[a-f0-9]{64}$/);
+    expect(plan.idempotencyKey).not.toContain("tenant_001");
+    expect(plan.idempotencyKey).not.toContain("/cities/seattle-wa");
   });
   it("blocks SEO mutations for cross-tenant records and unauthorized dashboard roles", () => {
     const route = createSeoRouteRecord({

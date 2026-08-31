@@ -951,15 +951,17 @@ export const prGapEvidenceEnforcementExecutionPolicy: PrGapEvidenceEnforcementEx
 };
 
 const sensitivePrGapEvidenceKeyPattern =
-  /(token|secret|password|authorization|cookie|env|provider|projectId|branchProtection|pullRequest|prUrl|checkRun|artifactUrl|ciRunUrl|tenantId|userId|runId|email|phone|log|payload)/i;
+  /(token|secret|password|authorization|cookie|env|provider|projectId|branchProtection|repositorySettings|pullRequest|prUrl|checkRun|statusCheck|artifact|artifactUrl|ci|ciRun|ciRunUrl|tenantId|userId|runId|email|phone|log|payload|raw|request|response|diff|patch|fixture|gapAudit|quality|mergeBlock|passingPr|failingPr|secretSafe|review|reviewer|codeowner|codeowners|command|output|transcript|path|url|uri|database|dsn|stack|error|actor|metadata)/i;
 
 const sensitivePrGapEvidenceStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:ghp|gho|ghu|ghs|sk|pk|rk|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|artifact|run|pr|branch|check)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|project|provider|artifact|run|pr|branch|check|merge|block|gap|quality|workflow|ci|commit|fixture|diff|review|reviewer|codeowner|codeowners|actor)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:artifacts|coverage|test-results|reports|diffs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export interface PrGapEvidenceEnforcementRunPersistenceContract {
@@ -1991,9 +1993,9 @@ export function buildPrDiffEvidenceEvidenceDecision(
 }
 
 const sensitivePrDiffEvidenceKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|branch|repository|owner)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|branch|repository|owner|diff|patch|fixture|artifact|path|audit|gap|quality|ci|workflow|run|merge|base|fallback|positive|negative|secretSafe|review|reviewer|codeowner|codeowners|command|output|log|transcript|raw|payload|request|response|stack|error|provider|metadata)$/iu;
 const sensitivePrDiffEvidenceValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|account|branch|repository|owner|diff|patch|fixture|artifact|audit|gap|quality|pull.?request|pr|merge|base|fallback|workflow|ci|run|commit|reviewer|codeowner|codeowners|provider)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:scripts|artifacts|coverage|test-results|reports|diffs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactPrDiffEvidenceString = (value: string): string =>
   value.replace(sensitivePrDiffEvidenceValuePattern, "[REDACTED]");

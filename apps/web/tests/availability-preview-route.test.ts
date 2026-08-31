@@ -14,6 +14,20 @@ describe("availability preview route", () => {
     expect(routeSource).toContain("conflictWritesPersisted: false");
     expect(routeSource).toContain("providerSyncExecuted: false");
     expect(routeSource).toContain("staticPreviewDisabled: true");
+    expect(routeSource).toContain("buildPublicWindowReceipt");
+    expect(routeSource).toContain("buildPublicSlotReceipts");
+    expect(routeSource).toContain("buildPublicConflictReceipts");
+    expect(routeSource).toContain("rawAvailabilityWindowEchoed: false");
+    expect(routeSource).toContain("rawAvailabilityWindowsEchoed: false");
+    expect(routeSource).toContain("rawSlotObjectEchoed: false");
+    expect(routeSource).toContain("rawSlotObjectsEchoed: false");
+    expect(routeSource).toContain("rawConflictObjectEchoed: false");
+    expect(routeSource).toContain("rawConflictObjectsEchoed: false");
+    expect(routeSource).toContain("availabilityWindowIdEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("artistIdEchoed: false");
+    expect(routeSource).toContain("conflictIdsEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
   });
 
   it("returns 404 for unknown tenant availability previews", async () => {
@@ -38,9 +52,10 @@ describe("availability preview route", () => {
       status: string;
       gapIds: string[];
       data: {
-        window: { id: string; timezone: string; status: string };
-        slots: Array<{ id: string; status: string; conflictIds: string[] }>;
-        conflicts: Array<{ severity: string; conflictingBlockId: string; reason: string }>;
+        window: { timezone: string; status: string; responseProjection: { rawAvailabilityWindowEchoed: boolean; availabilityWindowIdEchoed: boolean; tenantIdEchoed: boolean; artistIdEchoed: boolean } };
+        slots: Array<{ status: string; conflictCount: number; responseProjection: { rawSlotObjectEchoed: boolean; slotIdEchoed: boolean; conflictIdsEchoed: boolean } }>;
+        conflicts: Array<{ severity: string; conflictingBlockLinked: boolean; reason: string; responseProjection: { rawConflictObjectEchoed: boolean; conflictingBlockIdEchoed: boolean } }>;
+        responseProjection: { rawAvailabilityWindowsEchoed: boolean; rawSlotObjectsEchoed: boolean; rawConflictObjectsEchoed: boolean; availabilityWindowIdsEchoed: boolean; tenantIdEchoed: boolean; artistIdEchoed: boolean; conflictIdsEchoed: boolean; internalPersistenceIdsEchoed: boolean };
       };
     };
 
@@ -50,18 +65,37 @@ describe("availability preview route", () => {
     expect(payload.status).toBe("static_preview_not_persistent");
     expect(payload.gapIds).toEqual(["GAP-009", "GAP-056", "GAP-057"]);
     expect(payload.data.window).toMatchObject({
-      id: "public_preview_seattle_flash",
       timezone: "America/Los_Angeles",
       status: "open",
+      responseProjection: {
+        rawAvailabilityWindowEchoed: false,
+        availabilityWindowIdEchoed: false,
+        tenantIdEchoed: false,
+        artistIdEchoed: false,
+      },
+    });
+    expect(payload.data.window).not.toHaveProperty("id");
+    expect(payload.data.window).not.toHaveProperty("tenantId");
+    expect(payload.data.window).not.toHaveProperty("artistId");
+    expect(payload.data.responseProjection).toMatchObject({
+      rawAvailabilityWindowsEchoed: false,
+      rawSlotObjectsEchoed: false,
+      rawConflictObjectsEchoed: false,
+      availabilityWindowIdsEchoed: false,
+      tenantIdEchoed: false,
+      artistIdEchoed: false,
+      conflictIdsEchoed: false,
+      internalPersistenceIdsEchoed: false,
     });
     expect(payload.data.slots.length).toBeGreaterThan(0);
     expect(payload.data.slots.some((slot) => slot.status === "conflicted")).toBe(true);
-    expect(payload.data.slots.some((slot) => slot.conflictIds.includes("appt_flash_noa"))).toBe(true);
+    expect(payload.data.slots.some((slot) => slot.conflictCount > 0 && slot.responseProjection.rawSlotObjectEchoed === false && slot.responseProjection.conflictIdsEchoed === false)).toBe(true);
     expect(payload.data.conflicts).toEqual([
       expect.objectContaining({
         severity: "blocking",
-        conflictingBlockId: "appt_flash_noa",
+        conflictingBlockLinked: true,
         reason: "Appointment times overlap.",
+        responseProjection: { rawConflictObjectEchoed: false, conflictingBlockIdEchoed: false },
       }),
     ]);
   });

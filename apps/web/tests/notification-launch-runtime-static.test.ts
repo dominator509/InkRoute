@@ -64,14 +64,14 @@ describe("notification launch runtime contract", () => {
       "pnpm --filter @inkroute/notifications typecheck",
       "pnpm --filter @inkroute/notifications test",
       "notification provider sandbox tests",
-      "notification queue worker source contract tests",
+      "notification queue worker integration tests",
       "provider webhook signature/replay tests",
-      "preference suppression source contract tests",
+      "message thread/preference suppression integration tests",
       "Expo push device smoke",
       "GitHub Actions notification launch evidence job",
     ]);
-    expect(notificationLaunchRuntimeControls).toContain("raw-body-provider-webhook-signature-and-replay-rejection");
-    expect(notificationLaunchRuntimeControls).toContain("redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts");
+    expect(notificationLaunchRuntimeControls).toContain("Verify provider signatures against raw webhook bodies and reject replayed events before side effects.");
+    expect(notificationLaunchRuntimeControls).toContain("Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs.");
     expect(notificationLaunchRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "notifications-typecheck",
       "notifications-tests",
@@ -121,7 +121,7 @@ describe("notification launch runtime contract", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
       notificationLaunchRunPersisted: false,
-      coveredControls: ["redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts"],
+      coveredControls: ["Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs."],
       capturedArtifacts: [
         "coverage/notification-launch-runtime.json",
         "coverage/notification-typecheck.txt",
@@ -195,7 +195,7 @@ describe("notification launch runtime contract", () => {
     });
     expect(runData.commandMatrix).toBe(notificationLaunchRuntimeMatrix);
     expect(runData.controlManifest).toEqual([
-      "redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts",
+      "Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs.",
     ]);
     expect(runData.providerSendManifest.resendSandboxSendPassed).toBe(false);
     expect(String(persistNotificationLaunchRun)).toContain("repository.notificationLaunchRun.upsert");
@@ -221,7 +221,7 @@ describe("notification launch runtime contract", () => {
     expect(webhookReplayContract).toContain("Raw webhook body must be available");
     expect(webhookReplayContract).toContain("Provider webhook replay detected; reject before side effects.");
     expect(messageReadTest).toContain("body/provider/contact redaction");
-    expect(templateReadTest).toContain("notification template read RBAC");
+    expect(templateReadTest).toContain('assertPermission(actor, "notification:read")');
     expect(emailWebhook).toContain("webhook");
     expect(smsWebhook).toContain("webhook");
     expect(emailWebhook).toContain("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
@@ -256,7 +256,7 @@ describe("notification launch runtime contract", () => {
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "preference center, unsubscribe, STOP, quiet-hours, and rate-limit evidence",
     );
-    expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain("redacted artifact and privacy review evidence");
+    expect(notificationLaunchRuntimeReadiness.requiredEvidence).toContain("redacted artifact and privacy review evidence");
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "tenant-scoped NotificationDelivery, ProviderEvent, and MessageThread persistence evidence",
     );
@@ -306,7 +306,7 @@ describe("notification launch runtime contract", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
       notificationLaunchRunPersisted: false,
-      coveredControls: ["redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts"],
+       coveredControls: ["Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs."],
       capturedArtifacts: [
         "coverage/notification-launch-runtime.json",
         "coverage/notification-typecheck.txt",
@@ -320,17 +320,17 @@ describe("notification launch runtime contract", () => {
       completedCommands: [
         "pnpm --filter @inkroute/notifications typecheck",
         "pnpm --filter @inkroute/notifications test",
-        "notification queue worker source contract tests",
-        "preference suppression source contract tests",
+        "notification queue worker integration tests",
+        "message thread/preference suppression integration tests",
       ],
     });
 
     expect(decision.status).toBe("blocked");
     expect(decision.missingControls).toEqual([
-      "pre-send-consent-preference-suppression-quiet-hours-rate-limit-resolution",
-      "tenant-scoped-delivery-provider-thread-message-audit-idempotency-persistence",
-      "raw-body-provider-webhook-signature-and-replay-rejection",
-      "unsubscribe-stop-help-bounce-complaint-invalid-push-retry-dead-letter-processing",
+      "Resolve consent, preference, suppression, quiet-hours, and rate-limit state immediately before every send.",
+      "Persist NotificationDelivery, ProviderEvent, MessageThread, Message, audit, and idempotency records with tenant scope.",
+      "Verify provider signatures against raw webhook bodies and reject replayed events before side effects.",
+      "Process unsubscribe, STOP/HELP, bounce/complaint, invalid push token, retry, and dead-letter flows before future delivery attempts.",
     ]);
     expect(decision.missingArtifacts).toEqual([
       "coverage/notification-provider-sandbox.json",
@@ -402,8 +402,8 @@ describe("notification launch runtime contract", () => {
     expect(executionPlan.localCommands).toEqual([
       "pnpm --filter @inkroute/notifications typecheck",
       "pnpm --filter @inkroute/notifications test",
-      "notification queue worker source contract tests",
-      "preference suppression source contract tests",
+      "notification queue worker integration tests",
+      "message thread/preference suppression integration tests",
     ]);
     expect(executionPlan.externalCommands).toBe(notificationLaunchExternalCommands);
     expect(executionPlan.externalCommands).toEqual([
@@ -443,6 +443,10 @@ describe("notification launch runtime contract", () => {
         providerEventId: "evt_notification_launch_1234567890",
         publicSummary: "notification launch provider evidence captured",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_notification_launch",
+      reviewerHandle: "reviewer_notification_owner",
+      codeownerSelector: "CODEOWNER:notifications-platform-team",
     };
     const redactedOnly = buildRedactedNotificationLaunchArtifact(artifact);
     const review = buildNotificationLaunchArtifactReview(artifact);
@@ -454,6 +458,10 @@ describe("notification launch runtime contract", () => {
     expect(serialized).not.toContain("Raw client message body");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("evt_notification_launch_1234567890");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_notification_launch");
+    expect(serialized).not.toContain("reviewer_notification_owner");
+    expect(serialized).not.toContain("CODEOWNER:notifications-platform-team");
     expect(review.redactions).toEqual([
       "providerToken",
       "destinationEmail",
@@ -461,6 +469,11 @@ describe("notification launch runtime contract", () => {
       "messageBody",
       "nested.databaseUrl",
       "nested.providerEventId",
+      "nested.publicSummary",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(notificationLaunchRequiredExternalEvidence);
@@ -475,7 +488,7 @@ describe("notification launch runtime contract", () => {
     expect(gapTracker).toContain("NotificationLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/notificationLaunchRuntime.ts");
     expect(gapTracker).toContain("persistNotificationLaunchRun upsert seam");
-    expect(gapTracker).toContain("preference/unsubscribe DB-first route persistence is credited through GAP-067");
+    expect(gapTracker).toContain("preference/unsubscribe DB-first route persistence plus safe public preference and unsubscribe persistence response projections without internal ID echoes are credited through GAP-067");
     expect(gapTracker).toContain("live notification typecheck/tests, provider SDK configuration, sandbox/device sends, live provider-backed queue execution and retry/dead-letter execution evidence, delivery/provider/message persistence integration, live provider-driven STOP/quiet-hours suppression execution, signed webhook replay source controls, tenant isolation, live CI secret-safe redaction/privacy artifact review, CI evidence, provider-backed persistNotificationLaunchRun execution, and secret-safe artifacts remain open");
     expect(gapTracker).toContain("GAP-010 is notification-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");

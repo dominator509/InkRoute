@@ -728,7 +728,12 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toBe(releasePersistenceRbacReadinessRequiredEvidence);
+    expect(plan.requiredEvidence).toEqual([
+      releasePersistenceRbacReadinessRequiredEvidence[0],
+      releasePersistenceRbacReadinessRequiredEvidence[2],
+      releasePersistenceRbacReadinessRequiredEvidence[3],
+      releasePersistenceRbacReadinessRequiredEvidence[4],
+    ]);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",

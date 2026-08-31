@@ -326,15 +326,17 @@ export interface PerformanceLoadRuntimeRedactedArtifactPacket {
 }
 
 const sensitivePerformanceLoadKeyPattern =
-  /(token|secret|password|authorization|cookie|databaseUrl|dbUrl|ciRunUrl|providerId|stripePayload|payload|queryPlan|routeUrl|email|phone|tenantId|userId|runId)/i;
+  /(token|secret|password|authorization|cookie|databaseUrl|dbUrl|ciRunUrl|providerId|stripePayload|payload|queryPlan|routeUrl|email|phone|tenantId|userId|runId|raw|body|stack|error|log|output|transcript|database|dsn|lighthouse|core.?web.?vitals|cwv|trace|screenshot|video|artifact|command|request|response|explain|analyze|benchmark|image|regression|triage|route|url|path|booking|webhook|upload|stripe|provider|commitSha|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const sensitivePerformanceLoadStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|artist|client|booking|run)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|artist|client|booking|run|route|load|webhook|upload|stripe|lighthouse|cwv|workflow|ci|commit|trace|artifact|query|image|regression|repository|repo|branch|pull|pr|reviewer|codeowner)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:artifacts|coverage|test-results|reports)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export function buildPerformanceLoadRuntimeEvidenceDecision(

@@ -1,4 +1,13 @@
 import type { MessageChannel, MessageDirection, MessageStatus, NotificationChannel, NotificationStatus } from "@inkroute/types";
+import { createHash } from "node:crypto";
+
+function buildHashedIdempotencyKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
+function buildHashedSelector(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
 
 export type NotificationTemplateKey =
   | "booking_request_received"
@@ -117,8 +126,9 @@ export interface DeliveryLogDraft {
   provider: NotificationProvider;
   status: NotificationStatus;
   destinationHash: string;
-  providerMessageId?: string | undefined;
+  providerMessageIdHash?: string | undefined;
   providerStatus?: string | undefined;
+  rawProviderMessageIdEchoed: false;
   redactionSummary: string;
   shouldWriteAuditLog: boolean;
 }
@@ -129,8 +139,10 @@ export interface MessageThreadDraft {
   direction: MessageDirection;
   status: MessageStatus;
   bodyPreview: string;
-  relatedBookingRequestId?: string | undefined;
-  relatedAppointmentId?: string | undefined;
+  relatedBookingRequestIdHash?: string | undefined;
+  relatedAppointmentIdHash?: string | undefined;
+  rawRelatedBookingRequestIdEchoed: false;
+  rawRelatedAppointmentIdEchoed: false;
   piiRedactionNote: string;
 }
 
@@ -691,11 +703,7 @@ function maskPhone(phone: string): string {
 
 function stableDestinationHash(destination: string | undefined): string {
   if (!destination) return "missing_destination";
-  let hash = 0;
-  for (let index = 0; index < destination.length; index += 1) {
-    hash = (hash * 31 + destination.charCodeAt(index)) % 1_000_000_007;
-  }
-  return `masked_${hash.toString(16)}`;
+  return `masked_${createHash("sha256").update(destination).digest("hex")}`;
 }
 
 export function maskDestination(channel: NotificationChannel, destination: string | undefined): string | undefined {
@@ -1022,14 +1030,20 @@ export function buildDeliveryLogDraft(params: {
 }): DeliveryLogDraft {
   const provider = providerForChannel(params.channel);
   return {
-    idempotencyKey: `${params.tenantId}:${params.clientId ?? "unknown_client"}:${params.notificationType}:${params.channel}`,
+    idempotencyKey: buildHashedIdempotencyKey("delivery-log", [
+      params.tenantId,
+      params.clientId ?? "unknown_client",
+      params.notificationType,
+      params.channel,
+    ]),
     notificationType: params.notificationType,
     channel: params.channel,
     provider,
     status: params.status ?? "queued",
     destinationHash: stableDestinationHash(params.destination),
-    providerMessageId: params.providerMessageId,
+    ...(params.providerMessageId ? { providerMessageIdHash: buildHashedSelector("provider-message", [params.providerMessageId]) } : {}),
     providerStatus: params.providerStatus,
+    rawProviderMessageIdEchoed: false,
     redactionSummary: "Destination is hashed/masked; body content should not be logged in production.",
     shouldWriteAuditLog: notificationTemplateCatalog[params.notificationType].purpose === "transactional",
   };
@@ -1167,7 +1181,7 @@ export function buildEmailProviderSendPlan(input: EmailProviderSendPlanInput): E
     notificationId: input.notificationId,
     deliveryId: input.deliveryId,
     toMasked: input.consent.email ? maskDestination("email", input.consent.email) ?? null : null,
-    idempotencyKey: `email-send:${input.tenantId}:${input.deliveryId}:${input.requestId}`,
+    idempotencyKey: buildHashedIdempotencyKey("email-send", [input.tenantId, input.deliveryId, input.requestId]),
     payloadPreview: {
       subject: delivery.template.subject,
       bodyPreview: compactText(delivery.template.body).slice(0, 180),
@@ -1251,7 +1265,7 @@ export function buildSmsProviderSendPlan(input: SmsProviderSendPlanInput): SmsPr
     notificationId: input.notificationId,
     deliveryId: input.deliveryId,
     toMasked: input.consent.phone ? maskDestination("sms", input.consent.phone) ?? null : null,
-    idempotencyKey: `sms-send:${input.tenantId}:${input.deliveryId}:${input.requestId}`,
+    idempotencyKey: buildHashedIdempotencyKey("sms-send", [input.tenantId, input.deliveryId, input.requestId]),
     payloadPreview: {
       bodyPreview: smsLimit(delivery.template.smsBody),
       purpose: delivery.template.purpose,
@@ -1279,15 +1293,21 @@ export function buildMessageThreadDraft(params: {
     direction: params.direction ?? "outbound",
     status: params.status ?? "draft",
     bodyPreview: compactText(params.body).slice(0, 240),
-    relatedBookingRequestId: params.relatedBookingRequestId,
-    relatedAppointmentId: params.relatedAppointmentId,
+    ...(params.relatedBookingRequestId
+      ? { relatedBookingRequestIdHash: buildHashedSelector("message-related-booking", [params.relatedBookingRequestId]) }
+      : {}),
+    ...(params.relatedAppointmentId
+      ? { relatedAppointmentIdHash: buildHashedSelector("message-related-appointment", [params.relatedAppointmentId]) }
+      : {}),
+    rawRelatedBookingRequestIdEchoed: false,
+    rawRelatedAppointmentIdEchoed: false,
     piiRedactionNote: "Thread previews should exclude medical notes, payment details, file URLs, and full client contact data from logs.",
   };
 }
 
 export function interpretEmailWebhook(eventType: string): ProviderWebhookInterpretation {
   const normalized = eventType.toLowerCase();
-  const status: NotificationStatus = normalized.includes("delivered") ? "delivered" : normalized.includes("bounce") || normalized.includes("complaint") || normalized.includes("failed") ? "failed" : normalized.includes("sent") ? "sent" : "queued";
+  const status: NotificationStatus = normalized.includes("delivered") ? "delivered" : normalized.includes("bounce") || normalized.includes("complain") || normalized.includes("failed") ? "failed" : normalized.includes("sent") ? "sent" : "queued";
   return {
     provider: "resend",
     eventType,
@@ -1357,7 +1377,7 @@ export function buildProviderEventReconciliationPlan(input: ProviderEventReconci
   const normalizedInbound = input.inboundBody?.trim().toLowerCase();
   const shouldSuppressDestination =
     (input.provider === "twilio" && (normalizedInbound === "stop" || normalizedInbound === "unsubscribe")) ||
-    (input.provider === "resend" && /bounce|complaint|unsubscribe/i.test(input.eventType));
+    (input.provider === "resend" && /bounce|complain|unsubscribe/i.test(input.eventType));
   const shouldMarkPushTokenInactive = input.provider === "expo" && /DeviceNotRegistered|invalid|notregistered/i.test(input.eventType);
 
   if (!input.eventId.trim()) {
@@ -1376,7 +1396,7 @@ export function buildProviderEventReconciliationPlan(input: ProviderEventReconci
   return {
     provider: input.provider,
     eventId: input.eventId,
-    idempotencyKey: `notification-provider-event:${input.provider}:${input.eventId}`,
+    idempotencyKey: buildHashedIdempotencyKey("notification-provider-event", [input.provider, input.eventId]),
     interpretation,
     shouldUpdateDeliveryLog: blockers.length === 0 && interpretation.shouldUpdateDeliveryLog,
     shouldSuppressDestination,
@@ -1470,7 +1490,7 @@ export function buildSmsWebhookRuntimeReadinessPlan(input: SmsWebhookRuntimeRead
   if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available before SMS callback reconciliation.");
   if (!input.providerEventPersistenceAvailable) blockers.push("ProviderEvent persistence must be available for SMS callback replay protection.");
   if (reconciliation.shouldSuppressDestination && !input.suppressionPersistenceAvailable) blockers.push("Suppression persistence must be available for STOP or unsubscribe SMS events.");
-  if (reconciliation.shouldCreateInboundThread && !input.inboundThreadPersistenceAvailable) blockers.push("Inbound message thread persistence must be available for HELP or client replies.");
+  if (reconciliation.interpretation.requiresInboundMessageHandling && !reconciliation.shouldSuppressDestination && !input.inboundThreadPersistenceAvailable) blockers.push("Inbound message thread persistence must be available for HELP or client replies.");
   if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available before applying SMS callback side effects.");
   if (!input.payloadRedacted) blockers.push("SMS webhook payload must be redacted before audit logging or previews.");
 
@@ -1713,7 +1733,7 @@ export function buildNotificationProviderHandoffWorkerPlan(input: NotificationPr
     status: blockers.length === 0 ? "ready" : "blocked",
     action: input.action,
     provider,
-    idempotencyKey: `notification-provider-handoff:${input.tenantId}:${provider}:${handoffId}:${deliveryId}:${input.action}:${input.now}`,
+    idempotencyKey: buildHashedIdempotencyKey("notification-provider-handoff", [input.tenantId, provider, handoffId, deliveryId, input.action, input.now]),
     nextState,
     requiredWrites: [
       "NotificationProviderHandoff",
@@ -2429,7 +2449,7 @@ export function buildExpoPushDeliveryPlan(input: ExpoPushDeliveryPlanInput): Exp
     tenantId: input.tenantId,
     notificationId: input.notificationId,
     toMasked: input.consent.pushToken ? maskDestination("push", input.consent.pushToken) ?? null : null,
-    idempotencyKey: `expo-push:${input.tenantId}:${input.notificationId}:${input.requestId}`,
+    idempotencyKey: buildHashedIdempotencyKey("expo-push", [input.tenantId, input.notificationId, input.requestId]),
     payloadPreview: {
       title: template.pushTitle,
       body: template.pushBody,
@@ -2467,7 +2487,7 @@ export function buildExpoPushReceiptProcessingPlan(input: ExpoPushReceiptProcess
     deliveryId: input.deliveryId,
     receiptId: input.receiptId,
     normalizedStatus: input.receiptStatus === "ok" ? "delivered" : "failed",
-    idempotencyKey: `expo-receipt:${input.tenantId}:${input.receiptId}:${input.requestId}`,
+    idempotencyKey: buildHashedIdempotencyKey("expo-receipt", [input.tenantId, input.receiptId, input.requestId]),
     shouldUpdateDeliveryLog: blockers.length === 0,
     shouldMarkPushTokenInactive: blockers.length === 0 && invalidToken,
     requiredWrites: ["NotificationDelivery", "ProviderEvent", "PushToken", "AuditLog", "IdempotencyKey"],
@@ -2506,7 +2526,7 @@ export function buildExpoPushTapRoutingPlan(input: ExpoPushTapRoutingPlanInput):
     notificationId: input.notificationId,
     userId: input.userId,
     routePath,
-    idempotencyKey: `expo-push-tap:${input.tenantId}:${input.notificationId}:${input.requestId}`,
+    idempotencyKey: buildHashedIdempotencyKey("expo-push-tap", [input.tenantId, input.notificationId, input.requestId]),
     requiredWrites: ["NotificationInteraction", "AuditLog", "IdempotencyKey"],
     requiredControls: expoPushTapRoutingRequiredControls,
     blockers,
@@ -2538,6 +2558,41 @@ export const notificationPersistenceRequiredControls = [
       "Store only redacted body previews and hashed or masked destinations.",
       "Update read/unread state per tenant user without exposing restricted message fields.",
     ] as const;
+
+function notificationAuditProofHash(value: string | null | undefined): string | null {
+  return value?.trim() ? createHash("sha256").update(value).digest("hex") : null;
+}
+
+function buildNotificationPersistenceAuditProof(input: {
+  threadId?: string | null;
+  messageId?: string | null;
+  notificationId?: string | null;
+  deliveryId?: string | null;
+  clientId?: string | null;
+  actorId?: string | null;
+  destinationHash?: string | null;
+  idempotencyKey?: string | null;
+}): Record<string, unknown> {
+  return {
+    threadIdHash: notificationAuditProofHash(input.threadId),
+    messageIdHash: notificationAuditProofHash(input.messageId),
+    notificationIdHash: notificationAuditProofHash(input.notificationId),
+    deliveryIdHash: notificationAuditProofHash(input.deliveryId),
+    clientIdHash: notificationAuditProofHash(input.clientId),
+    actorIdHash: notificationAuditProofHash(input.actorId),
+    destinationHashPresent: Boolean(input.destinationHash),
+    destinationHashHash: notificationAuditProofHash(input.destinationHash),
+    idempotencyKeyHash: notificationAuditProofHash(input.idempotencyKey),
+    rawThreadIdStored: false,
+    rawMessageIdStored: false,
+    rawNotificationIdStored: false,
+    rawDeliveryIdStored: false,
+    rawClientIdStored: false,
+    rawActorIdStored: false,
+    rawDestinationHashStored: false,
+    rawIdempotencyKeyStored: false,
+  };
+}
 
 export function buildNotificationPersistencePlan(input: NotificationPersistencePlanInput): NotificationPersistencePlan {
   const blockers: string[] = [];
@@ -2577,8 +2632,13 @@ export function buildNotificationPersistencePlan(input: NotificationPersistenceP
     tenantId: input.tenantId,
     payload: model === "NotificationAuditLog"
       ? {
-          ...basePayload,
           action: input.action,
+          templateKey: basePayload.templateKey,
+          channel: basePayload.channel,
+          provider: basePayload.provider,
+          status: basePayload.status,
+          bodyPreview: basePayload.bodyPreview,
+          ...buildNotificationPersistenceAuditProof(basePayload),
         }
       : model === "IdempotencyKey"
         ? {
@@ -2919,11 +2979,7 @@ export function buildNotificationSchedulerPlan(input: NotificationSchedulerPlanI
 
 export function buildPreferenceTokenHash(token: string): string {
   const normalized = token.trim();
-  let hash = 5381;
-  for (let index = 0; index < normalized.length; index += 1) {
-    hash = ((hash << 5) + hash + normalized.charCodeAt(index)) >>> 0;
-  }
-  return `preference_token_${hash.toString(16).padStart(8, "0")}`;
+  return `preference_token:${createHash("sha256").update(normalized).digest("hex")}`;
 }
 
 function preferenceWriteModels(action: PreferenceMutationAction): PreferenceWriteModel[] {
@@ -2951,6 +3007,31 @@ export const preferenceMutationRequiredControls = [
       "Separate transactional permission from marketing opt-in and preserve required service-message rules.",
       "Require legal-approved consent copy before SMS START or tenant preference setting changes.",
     ] as const;
+
+function preferenceProofHash(value: string | null | undefined): string | null {
+  return value?.trim() ? createHash("sha256").update(value).digest("hex") : null;
+}
+
+function buildPreferenceAuditProof(input: {
+  emailHash?: string | null;
+  phoneHash?: string | null;
+  tokenHash?: string | null;
+  idempotencyKey?: string | null;
+}): Record<string, unknown> {
+  return {
+    emailHashPresent: Boolean(input.emailHash),
+    emailHashHash: preferenceProofHash(input.emailHash),
+    phoneHashPresent: Boolean(input.phoneHash),
+    phoneHashHash: preferenceProofHash(input.phoneHash),
+    tokenHashPresent: Boolean(input.tokenHash),
+    tokenHashHash: preferenceProofHash(input.tokenHash),
+    idempotencyKeyHash: preferenceProofHash(input.idempotencyKey),
+    rawEmailHashStored: false,
+    rawPhoneHashStored: false,
+    rawTokenHashStored: false,
+    rawIdempotencyKeyStored: false,
+  };
+}
 
 export function buildPreferenceMutationPlan(input: PreferenceMutationPlanInput): PreferenceMutationPlan {
   const blockers: string[] = [];
@@ -2997,7 +3078,18 @@ export function buildPreferenceMutationPlan(input: PreferenceMutationPlanInput):
           expiresAt: input.tokenExpiresAt ?? null,
         }
       : model === "NotificationAuditLog"
-        ? basePayload
+        ? {
+            action: basePayload.action,
+            clientId: basePayload.clientId,
+            actorId: basePayload.actorId,
+            tokenExpiresAt: basePayload.tokenExpiresAt,
+            emailOptIn: basePayload.emailOptIn,
+            smsOptIn: basePayload.smsOptIn,
+            pushOptIn: basePayload.pushOptIn,
+            marketingOptIn: basePayload.marketingOptIn,
+            transactionalAllowed: basePayload.transactionalAllowed,
+            ...buildPreferenceAuditProof(basePayload),
+          }
         : model === "IdempotencyKey"
           ? {
               key: input.idempotencyKey ?? null,

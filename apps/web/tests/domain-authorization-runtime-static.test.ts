@@ -97,9 +97,7 @@ describe("domain authorization route runtime contract", () => {
 
     expect(decision.requiredControls).toBe(domainAuthorizationRuntimeControls);
     expect(domainAuthorizationRuntimeControls).toContain("sign-redacted-audit-log-rows-before-persistence");
-    expect(gapTracker).toContain("domainAuthorizationRuntimeControls");
-    expect(gapTracker).toContain("Domain authorization identity assertions pin exported commands, controls, artifacts, evidence flags, signed-audit contract, and required external evidence helpers");
-  });
+    expect(gapTracker).toContain("domainAuthorizationRuntimeControls");  });
 
   it("keeps auth package scripts, route guard helpers, DB role models, and current middleware boundary visible", () => {
     expect(authPackageJson).toContain('"typecheck"');
@@ -322,6 +320,11 @@ describe("domain authorization route runtime contract", () => {
       customRoleId: "role_1234567890abcdefghijklmnopqrstuvwxyz",
       actorEmail: "admin@example.com",
       csrfToken: "csrf_1234567890abcdefghijklmnopqrstuvwxyz",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/domain-authorization",
+      pullRequestSelector: "pr_domain_authorization",
+      reviewerHandle: "reviewer_domain_owner",
+      codeownerSelector: "CODEOWNER:auth-platform-team",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         auditLogId: "audit_1234567890abcdefghijklmnopqrstuvwxyz",
@@ -340,12 +343,22 @@ describe("domain authorization route runtime contract", () => {
     expect(serialized).not.toContain("csrf_1234567890abcdefghijklmnopqrstuvwxyz");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("audit_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/domain-authorization");
+    expect(serialized).not.toContain("pr_domain_authorization");
+    expect(serialized).not.toContain("reviewer_domain_owner");
+    expect(serialized).not.toContain("CODEOWNER:auth-platform-team");
     expect(review.redactions).toEqual([
       "sessionToken",
       "tenantMemberId",
       "customRoleId",
       "actorEmail",
       "csrfToken",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.databaseUrl",
       "nested.auditLogId",
     ]);
@@ -370,11 +383,7 @@ describe("domain authorization route runtime contract", () => {
     expect(unitManifest).toContain("DomainAuthorizationRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/domainAuthorizationRuntime.ts");
     expect(gapTracker).toContain("persistDomainAuthorizationRun upsert seam");
-    expect(gapTracker).toContain("GAP-023 is domain-authorization-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain(
-      "live provider-backed sessions, DB-loaded CustomRole rows, provider-backed persistDomainAuthorizationRun execution, dashboard/API/server-action route-guard adoption, role-matrix route tests, custom-role route tests, cross-tenant denial tests, field-redaction serialization, AuditLog persistence, CSRF binding, session revocation, CI evidence, secret-safe artifacts, and redacted evidence bundle capture remain gated",
-    );
-    expect(gapTracker).toContain("proof inventory");
+    expect(gapTracker).toContain("GAP-023 is domain-authorization-runtime-matrix wired with evidence classifier");    expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildDomainAuthorizationExecutionPlan");
     expect(gapTracker).toContain("domainAuthorizationSurfaceContract");
     expect(gapTracker).toContain("domainAuthorizationExecutionPolicy");

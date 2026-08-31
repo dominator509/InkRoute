@@ -306,6 +306,20 @@ describe("testing launch execution runtime contract", () => {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         screenshotPath: "coverage/playwright-screenshots/client@example.com.png",
         artifactId: "artifact_testing_launch_1234567890",
+        commandOutput: "pnpm test failed with PRIVATE_ENV=value",
+        junitXml: "<failure>client@example.com private failure</failure>",
+        failureDebugLog: "stack trace for tenant_private_123",
+        branchProtectionNotes: "required check run_private_123",
+        flakyPolicyText: "quarantine user_private_123",
+        rawProviderOutput: { token: "provider_secret_private_123" },
+        mobileDeviceOutput: "device_private_123",
+        neutralReportTrace: "junit_report_01HZYXZYXZYXZYXZYXZYXZYXZ stored coverage/playwright-report/private/index.html",
+        neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ failed commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        neutralProviderTrace: "provider_test_01HZYXZYXZYXZYXZYXZYXZYXZ replayed mobile_device_01HZYXZYXZYXZYXZYXZYXZYXZ",
+        repositorySelector: "repo:dominator509/InkRoute",
+        pullRequestSelector: "pr_testing_launch",
+        reviewerHandle: "reviewer_testing_owner",
+        codeownerSelector: "CODEOWNER:test-platform-team",
         publicSummary: "testing launch execution evidence captured",
       },
     };
@@ -319,6 +333,21 @@ describe("testing launch execution runtime contract", () => {
     expect(serialized).not.toContain("4242 4242 4242 4242");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("artifact_testing_launch_1234567890");
+    expect(serialized).not.toContain("PRIVATE_ENV=value");
+    expect(serialized).not.toContain("private failure");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("run_private_123");
+    expect(serialized).not.toContain("user_private_123");
+    expect(serialized).not.toContain("provider_secret_private_123");
+    expect(serialized).not.toContain("device_private_123");
+    expect(serialized).not.toContain("junit_report_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("coverage/playwright-report/private/index.html");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("provider_test_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_testing_launch");
+    expect(serialized).not.toContain("reviewer_testing_owner");
+    expect(serialized).not.toContain("CODEOWNER:test-platform-team");
     expect(review.redactions).toEqual([
       "githubToken",
       "userEmail",
@@ -327,6 +356,20 @@ describe("testing launch execution runtime contract", () => {
       "nested.databaseUrl",
       "nested.screenshotPath",
       "nested.artifactId",
+      "nested.commandOutput",
+      "nested.junitXml",
+      "nested.failureDebugLog",
+      "nested.branchProtectionNotes",
+      "nested.flakyPolicyText",
+      "nested.rawProviderOutput",
+      "nested.mobileDeviceOutput",
+      "nested.neutralReportTrace",
+      "nested.neutralCiTrace",
+      "nested.neutralProviderTrace",
+      "nested.repositorySelector",
+      "nested.pullRequestSelector",
+      "nested.reviewerHandle",
+      "nested.codeownerSelector",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(testingLaunchExecutionRequiredExternalEvidence);
@@ -352,6 +395,7 @@ describe("testing launch execution runtime contract", () => {
     expect(gapTracker).toContain("testingLaunchExecutionSurfaceContract");
     expect(gapTracker).toContain("buildRedactedTestingLaunchExecutionArtifact");
     expect(gapTracker).toContain("buildTestingLaunchExecutionArtifactReview");
+    expect(gapTracker).toContain("GAP-012 testing launch execution artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
     expect(gapTracker).toContain("Testing launch execution identity assertions pin exported local/external commands, artifacts, required external evidence, policy, surface contract, and persistence evidence helpers");
   });
 

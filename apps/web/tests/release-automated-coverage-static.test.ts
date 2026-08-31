@@ -235,6 +235,11 @@ describe("GAP-094 release automated coverage contracts", () => {
       providerPayload: { rawBody: "{\"email\":\"artist@example.com\",\"phone\":\"+1 555 222 1010\"}" },
       nested: ["Authorization: Bearer secret-release-token", "contact artist@example.com at +1 (555) 333-4444"],
       stack: "Error: provider failed",
+      playwrightTraceUrl: "https://artifacts.example.com/release-dashboard/trace.zip",
+      expoDeviceId: "device_release_123",
+      workflowRunId: "workflow_run_123",
+      providerRoutePayload: { releaseRecordId: "release_record_123", featureFlagId: "feature_flag_123" },
+      ciArtifactPath: "test-results/release-dashboard/raw-report.json",
     };
 
     const redacted = buildRedactedReleaseAutomatedCoverageArtifact(rawArtifact);
@@ -246,6 +251,12 @@ describe("GAP-094 release automated coverage contracts", () => {
     expect(serialized).not.toContain("artist@example.com");
     expect(serialized).not.toContain("+1 555 222 1010");
     expect(serialized).not.toContain("secret-release-token");
+    expect(serialized).not.toContain("artifacts.example.com");
+    expect(serialized).not.toContain("device_release_123");
+    expect(serialized).not.toContain("workflow_run_123");
+    expect(serialized).not.toContain("release_record_123");
+    expect(serialized).not.toContain("feature_flag_123");
+    expect(serialized).not.toContain("raw-report.json");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(releaseAutomatedCoverageArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

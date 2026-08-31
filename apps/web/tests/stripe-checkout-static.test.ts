@@ -34,14 +34,71 @@ describe("Stripe Checkout route static contract", () => {
   });
 
   it("persists idempotency and audit before provider session creation", () => {
+    const executionSource = checkoutSource.slice(
+      checkoutSource.indexOf("export async function executeStripeCheckoutWithAdapters"),
+    );
     expect(checkoutSource).toContain("verifyStripeDepositAuthorization");
     expect(checkoutSource).toContain("authorization.canCreateCheckout");
-    expect(checkoutSource.indexOf("verifyStripeDepositAuthorization")).toBeLessThan(checkoutSource.indexOf("persistIdempotencyKey"));
-    expect(checkoutSource.indexOf('phase: "before_provider_call"')).toBeLessThan(checkoutSource.indexOf("persistIdempotencyKey"));
-    expect(checkoutSource.indexOf("persistIdempotencyKey")).toBeLessThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf('action: "checkout_session_requested"')).toBeLessThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf('phase: "after_provider_call"')).toBeGreaterThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf("persistProviderSession")).toBeGreaterThan(checkoutSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf("verifyStripeDepositAuthorization")).toBeLessThan(executionSource.indexOf("persistIdempotencyKey"));
+    expect(executionSource.indexOf('phase: "before_provider_call"')).toBeLessThan(executionSource.indexOf("persistIdempotencyKey"));
+    expect(executionSource.indexOf("persistIdempotencyKey")).toBeLessThan(executionSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf('action: "checkout_session_requested"')).toBeLessThan(executionSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf('phase: "after_provider_call"')).toBeGreaterThan(executionSource.indexOf("createCheckoutSession"));
+    expect(executionSource.indexOf("persistProviderSession")).toBeGreaterThan(executionSource.indexOf("createCheckoutSession"));
+  });
+
+  it("allowlists public deposit idempotency replay fields before responding", () => {
+    expect(routeSource).toContain("isRecord(idempotency.result)");
+    expect(routeSource).toContain("tx.deposit.findFirst");
+    expect(routeSource).toContain("tx.payment.findFirst");
+    expect(routeSource).toContain("buildSafeSessionDraftResponse");
+    expect(routeSource).toContain("buildSafeLocalSessionResponse");
+    expect(routeSource).toContain("buildSafeDepositDraftDatabaseResponse");
+    expect(routeSource).toContain("depositPersisted: true");
+    expect(routeSource).toContain("paymentPersisted: true");
+    expect(routeSource).toContain("paymentAuditPersisted: true");
+    expect(routeSource).toContain("bookingStateEventPersisted: true");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).toContain("idempotencyPersisted: true");
+    expect(routeSource).toContain("checkoutUrlsPersisted: false");
+    expect(routeSource).toContain("bookingRequestMatched: true");
+    expect(routeSource).toContain("rawIdempotencyResultEchoed: false");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("rawProviderSessionIdEchoed: false");
+    expect(routeSource).toContain("mockCheckoutUrlEchoed: false");
+    expect(routeSource).not.toContain("url: null");
+    expect(routeSource).toContain("clientReferenceIdEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("bookingRequestIdEchoed: false");
+    expect(routeSource).toContain("localDepositSessionIdEchoed: false");
+    expect(routeSource).not.toContain("idempotency.result.depositId");
+    expect(routeSource).not.toContain("idempotency.result.paymentId");
+    expect(routeSource).not.toContain("auditId: audit.id");
+    expect(routeSource).not.toContain("idempotency: { key: sessionDraft.idempotencyKey");
+    expect(routeSource).not.toContain("idempotencyKey: sessionDraft.idempotencyKey");
+    expect(routeSource).not.toContain("clientReferenceId: draft.clientReferenceId");
+    expect(routeSource).not.toContain("successUrl,\n              cancelUrl");
+    expect(routeSource).not.toContain("bookingRequestId: booking.id,\n              idempotencyKey");
+    expect(routeSource).not.toContain("depositId: deposit.id,\n              paymentId: payment.id");
+  });
+
+  it("allowlists public deposit response fields", () => {
+    expect(routeSource).toContain("depositResponseAllowlisted: true");
+    expect(routeSource).toContain("depositIdEchoed: false");
+    expect(routeSource).toContain("paymentIdEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("buildSafeLocalStoredSessionResponse");
+    expect(routeSource).toContain("persisted: true");
+    expect(routeSource).toContain("amountCents: result.deposit.amountCents");
+    expect(routeSource).toContain("currency: result.deposit.currency");
+    expect(routeSource).toContain("status: result.deposit.status");
+    expect(routeSource).not.toContain("id: result.deposit.id");
+    expect(routeSource).not.toContain("payment: result.payment");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
+    expect(routeSource).not.toContain("...result.deposit");
+    expect(routeSource).not.toContain("storedSession,");
+    expect(routeSource).not.toContain("bookingId: existingBooking.request.id");
   });
 
   it("defines accepted-booking or signed-token authorization before live Checkout", () => {
@@ -98,13 +155,17 @@ describe("Stripe Checkout route static contract", () => {
     expect(checkoutSource).toContain("safeBrowserResponse");
     expect(checkoutSource).toContain("buildStripeCheckoutSafeBrowserResponse");
     expect(checkoutSource).toContain("isStripeHostedCheckoutUrl");
-    expect(checkoutSource).toContain("checkoutUrl");
-    expect(checkoutSource).toContain("providerSessionId");
+    expect(checkoutSource).toContain("providerRedirectValidated");
+    expect(checkoutSource).toContain("providerCheckoutUrlEchoed: false");
+    expect(checkoutSource).toContain("providerSessionIdEchoed: false");
+    expect(checkoutSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(checkoutSource).not.toContain("checkoutUrl: input.providerSession.url");
+    expect(checkoutSource).not.toContain("providerSessionId: input.providerSession.id");
     expect(checkoutSource).not.toContain("STRIPE_SECRET_KEY");
     expect(checkoutSource).not.toContain("client_secret");
   });
 
-  it("serializes only Stripe-hosted Checkout redirect data to the browser", () => {
+  it("serializes only Stripe-hosted Checkout redirect proof to the browser", () => {
     expect(
       buildStripeCheckoutSafeBrowserResponse({
         providerSession: {
@@ -118,9 +179,11 @@ describe("Stripe Checkout route static contract", () => {
     ).toEqual({
       provider: "stripe",
       mode: "redirect",
-      checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test_123",
-      providerSessionId: "cs_test_123",
-      idempotencyKey: "deposit:tenant_demo:booking_demo:15000:usd",
+      providerRedirectValidated: true,
+      providerCheckoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      idempotencyPersisted: true,
+      rawIdempotencyKeyEchoed: false,
     });
 
     expect(
@@ -136,9 +199,11 @@ describe("Stripe Checkout route static contract", () => {
     ).toEqual({
       provider: "stripe",
       mode: "redirect",
-      checkoutUrl: null,
-      providerSessionId: null,
-      idempotencyKey: "deposit:tenant_demo:booking_demo:15000:usd",
+      providerRedirectValidated: false,
+      providerCheckoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      idempotencyPersisted: true,
+      rawIdempotencyKeyEchoed: false,
     });
   });
 

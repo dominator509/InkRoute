@@ -371,15 +371,41 @@ describe("public web launch runtime contract", () => {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      renderedHtml: "<main>client@example.com private booking copy</main>",
+      jsonLdSnapshot: "{\"url\":\"https://tenant.example.com/private\",\"name\":\"Private Studio\"}",
+      legalReviewNotes: "private legal route note for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      mediaDerivativeUrl: "https://cdn.example.com/private/derivative.webp",
+      placeholderAssetDisposition: "placeholder file public/placeholder-client-before.jpg",
+      browserTrace: "playwright trace captured route_public_01HZYXZYXZYXZYXZYXZYXZYXZ for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      lighthouseOutput: "lighthouse_01HZYXZYXZYXZYXZYXZYXZYXZ flagged https://tenant.example.com/private",
+      fallbackProof: "local fallback used static/demo/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ for booking_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      commandOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed web:build",
       contactPhone: "+1 (555) 867-5309",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_public_web_launch",
+      reviewerHandle: "reviewer_public_web_owner",
+      codeownerSelector: "CODEOWNER:web-platform-team",
     };
 
     expect(buildRedactedPublicWebLaunchArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
-      routeSmokeLog: "tenant [REDACTED] rendered for [REDACTED]",
+      routeSmokeLog: "[REDACTED]",
       providerRouteEvidence: "[REDACTED]",
+      renderedHtml: "[REDACTED]",
+      jsonLdSnapshot: "[REDACTED]",
+      legalReviewNotes: "[REDACTED]",
+      mediaDerivativeUrl: "[REDACTED]",
+      placeholderAssetDisposition: "[REDACTED]",
+      browserTrace: "[REDACTED]",
+      lighthouseOutput: "[REDACTED]",
+      fallbackProof: "local fallback used [REDACTED] for [REDACTED]",
+      commandOutput: "[REDACTED]",
       contactPhone: "[REDACTED]",
+      repositorySelector: "[REDACTED]",
+      pullRequestSelector: "[REDACTED]",
+      reviewerHandle: "[REDACTED]",
+      codeownerSelector: "[REDACTED]",
     });
 
     const review = buildPublicWebLaunchArtifactReview(artifact);
@@ -391,9 +417,30 @@ describe("public web launch runtime contract", () => {
         "ciRunUrl",
         "routeSmokeLog",
         "providerRouteEvidence",
+        "renderedHtml",
+        "jsonLdSnapshot",
+        "legalReviewNotes",
+        "mediaDerivativeUrl",
+        "placeholderAssetDisposition",
+        "browserTrace",
+        "lighthouseOutput",
+        "fallbackProof",
+        "commandOutput",
         "contactPhone",
+        "repositorySelector",
+        "pullRequestSelector",
+        "reviewerHandle",
+        "codeownerSelector",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("route_public_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("lighthouse_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("static/demo/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_public_web_launch");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_public_web_owner");
+    expect(JSON.stringify(review.artifact)).not.toContain("CODEOWNER:web-platform-team");
     expect(review.requiredExternalEvidence).toContain(
       "Provider-backed PublicWebLaunchRun persistence row captured from the target database.",
     );

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -117,9 +117,9 @@ describe("static dependency audit runtime contract", () => {
     expect(workspacePackageJson).toContain('"test"');
     expect(workspaceImportAudit).toContain("workspace imports");
     expect(workspaceImportAudit).toContain("external imports");
-    expect(workspaceTests).toContain("external package-name normalization");
-    expect(workspaceProtocol).toContain("workspace import");
-    expect(workspaceImportManifest).toContain("workspace-import-audit");
+    expect(workspaceTests).toContain("allows shared root dev dependency tooling for external test imports");
+    expect(workspaceProtocol).toContain("Workspace imports from `@inkroute/*`");
+    expect(workspaceImportManifest).toContain("Phase 18 workspace runtime readiness");
   });
 
   it("preserves the verified static audit result while runtime resolution remains gated", () => {
@@ -250,12 +250,12 @@ describe("static dependency audit runtime contract", () => {
     expect(unitManifest).toContain("StaticDependencyAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("StaticDependencyAuditRun");
     expect(gapTracker).toContain("apps/web/lib/staticDependencyAuditRuntime.ts");
-    expect(gapTracker).toContain("live package test/typecheck, install/typecheck/build, CI, peer/version, and runtime resolution proof remain open");
-    expect(gapTracker).toContain("GAP-131 is static-dependency-audit-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-131 static dependency audit artifact hardening");
+
     expect(gapTracker).toContain("buildStaticDependencyAuditExecutionPlan");
     expect(gapTracker).toContain("staticDependencyAuditExecutionPolicy");
     expect(gapTracker).toContain("staticDependencyAuditReadinessRequiredEvidence");
-    expect(gapTracker).toContain("staticDependencyAuditRequiredEvidence");
+
     expect(gapTracker).toContain("staticDependencyAuditRequiredExternalEvidence");
     expect(gapTracker).toContain("staticDependencyAuditLocalArtifacts");
     expect(gapTracker).toContain("staticDependencyAuditExternalArtifacts");
@@ -346,19 +346,36 @@ describe("static dependency audit runtime contract", () => {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      dependencyTreeOutput: "workspace app resolved package @inkroute/db from ../packages/db",
+      pnpmLockfileExcerpt: "registry.npmjs.org/@stripe/stripe-js/-/stripe-js-4.1.0.tgz",
+      ciWorkspaceResolutionPayload: {
+        workflowRunUrl: "https://github.com/example/inkroute/actions/runs/123456789",
+        commandStdout: "pnpm install resolved workspace dependencies",
+      },
+      runtimeResolutionProof: {
+        webBuildArtifactPath: "test-results/static-dependency-audit-runtime/web-build.log",
+        dashboardBuildOutput: "dashboard imported package-runtime-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr-3131",
+      reviewerHandle: "reviewer_dependency_owner",
+      codeownerSelector: "CODEOWNER:workspace-platform-team",
     };
 
     expect(buildRedactedStaticDependencyAuditArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       registryUrl: "[REDACTED]",
-      installOutput: "resolved by [REDACTED] with token [REDACTED]",
-      peerReview: {
-        packageId: "[REDACTED]",
-      },
-      persistence: {
-        tenantId: "[REDACTED]",
-        databaseUrl: "[REDACTED]",
-      },
+      installOutput: "[REDACTED]",
+      peerReview: "[REDACTED]",
+      persistence: "[REDACTED]",
+      dependencyTreeOutput: "[REDACTED]",
+      pnpmLockfileExcerpt: "[REDACTED]",
+      ciWorkspaceResolutionPayload: "[REDACTED]",
+      runtimeResolutionProof: "[REDACTED]",
+      repositorySelector: "[REDACTED]",
+      pullRequestSelector: "[REDACTED]",
+      reviewerHandle: "[REDACTED]",
+      codeownerSelector: "[REDACTED]",
     });
 
     const review = buildStaticDependencyAuditArtifactReview(artifact);
@@ -370,9 +387,16 @@ describe("static dependency audit runtime contract", () => {
         "runId",
         "registryUrl",
         "installOutput",
-        "peerReview.packageId",
-        "persistence.tenantId",
-        "persistence.databaseUrl",
+        "peerReview",
+        "persistence",
+        "dependencyTreeOutput",
+        "pnpmLockfileExcerpt",
+        "ciWorkspaceResolutionPayload",
+        "runtimeResolutionProof",
+        "repositorySelector",
+        "pullRequestSelector",
+        "reviewerHandle",
+        "codeownerSelector",
       ]),
     );
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");

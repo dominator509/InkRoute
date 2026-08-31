@@ -63,6 +63,10 @@ describe("email provider contract", () => {
       recipientEmail: "[redacted]",
       nested: { signature: "[redacted]", clientName: "[redacted]" },
     });
+    expect(sendResult?.providerMessageId).toBe("[redacted-provider-message-id]");
+    expect(sendResult?.providerMessageIdHash).toHaveLength(64);
+    expect(sendResult?.rawProviderMessageIdEchoed).toBe(false);
+    expect(JSON.stringify(sendResult)).not.toContain("resend_message_demo");
     expect(JSON.stringify(sendResult)).not.toContain("re_secret");
     expect(JSON.stringify(sendResult)).not.toContain("client@example.test");
     expect(JSON.stringify(webhookPayload)).not.toContain("Bearer secret");
@@ -98,6 +102,8 @@ describe("email provider contract", () => {
     expect(duplicate.status).toBe("duplicate");
     expect(repository.state.queuedDeliveries).toHaveLength(1);
     expect(repository.state.providerSendResults).toHaveLength(1);
+    expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("resend_message_demo");
+    expect(repository.state.providerSendResults[0]?.result.rawProviderMessageIdEchoed).toBe(false);
     expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("riley@example.test");
 
     await expect(

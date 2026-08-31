@@ -34,6 +34,7 @@ describe("provider storage upload runtime contract", () => {
   const uploadRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/secure-upload-intents/route.ts");
   const uploadPolicyRoute = readRepoFile("apps/web/app/api/public/[tenantSlug]/upload-policy/route.ts");
   const dashboardSignedUploadRoute = readRepoFile("apps/dashboard/app/api/files/signed-upload/route.ts");
+  const portfolioImageRoute = readRepoFile("apps/dashboard/app/api/portfolio/[portfolioId]/images/route.ts");
   const uploadRouteTest = readRepoFile("apps/web/tests/secure-upload-intents-route.test.ts");
   const portfolioReadTest = readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
@@ -193,7 +194,38 @@ describe("provider storage upload runtime contract", () => {
     expect(dashboardSignedUploadRoute).toContain("idempotency.status === \"completed\"");
     expect(dashboardSignedUploadRoute).toContain("tx.fileAsset.findFirst");
     expect(dashboardSignedUploadRoute).toContain("tx.fileAsset.create");
+    expect(dashboardSignedUploadRoute).toContain("bucket: input.bucket");
+    expect(dashboardSignedUploadRoute).toContain("objectKey: input.objectKey");
+    expect(dashboardSignedUploadRoute).toContain("kind: input.kind");
+    expect(dashboardSignedUploadRoute).toContain("buildSafeSignedUploadResponse");
+    expect(dashboardSignedUploadRoute).toContain("buildSignedUploadResponseProjection");
+    expect(dashboardSignedUploadRoute).toContain("rawStorageFieldsEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("bucketEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("objectKeyEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("signedUploadUrlEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("signedUrlHashEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("rawPlanObjectsEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("rawIdempotencyKeyEchoed: false");
+    expect(dashboardSignedUploadRoute).toContain("internalPersistenceIdsEchoed: false");
+    expect(dashboardSignedUploadRoute).not.toContain("...result.fileAsset");
+    expect(dashboardSignedUploadRoute).not.toContain("...result.grant");
+    expect(dashboardSignedUploadRoute).toContain("signedUploadIntentPlan,");
+    expect(dashboardSignedUploadRoute).toContain("privateStorageAccessPlan,");
+    expect(dashboardSignedUploadRoute).not.toContain("function resultFileAssetId");
+    expect(dashboardSignedUploadRoute).not.toContain("fileAssetId: fileAsset.id,\n            signedUrlGrantId: grant.id,\n            auditId: audit.id");
+    expect(dashboardSignedUploadRoute).not.toContain("auditId: result.status");
+    expect(dashboardSignedUploadRoute).not.toContain("idempotencyKeyId: result.idempotency.id");
     expect(dashboardSignedUploadRoute).toContain("tx.signedUrlGrant.create");
+    expect(portfolioImageRoute).toContain("buildSafePortfolioImageAttachResponse");
+    expect(portfolioImageRoute).toContain("buildPortfolioImageAttachResponseProjection");
+    expect(portfolioImageRoute).toContain("imageUrlEchoed: false");
+    expect(portfolioImageRoute).toContain("fileAssetIdEchoed: false");
+    expect(portfolioImageRoute).toContain("rawImageUrlEchoed: false");
+    expect(portfolioImageRoute).toContain("rawIdempotencyKeyEchoed: false");
+    expect(portfolioImageRoute).toContain("internalPersistenceIdsEchoed: false");
+    expect(portfolioImageRoute).not.toContain("imageUrl: result.image.imageUrl");
+    expect(portfolioImageRoute).not.toContain("fileAssetId: result.image.fileAssetId");
+    expect(portfolioImageRoute).not.toContain("idempotencyKeyId: result.idempotency.id");
     expect(dashboardSignedUploadRoute).toContain("tx.auditLog.create");
     expect(dashboardSignedUploadRoute).toContain("tx.idempotencyKey.update");
     expect(dashboardSignedUploadRoute).toContain("providerUrlMinted: false");
@@ -203,7 +235,11 @@ describe("provider storage upload runtime contract", () => {
     expect(dashboardSignedUploadRoute).toContain("privateStorageAccessStatus");
     expect(dashboardSignedUploadRoute).toContain("malwareScanExecuted: false");
     expect(dashboardSignedUploadRoute).toContain("bucketAclVerified: false");
-    expect(dashboardSignedUploadRoute).toContain("idempotencyKeyId");
+    expect(dashboardSignedUploadRoute).toContain("fileAssetPersisted: true");
+    expect(dashboardSignedUploadRoute).toContain("signedUrlGrantPersisted: true");
+    expect(dashboardSignedUploadRoute).toContain("auditLogged: true");
+    expect(dashboardSignedUploadRoute).toContain("internalPersistenceIdsStored: false");
+    expect(dashboardSignedUploadRoute).toContain("idempotencyPersisted: true");
     expect(dashboardSignedUploadRoute).toContain("idempotencyReplay");
     expect(uploadPolicyRoute).toContain("PROVIDER_STORAGE_POLICY_NOT_CONFIGURED");
     expect(uploadPolicyRoute).toContain("local policy preview is disabled until provider proof is captured");
@@ -214,9 +250,16 @@ describe("provider storage upload runtime contract", () => {
     expect(uploadPolicyRoute).toContain("{ headers: noStoreHeaders }");
     expect(uploadPolicyRoute).toContain("localUploadPolicyPreviewDisabled");
     expect(uploadRoute).toContain("local signed-upload validation rules");
+    expect(uploadRoute).toContain("buildSafeUploadDatabaseResponse");
+    expect(uploadRoute).toContain("buildSafeUploadLocalResponse");
+    expect(uploadRoute).toContain("bucketEchoed: false");
+    expect(uploadRoute).toContain("objectKeyEchoed: false");
+    expect(uploadRoute).toContain("signedUploadUrlEchoed: false");
+    expect(uploadRoute).toContain("rawPlanObjectsEchoed: false");
+    expect(uploadRoute).toContain("localDraftEchoed: false");
     expect(uploadRouteTest).toContain("secure-upload-intents");
     expect(uploadRouteTest).toContain('response.headers.get("Cache-Control")).toBe("no-store")');
-    expect(portfolioReadTest).toContain("storage-key redaction");
+    expect(portfolioReadTest).toContain("objectKeySelectedFromDatabase: false");
   });
 
   it("keeps provider storage blockers explicit until object storage evidence exists", () => {
@@ -456,10 +499,19 @@ describe("provider storage upload runtime contract", () => {
       objectKey: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ/client@example.com/original.jpg",
       fileAssetId: "fileasset_01HZYXZYXZYXZYXZYXZYXZYXZ",
       clientPhone: "+1 (555) 867-5309",
+      providerTranscript: "S3 PUT s3://inkroute-private/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ/private/original.jpg",
+      scanResult: "malware_scan_01HZYXZYXZYXZYXZYXZYXZYXZ cleared fileasset_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      accessProof: "anonymous fetch denied for private/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ/original.jpg",
+      derivativeTrace: "published derivative_01HZYXZYXZYXZYXZYXZYXZYXZ at public/derivatives/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ.jpg",
+      commandOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed storage:test",
       persistence: {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_provider_storage_upload",
+      reviewerHandle: "reviewer_storage_owner",
+      codeownerSelector: "CODEOWNER:storage-platform-team",
     };
 
     expect(buildRedactedProviderStorageUploadArtifact(artifact)).toEqual({
@@ -469,10 +521,19 @@ describe("provider storage upload runtime contract", () => {
       objectKey: "[REDACTED]",
       fileAssetId: "[REDACTED]",
       clientPhone: "[REDACTED]",
+      providerTranscript: "S3 PUT [REDACTED]",
+      scanResult: "[REDACTED] cleared [REDACTED]",
+      accessProof: "anonymous fetch denied for [REDACTED]",
+      derivativeTrace: "published [REDACTED] at [REDACTED]",
+      commandOutput: "[REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
       },
+      repositorySelector: "[REDACTED]",
+      pullRequestSelector: "[REDACTED]",
+      reviewerHandle: "[REDACTED]",
+      codeownerSelector: "[REDACTED]",
     });
 
     const review = buildProviderStorageUploadArtifactReview(artifact);
@@ -486,10 +547,27 @@ describe("provider storage upload runtime contract", () => {
         "objectKey",
         "fileAssetId",
         "clientPhone",
+        "providerTranscript",
+        "scanResult",
+        "accessProof",
+        "derivativeTrace",
+        "commandOutput",
         "persistence.tenantId",
         "persistence.databaseUrl",
+        "repositorySelector",
+        "pullRequestSelector",
+        "reviewerHandle",
+        "codeownerSelector",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("s3://inkroute-private");
+    expect(JSON.stringify(review.artifact)).not.toContain("malware_scan_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("private/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_provider_storage_upload");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_storage_owner");
+    expect(JSON.stringify(review.artifact)).not.toContain("CODEOWNER:storage-platform-team");
     expect(review.requiredExternalEvidence).toContain(
       "Provider-backed ProviderStorageUploadRun persistence row captured from the target database.",
     );

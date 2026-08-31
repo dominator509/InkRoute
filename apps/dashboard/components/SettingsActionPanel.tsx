@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type SettingsActionState =
   | { status: "idle"; message: string }
@@ -22,7 +23,7 @@ export function SettingsActionPanel() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "idempotency-key": `dashboard-settings-draft-${Date.now()}`,
+          "idempotency-key": createClientRequestKey("dashboard-settings-draft"),
         },
         body: JSON.stringify({
           publicSiteName: "InkRoute Demo Studio",

@@ -20,7 +20,7 @@ Mark every changed area honestly:
 - [ ] I ran `node scripts/quality/audit-gap-evidence.mjs` or `pnpm quality:gaps`.
 - [ ] I disclosed any `warn`/`fail` output relevant to this PR.
 
-### Gap tracker
+### Gap tracker impact
 
 - Gap IDs changed:
 - New gap IDs added:
@@ -35,7 +35,7 @@ Paste exact commands and results. Do not summarize failures away.
 # commands here
 ```
 
-### Security/privacy
+### Security/privacy checklist
 
 - [ ] No secrets, credentials, provider tokens, database URLs, or private keys committed.
 - [ ] PII/medical/consent/payment data remains redacted in logs and docs.

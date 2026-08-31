@@ -51,6 +51,27 @@ describe("alert escalation runtime contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('entityType: "AlertDelivery"');
     expect(routeSource).toContain("alert-delivery-transaction");
+    expect(routeSource).toContain("alertDeliveryRecorded: result.alertDeliveryRecorded");
+    expect(routeSource).toContain("buildSafeAlertReportResponse");
+    expect(routeSource).toContain("buildSafeAlertPayloadPreview");
+    expect(routeSource).toContain("rawReportEchoed: false");
+    expect(routeSource).toContain("reportIdEchoed: false");
+    expect(routeSource).toContain("fingerprintEchoed: false");
+    expect(routeSource).toContain("rawPayloadEchoed: false");
+    expect(routeSource).toContain("rawSanitizedPayloadEchoed: false");
+    expect(routeSource).toContain("alertDeliveryIdEchoed: false");
+    expect(routeSource).toContain("auditLogged: result.auditLogged");
+    expect(routeSource).toContain("auditLogIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("reportMatched: true");
+    expect(routeSource).toContain("alertDeliveryRecorded: true");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).not.toContain("reportId: report.id");
+    expect(routeSource).not.toContain("alertDeliveryId: result.alertDeliveryId");
+    expect(routeSource).not.toContain("auditLogId: result.auditLogId");
+    expect(routeSource).not.toContain("auditLogId: null");
+    expect(routeSource).not.toContain("reportId: input.report.id");
+    expect(routeSource).not.toContain("alertDeliveryId: alertDelivery.id");
     expect(routeSource).toContain("acknowledgementState");
     expect(routeSource).toContain("exponential-backoff-3-attempts");
     expect(routeSource).toContain("configured-dead-letter-after-retry-exhaustion");
@@ -174,6 +195,10 @@ describe("alert escalation runtime contract", () => {
         rawBody: "critical alert stack with private booking note",
         sanitizedPayload: { severity: "critical", route: "/api/observability/alerts" },
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_alert_escalation",
+      reviewerHandle: "reviewer_alert_owner",
+      codeownerSelector: "CODEOWNER:observability-platform-team",
     };
 
     const redacted = buildRedactedAlertEscalationArtifact(rawArtifact);
@@ -185,6 +210,10 @@ describe("alert escalation runtime contract", () => {
     expect(serialized).not.toContain("oncall@example.com");
     expect(serialized).not.toContain("+1 555 010 7777");
     expect(serialized).not.toContain("private booking note");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_alert_escalation");
+    expect(serialized).not.toContain("reviewer_alert_owner");
+    expect(serialized).not.toContain("CODEOWNER:observability-platform-team");
     expect(serialized).toContain("critical");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);

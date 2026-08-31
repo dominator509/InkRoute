@@ -13,9 +13,7 @@ export const runtime = "nodejs";
 
 function redactEmail(value: string | null | undefined): string | null {
   if (!value) return null;
-  const [local, domain] = value.split("@");
-  if (!local || !domain) return "[redacted-dashboard-field]";
-  return `${local.slice(0, 1)}***@${domain}`;
+  return "[redacted-dashboard-field]";
 }
 
 function toJsonValue(value: unknown) {
@@ -37,6 +35,38 @@ function resultString(value: unknown, key: string): string | null {
   return typeof result?.[key] === "string" ? result[key] : null;
 }
 
+function buildSettingsReadResponseProjection() {
+  return {
+    settingsReadResponseAllowlisted: true,
+    tenantRecordIdEchoed: false,
+    tenantIdEchoed: false,
+    domainIdsEchoed: false,
+    memberIdsEchoed: false,
+    userIdsEchoed: false,
+    customRoleIdsEchoed: false,
+    studioIdsEchoed: false,
+    featureFlagIdsEchoed: false,
+    auditIdEchoed: false,
+    contactFieldsEchoed: false,
+    verificationTokenHashEchoed: false,
+    studioStreetAddressEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSettingsMutationResponseProjection() {
+  return {
+    settingsMutationResponseAllowlisted: true,
+    tenantRecordIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawSecretsEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 function settingsGuardFailureResponse(guard: ReturnType<typeof evaluateDashboardApiGuard>) {
   const safeReason = `${guard.status}:${guard.action}`;
   if (guard.action === "reject_401" || guard.action === "reject_419") {
@@ -51,6 +81,11 @@ function settingsGuardFailureResponse(guard: ReturnType<typeof evaluateDashboard
   }
 
   return NextResponse.json({ ok: false, error: { code: "FORBIDDEN", reason: safeReason } }, { status: 403, headers: noStoreHeaders });
+}
+
+function buildSafeSettingsTenantRecord(record: Record<string, unknown>) {
+  const { id: _id, tenantId: _tenantId, ...safeRecord } = record;
+  return { ...safeRecord, responseProjection: buildSettingsReadResponseProjection() };
 }
 
 export async function GET(request: NextRequest) {
@@ -78,12 +113,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard settings reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
           },
+          responseProjection: buildSettingsReadResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -94,11 +129,11 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        tenant: dashboardShellContext.tenant,
+        tenant: buildSafeSettingsTenantRecord(dashboardShellContext.tenant as Record<string, unknown>),
         rolePermissions,
-        featureFlags: dashboardFeatureFlags,
+        featureFlags: dashboardFeatureFlags.map((flag) => buildSafeSettingsTenantRecord(flag as Record<string, unknown>)),
+        responseProjection: buildSettingsReadResponseProjection(),
         gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns demo tenant settings only; database mode is required for live settings reads.",
       },
@@ -130,10 +165,9 @@ export async function GET(request: NextRequest) {
               id: true,
               role: true,
               status: true,
-              invitedEmail: true,
               invitedAt: true,
               joinedAt: true,
-              user: { select: { id: true, email: true, name: true, status: true, lastLoginAt: true } },
+              user: { select: { id: true, status: true, lastLoginAt: true } },
               customRole: { select: { key: true, label: true } },
             },
           },
@@ -183,10 +217,8 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         tenant: {
-          id: result.tenant.id,
           name: result.tenant.name,
           slug: result.tenant.slug,
           plan: result.tenant.plan,
@@ -197,20 +229,22 @@ export async function GET(request: NextRequest) {
           updatedAt: result.tenant.updatedAt.toISOString(),
         },
         domains: result.tenant.domains.map((domain) => ({
-          id: domain.id,
           hostname: domain.hostname,
           status: domain.status,
           isPrimary: domain.isPrimary,
           verifiedAt: domain.verifiedAt?.toISOString() ?? null,
         })),
         members: result.tenant.members.map((member) => ({
-          id: member.id,
           role: member.role,
           status: member.status,
-          userId: member.user.id,
-          name: member.user.name,
-          email: redactEmail(member.user.email),
-          invitedEmail: redactEmail(member.invitedEmail),
+          name: redactEmail(member.user.id),
+          email: redactEmail(member.user.id),
+          invitedEmail: redactEmail(member.invitedAt?.toISOString()),
+          userLinked: Boolean(member.user.id),
+          hasUserEmail: Boolean(member.user.id),
+          hasInvitedEmail: Boolean(member.invitedAt),
+          userContactFieldsSelectedFromDatabase: false,
+          invitedEmailSelectedFromDatabase: false,
           userStatus: member.user.status,
           customRole: member.customRole,
           invitedAt: member.invitedAt?.toISOString() ?? null,
@@ -218,7 +252,6 @@ export async function GET(request: NextRequest) {
           lastLoginAt: member.user.lastLoginAt?.toISOString() ?? null,
         })),
         customRoles: result.tenant.customRoles.map((role) => ({
-          id: role.id,
           key: role.key,
           label: role.label,
           permissions: role.permissions,
@@ -226,7 +259,6 @@ export async function GET(request: NextRequest) {
           updatedAt: role.updatedAt.toISOString(),
         })),
         studios: result.tenant.studios.map((studio) => ({
-          id: studio.id,
           name: studio.name,
           slug: studio.slug,
           city: studio.city,
@@ -235,7 +267,6 @@ export async function GET(request: NextRequest) {
           timezone: studio.timezone,
         })),
         featureFlags: result.tenant.flags.map((flag) => ({
-          id: flag.id,
           key: flag.key,
           scope: flag.scope,
           enabled: flag.enabled,
@@ -243,7 +274,7 @@ export async function GET(request: NextRequest) {
           updatedAt: flag.updatedAt.toISOString(),
         })),
         rolePermissions,
-        auditId: result.audit.id,
+        responseProjection: buildSettingsReadResponseProjection(),
         gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard settings reads are tenant-scoped, credential-safe, no-store, and audited; settings mutations and provider secret handling remain gated.",
       },
@@ -255,8 +286,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Settings reads require the dashboard database connection." },
+          responseProjection: buildSettingsReadResponseProjection(),
           gapIds: ["GAP-003", "GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -301,7 +332,7 @@ export async function PATCH(request: NextRequest) {
     const idempotencyKey =
       request.headers.get("idempotency-key") ??
       body.idempotencyKey ??
-      `settings-update:${tenantId}:${hashSettingsSubject({ update })}`;
+      `settings-update:${hashSettingsSubject({ tenantId, update })}`;
     const requestHash = hashSettingsSubject({ tenantId, update });
 
   if (actor.source === "local-fallback") {
@@ -310,7 +341,8 @@ export async function PATCH(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildSettingsMutationResponseProjection(),
           error: {
             code: "PROVIDER_SETTINGS_PERSISTENCE_NOT_CONFIGURED",
             message: "Production settings writes require DB-backed actor resolution, tenant-scoped persistence, idempotency, and audit logs; local fallback setting plans are disabled.",
@@ -326,10 +358,11 @@ export async function PATCH(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "dry-run",
         action: "update_settings",
         update,
+        responseProjection: buildSettingsMutationResponseProjection(),
         boundary: "Local fallback returns a settings mutation contract with validated safe profile metadata; database mode is required to commit settings writes.",
         gapIds: ["GAP-007", "GAP-038", "GAP-040"],
       },
@@ -377,13 +410,13 @@ export async function PATCH(request: NextRequest) {
           status: "replayed" as const,
           idempotency,
           tenant: {
-            id: resultString(idempotency.result, "tenantId") ?? tenantId,
+            id: tenantId,
             publicSiteName: resultString(idempotency.result, "publicSiteName"),
             primaryLocale: resultString(idempotency.result, "primaryLocale"),
             defaultTimezone: resultString(idempotency.result, "defaultTimezone"),
             updatedAt: resultString(idempotency.result, "updatedAt") ?? new Date(0).toISOString(),
           },
-          audit: { id: resultString(idempotency.result, "auditId") },
+          auditLogged: resultString(idempotency.result, "auditLogged") === "true",
         };
       }
 
@@ -403,8 +436,9 @@ export async function PATCH(request: NextRequest) {
           metadata: {
             source: "dashboard-api",
             dashboardMutationAction: "update_settings",
-            idempotencyKey,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             updatedFields: Object.keys(update),
             rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
             rawSecretsStored: false,
@@ -418,21 +452,22 @@ export async function PATCH(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            tenantId: tenant.id,
-            auditId: audit.id,
+            tenantProfileUpdated: true,
+            auditLogged: true,
             updatedFields: Object.keys(update),
             publicSiteName: tenant.publicSiteName,
             primaryLocale: tenant.primaryLocale,
             defaultTimezone: tenant.defaultTimezone,
             updatedAt: tenant.updatedAt.toISOString(),
             rawSecretsStored: false,
+            internalPersistenceIdsStored: false,
             rejectedFields: ["providerSecrets", "credentials", "legalPolicyCopy", "memberInvites", "customRoles"],
           }),
         },
         select: { id: true },
       });
 
-      return { status: "persisted" as const, tenant, audit, idempotency };
+      return { status: "persisted" as const, tenant, auditLogged: Boolean(audit.id), idempotency };
     });
 
     if (result.status === "idempotency_conflict") {
@@ -440,9 +475,15 @@ export async function PATCH(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different settings payload." },
-          idempotencyKeyId: result.idempotency.id,
+          responseProjection: {
+            settingsIdempotencyConflictResponseAllowlisted: true,
+            tenantIdEchoed: false,
+            idempotencyKeyIdEchoed: false,
+            rawIdempotencyKeyEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           gapIds: ["GAP-007", "GAP-038", "GAP-040"],
         },
         { status: 409, headers: noStoreHeaders },
@@ -453,19 +494,17 @@ export async function PATCH(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
         action: "update_settings",
         tenant: {
-          id: result.tenant.id,
           publicSiteName: result.tenant.publicSiteName,
           primaryLocale: result.tenant.primaryLocale,
           defaultTimezone: result.tenant.defaultTimezone,
           updatedAt: typeof result.tenant.updatedAt === "string" ? result.tenant.updatedAt : result.tenant.updatedAt.toISOString(),
         },
-        auditId: result.audit.id,
-        idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
+        responseProjection: buildSettingsMutationResponseProjection(),
         boundary: "Settings writes are limited to idempotency-backed safe tenant profile metadata; provider secrets, member invites, custom roles, and legal policy copy remain gated.",
         gapIds: ["GAP-007", "GAP-038", "GAP-040"],
       },
@@ -477,7 +516,8 @@ export async function PATCH(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildSettingsMutationResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Settings writes require the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-038", "GAP-040"],
         },

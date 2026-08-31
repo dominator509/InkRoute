@@ -111,6 +111,21 @@ describe("Stripe webhook runtime contract", () => {
     expect(webhookStaticTest).toContain("rejects amount and currency mismatches");
     expect(webhookRoute).toContain("webhookContract");
     expect(webhookRoute).toContain("runtimeReadiness");
+    expect(webhookRoute).toContain("buildSafeStripeWebhookPersistenceResponse");
+    expect(webhookRoute).toContain("buildSafeStripeWebhookInterpretationResponse");
+    expect(webhookRoute).toContain("buildSafeStripeWebhookContractResponse");
+    expect(webhookRoute).toContain("buildSafeLocalStripeWebhookReceipt");
+    expect(webhookRoute).toContain("stripePersistenceResponseAllowlisted: true");
+    expect(webhookRoute).toContain("rawIdempotencyKeyEchoed: false");
+    expect(webhookRoute).toContain("rawProviderObjectEchoed: false");
+    expect(webhookRoute).toContain("rawPayloadEchoed: false");
+    expect(webhookRoute).toContain("eventIdEchoed: false");
+    expect(webhookRoute).toContain("webhookIdEchoed: false");
+    expect(webhookRoute).toContain("rawProviderEventIdEchoed: false");
+    expect(webhookRoute).toContain("rawInterpretationEchoed: false");
+    expect(webhookRoute).toContain("rawWebhookContractEchoed: false");
+    expect(webhookRoute).toContain("rawProviderPayloadEchoed: false");
+    expect(webhookRoute).not.toContain("persisted,");
     expect(webhookRoute).toContain("PROVIDER_STRIPE_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
     expect(webhookRoute).toContain("localStripeWebhookPersistenceDisabled");
     expect(webhookRoute).toContain("requiresDurableReplayProtection");
@@ -126,7 +141,7 @@ describe("Stripe webhook runtime contract", () => {
     expect(stripeWebhookRuntimeReadiness.missingSupportedEvents).toEqual([]);
     expect(stripeWebhookRuntimeReadiness.requiredCommands).toBe(stripeWebhookRuntimeCommands);
     expect(stripeWebhookRuntimeReadiness.requiredEvidence).toBe(stripeWebhookRuntimeRequiredEvidence);
-    expect(stripeWebhookRuntimeReadiness.requiredEvidence).not.toContain(
+    expect(stripeWebhookRuntimeReadiness.requiredEvidence).toContain(
       "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
     );
     expect(stripeWebhookRuntimeReadiness.requiredEvidence).not.toContain(
@@ -138,6 +153,9 @@ describe("Stripe webhook runtime contract", () => {
     expect(stripeWebhookRuntimeReadiness.blockers).not.toContain("Stripe event replay protection must persist provider event ids.");
     expect(stripeWebhookRuntimeReadiness.blockers).not.toContain(
       "Webhook reconciliation writes must run in one tenant-scoped transaction.",
+    );
+    expect(stripeWebhookRuntimeReadiness.blockers).toContain(
+      "Supported payment/refund/dispute events must fetch or verify provider objects before reconciliation.",
     );
     expect(stripeWebhookRuntimeReadiness.blockers).toContain("Stripe CLI replay tests must verify success, failure, expiration, refund, dispute, invalid signature, and replay behavior.");
   });

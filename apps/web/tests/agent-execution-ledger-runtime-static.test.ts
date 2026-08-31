@@ -125,10 +125,10 @@ describe("agent execution ledger runtime contract", () => {
 
   it("reports GAP-119 as blocked until completed redacted agent results are imported", () => {
     expect(agentExecutionLedgerRuntimeReadiness.status).toBe("blocked");
-    expect(agentExecutionLedgerRuntimeReadiness.missingTaskIds).toEqual([]);
-    expect(agentExecutionLedgerRuntimeReadiness.unknownTaskIds).toEqual([]);
-    expect(agentExecutionLedgerRuntimeReadiness.duplicateTaskIds).toEqual([]);
-    expect(agentExecutionLedgerRuntimeReadiness.incompleteTaskIds).toEqual([...agentExecutionLedgerTaskIds]);
+    expect(agentExecutionLedgerRuntimeReadiness.missingExecutionTaskIds).toEqual([]);
+    expect(agentExecutionLedgerRuntimeReadiness.unknownExecutionTaskIds).toEqual([]);
+    expect(agentExecutionLedgerRuntimeReadiness.duplicateExecutionTaskIds).toEqual([]);
+    expect(agentExecutionLedgerRuntimeReadiness.incompleteExecutionTaskIds).toEqual([...agentExecutionLedgerTaskIds]);
     expect(agentExecutionLedgerRuntimeReadiness.requiredCommands).toBe(agentExecutionLedgerRuntimeCommands);
     expect(agentExecutionLedgerRuntimeReadiness.requiredEvidence).toBe(agentExecutionLedgerRuntimeArtifactPaths);
     expect(agentExecutionLedgerRuntimeReadiness.blockers).toContain(
@@ -152,8 +152,8 @@ describe("agent execution ledger runtime contract", () => {
     expect(ciWorkflow).toContain("agent-execution-ledger-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-agent-execution-ledger-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentExecutionLedgerRuntime.ts");
-    expect(gapTracker).toContain("Agent execution ledger evidence classifier wired and external execution proof gated");
-    expect(gapTracker).toContain("GAP-119 is agent-execution-ledger-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Agent execution ledger evidence classifier and agentExecutionLedgerRequiredCommands identity wiring");
+    expect(gapTracker).toContain("GAP-119 is agent-execution-ledger-runtime-matrix wired with split ledger verification");
     expect(gapTracker).toContain("buildAgentExecutionLedgerRuntimeExecutionPlan");
     expect(gapTracker).toContain("agentExecutionLedgerRuntimeExecutionPolicy");
     expect(gapTracker).toContain("agentExecutionLedgerRuntimeRequiredExternalEvidence");
@@ -380,6 +380,18 @@ describe("agent execution ledger runtime contract", () => {
       diffSummary: "Changed apps/web/lib/foo.ts with token ghp_secret",
       providerEvidenceUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
       artifactUrl: "https://provider.example.com/artifacts/artifact_abc",
+      changedFilesMatrix: ["apps/web/lib/foo.ts", "GAP_TRACKER.md"],
+      remainingGapSummary: "GAP-119 still needs provider_project_123 execution import",
+      secretSafetyReview: "reviewed .env.local and found sk_live_secret",
+      externalResultImportMetadata: { actor: "owner@example.com", resultUrl: "https://provider.example.com/result/run_123" },
+      gapTrackerUpdatePayload: "updated GAP_TRACKER.md with tenant_demo evidence",
+      queueLedgerParityLog: "queue task_123 matched ledger run_123",
+      neutralAgentTrace: "agent_task_01HZYXZYXZYXZYXZYXZYXZYXZ imported result_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralDiffTrace: "changed_file_01HZYXZYXZYXZYXZYXZYXZYXZ wrote diffs/agent-execution/private.patch",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralDatabaseTrace: "ledger persistence postgresql://tenant_demo:secret@db.example.com/inkroute",
       nested: {
         authorization: "Bearer agent-execution-token",
         tenantId: "tenant_demo",
@@ -399,13 +411,39 @@ describe("agent execution ledger runtime contract", () => {
     expect(serialized).not.toContain("github.com/dominator509");
     expect(serialized).not.toContain("Bearer agent-execution-token");
     expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("GAP_TRACKER.md");
+    expect(serialized).not.toContain("execution import");
+    expect(serialized).not.toContain(".env.local");
+    expect(serialized).not.toContain("result/run_123");
+    expect(serialized).not.toContain("queue task_123");
+    expect(serialized).not.toContain("agent_task_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("result_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("diffs/agent-execution/private.patch");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "artifactUrl",
         "authorization",
+        "changedFilesMatrix",
+        "externalResultImportMetadata",
+        "gapTrackerUpdatePayload",
+        "queueLedgerParityLog",
+        "remainingGapSummary",
+        "secretSafetyReview",
         "commandTranscript",
         "diffSummary",
+        "neutralAgentTrace",
+        "neutralCiTrace",
+        "neutralDatabaseTrace",
+        "neutralDiffTrace",
+        "neutralRepositoryTrace",
         "providerEvidenceUrl",
         "stderr",
         "stdout",

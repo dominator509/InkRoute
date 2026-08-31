@@ -152,7 +152,7 @@ Implemented/scaffolded deliverables:
 
 Still required:
 - Dependency installation and Next.js route/runtime verification
-- Stripe SDK installation, API version pinning, and test/live credential configuration
+- Stripe SDK installation, API version pinning, and test/live credential configuration [blocked]
 - Signed deposit token or authenticated dashboard-only session creation
 - Stripe Checkout/PaymentIntent creation
 - Webhook signature verification with raw request body and endpoint secret
@@ -192,7 +192,7 @@ Implemented in Phase 9:
 - Consent-aware delivery plan helpers.
 - Booking, deposit, prep, reschedule, aftercare, healed-photo, waitlist, flash-drop, and review automation sequence previews.
 - Delivery-log drafts with destination masking/hashing.
-- Provider boundary matrix for Resend, Twilio, Expo Push, and in-app delivery.
+- Provider boundary matrix for Resend, Twilio, Expo Push, and in-app delivery [evidence].
 - Email/SMS webhook interpretation helpers.
 - Dashboard `/templates` and `/messages` previews.
 - Mobile notification plan previews.
@@ -286,7 +286,7 @@ Still external/blocking:
 - Key management/application-level encryption local contracts for medical notes and provider-token intake are wired with readiness/rotation metadata; runtime KMS/key lifecycle proof and broader provider-token operational hardening remain gated.
 - Signed S3/Supabase uploads, malware scanning, EXIF/GPS stripping, public derivative pipeline, and private ACL verification.
 - Distributed rate-limit store, bot/spam controls, CSRF/session enforcement, and security header runtime deployment.
-- Privacy request persistence/workers and verified export/delete/retention workflows.
+- Privacy request persistence/workers and verified export/delete/retention workflows [blocked].
 - Attorney review for privacy, terms, consent, medical, SMS, aftercare, deposit/no-show, and refund language.
 - Automated security, tenant isolation, upload, privacy, and legal-placeholder tests.
 

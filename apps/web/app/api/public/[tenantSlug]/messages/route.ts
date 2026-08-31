@@ -1,8 +1,9 @@
 import { buildMessageThreadDraft } from "@inkroute/notifications";
 import { prisma } from "@inkroute/db";
 import { publicMessageInputSchema } from "@inkroute/validators";
+import { createHash, randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
-import { checkRateLimit, getClientIp, persistMessage, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIpFromHeaders, persistMessage, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 type TenantResolution = { tenantId: string; source: "database" | "local-fallback" };
@@ -44,9 +45,78 @@ async function resolveMessageTenant(tenantSlug: string): Promise<TenantResolutio
   return { tenantId: local.tenantId, source: "local-fallback" };
 }
 
-function hashDestination(value: string | null | undefined): string | null {
+function hashDestination(tenantId: string, channel: string, value: string | null | undefined): string | null {
   if (!value) return null;
-  return `contact-length:${value.length}`;
+  return createHash("sha256").update(`${tenantId}:${channel}:${value.trim().toLowerCase()}`).digest("hex");
+}
+
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function buildSafePublicMessageDatabaseResponse(result: {
+  message: { status: string; channel: string; direction: string };
+  handoff: { state: string };
+  idempotencyReplayed?: boolean;
+  duplicateSideEffectsCreated?: boolean;
+}) {
+  return {
+    receipt: {
+      threadPersisted: true,
+      messagePersisted: true,
+      messageStatus: result.message.status,
+      messageChannel: result.message.channel,
+      messageDirection: result.message.direction,
+      notificationPersisted: true,
+      deliveryPersisted: true,
+      providerHandoffPersisted: true,
+      providerHandoffState: result.handoff.state,
+      auditPersisted: true,
+      idempotencyPersisted: true,
+      idempotencyReplayed: result.idempotencyReplayed === true,
+      duplicateSideEffectsCreated: result.duplicateSideEffectsCreated === true,
+      internalPersistenceIdsStored: false,
+    },
+    responseProjection: {
+      threadIdEchoed: false,
+      messageIdEchoed: false,
+      notificationIdEchoed: false,
+      deliveryIdEchoed: false,
+      handoffIdEchoed: false,
+      auditIdEchoed: false,
+      idempotencyKeyIdEchoed: false,
+      tenantIdEchoed: false,
+      clientContactFieldsEchoed: false,
+      clientProfileNameSelectedFromDatabase: false,
+      rawDestinationEchoed: false,
+      destinationHashEchoed: false,
+      idempotencyKeyEchoed: false,
+      rawMessageBodyEchoed: false,
+      bodyPreviewEchoed: false,
+      bookingRequestIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+      destinationHashOnly: true,
+    },
+  };
+}
+
+function buildSafePublicMessageDraftResponse(draft: ReturnType<typeof buildMessageThreadDraft>) {
+  return {
+    subject: draft.subject,
+    channel: draft.channel,
+    direction: draft.direction,
+    status: draft.status,
+    relatedBookingLinked: Boolean(draft.relatedBookingRequestId),
+    relatedAppointmentLinked: Boolean(draft.relatedAppointmentId),
+    piiRedactionNote: draft.piiRedactionNote,
+    responseProjection: {
+      rawMessageBodyEchoed: false,
+      bodyPreviewEchoed: false,
+      bookingRequestIdEchoed: false,
+      appointmentIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
 }
 
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
@@ -76,7 +146,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const rateLimit = checkRateLimit("public-message", tenantSlug, `${clientIp}:${resolvedTenant.tenantId}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -125,7 +195,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         const now = new Date();
         const idempotencyKey =
           request.headers.get("idempotency-key") ??
-          `public-message:${resolvedTenant.tenantId}:${draft.relatedBookingRequestId}:${now.getTime()}`;
+          `public-message:${randomUUID()}`;
 
         const result = await prisma.$transaction(async (tx) => {
           const booking = await tx.bookingRequest.findFirst({
@@ -133,7 +203,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             select: {
               id: true,
               clientId: true,
-              client: { select: { id: true, email: true, phone: true, preferredName: true } },
+              client: { select: { id: true, email: true, phone: true } },
             },
           });
 
@@ -160,8 +230,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
                 rawBodyStored: false,
               }),
             },
-            select: { id: true, key: true },
+            select: { id: true, key: true, status: true },
           });
+
+          if (idempotency.status === "completed") {
+            return {
+              status: "replayed" as const,
+              message: { status: "queued", channel: "in_app", direction: "inbound" },
+              handoff: { state: "queued" },
+              idempotencyReplayed: true,
+              duplicateSideEffectsCreated: false,
+            };
+          }
 
           const thread = await tx.messageThread.create({
             data: {
@@ -206,7 +286,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               notificationId: notification.id,
               channel: "in_app",
               status: "queued",
-              destinationHash: hashDestination(booking.client.email) ?? hashDestination(booking.client.phone),
+              destinationHash: hashDestination(resolvedTenant.tenantId, "in_app", booking.client.email) ?? hashDestination(resolvedTenant.tenantId, "in_app", booking.client.phone),
               provider: "internal-dashboard",
             },
             select: { id: true },
@@ -222,14 +302,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               channel: "in_app",
               provider: "internal-dashboard",
               state: "queued",
-              idempotencyKey: idempotency.key,
-              destinationHash: hashDestination(booking.client.email) ?? hashDestination(booking.client.phone),
+              idempotencyKey: idempotencyStorageFingerprint(idempotency.key),
+              destinationHash: hashDestination(resolvedTenant.tenantId, "in_app", booking.client.email) ?? hashDestination(resolvedTenant.tenantId, "in_app", booking.client.phone),
               sanitizedPayload: toJsonValue({
                 route: "/api/public/[tenantSlug]/messages",
                 subject: draft.subject,
-                bookingRequestId: booking.id,
-                clientId: booking.clientId,
+                bookingContextMatched: true,
+                clientContextMatched: true,
                 bodyPreview: "[redacted-message-body]",
+                destinationHashOnly: true,
+                rawContactFieldsStored: false,
+                internalPersistenceIdsStored: false,
+                rawIdempotencyKeyStored: false,
                 providerDispatchDeferred: true,
               }),
             },
@@ -244,15 +328,38 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               entityId: thread.id,
               metadata: toJsonValue({
                 route: "/api/public/[tenantSlug]/messages",
-                bookingRequestId: booking.id,
-                messageId: message.id,
-                notificationId: notification.id,
-                deliveryId: delivery.id,
-                handoffId: handoff.id,
-                idempotencyKeyId: idempotency.id,
+                bookingContextMatched: true,
+                messagePersisted: true,
+                notificationPersisted: true,
+                deliveryPersisted: true,
+                providerHandoffPersisted: true,
+                idempotencyPersisted: true,
+                internalPersistenceIdsStored: false,
                 redactedFields: ["message.body", "client.email", "client.phone"],
+                destinationHashOnly: true,
+                rawContactFieldsStored: false,
                 rawPayloadStored: false,
                 gapIds: ["GAP-010", "GAP-061", "GAP-064", "GAP-066"],
+              }),
+            },
+            select: { id: true },
+          });
+
+          await tx.idempotencyKey.update({
+            where: { tenantId_scope_key: { tenantId: resolvedTenant.tenantId, scope: "public-message", key: idempotency.key } },
+            data: {
+              status: "completed",
+              result: toJsonValue({
+                threadPersisted: true,
+                messagePersisted: true,
+                notificationPersisted: true,
+                deliveryPersisted: true,
+                providerHandoffPersisted: true,
+                auditPersisted: Boolean(audit.id),
+                internalPersistenceIdsStored: false,
+                providerDispatchDeferred: true,
+                rawContactFieldsStored: false,
+                rawBodyStored: false,
               }),
             },
             select: { id: true },
@@ -261,24 +368,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           return { status: "persisted" as const, thread, message, notification, delivery, handoff, audit, idempotency };
         });
 
-        if (result.status === "persisted") {
+        if (result.status === "persisted" || result.status === "replayed") {
           return NextResponse.json(
             {
               ok: true,
               data: {
-                tenantSlug,
-                tenantId: resolvedTenant.tenantId,
+                tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
                 persistence: "database",
-                threadId: result.thread.id,
-                messageId: result.message.id,
-                notificationId: result.notification.id,
-                deliveryId: result.delivery.id,
-                handoffId: result.handoff.id,
-                auditId: result.audit.id,
-                idempotencyKeyId: result.idempotency.id,
-                draft,
+                draft: buildSafePublicMessageDraftResponse(draft),
+                ...buildSafePublicMessageDatabaseResponse(result),
                 providerDispatch: {
-                  queued: true,
+                  queued: result.status === "persisted",
                   provider: "internal-dashboard",
                   externalSendDeferred: true,
                   handoffState: result.handoff.state,
@@ -290,10 +390,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
                 ],
               },
               runtimeBoundary: {
-                tenantId: resolvedTenant.tenantId,
-                messageCount: 1,
+                tenantIdEchoed: false,
+                messageCount: result.status === "persisted" ? 1 : 0,
                 savedInLocalRuntime: false,
-                savedInDatabase: true,
+                savedInDatabase: result.status === "persisted",
+                idempotencyReplay: result.status === "replayed",
                 gapIds: ["GAP-010", "GAP-061", "GAP-064", "GAP-066"],
               },
             },
@@ -359,12 +460,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   return NextResponse.json(
     {
       ok: true,
-      data: {
-        tenantSlug,
-        id: persisted.id,
-        status: persisted.status,
-        draft,
-        requiredNextWork: [
+        data: {
+          tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
+          status: persisted.status,
+          draft: buildSafePublicMessageDraftResponse(draft),
+          responseProjection: {
+            tenantIdEchoed: false,
+            messageIdEchoed: false,
+            bookingRequestIdEchoed: false,
+            clientContactFieldsEchoed: false,
+            rawDestinationEchoed: false,
+            destinationHashEchoed: false,
+            idempotencyKeyEchoed: false,
+            rawMessageBodyEchoed: false,
+            bodyPreviewEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
+          requiredNextWork: [
           "Resolve public tenant and client identity safely.",
           "Rate limit and spam-protect inbound public messages.",
           "Persist MessageThread and Message rows in a tenant-scoped transaction.",
@@ -373,7 +485,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         ],
       },
       runtimeBoundary: {
-        tenantId: resolvedTenant.tenantId,
+        tenantIdEchoed: false,
         messageCount: 1,
         savedInLocalRuntime: true,
         savedInDatabase: false,

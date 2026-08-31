@@ -43,10 +43,32 @@ describe("dashboard client read route contract", () => {
       expect(source).toContain('"phone"');
       expect(source).toContain('"medicalNotes"');
       expect(source).toContain('"privateNotes"');
+      expect(source).toContain('medicalNotes:');
+      expect(source).toContain('privateNotes:');
+      expect(source).toContain('"[redacted-dashboard-field]"');
+      expect(source).toContain("hasMedicalNotes: Boolean");
+      expect(source).toContain("hasPrivateNotes: Boolean");
       expect(source).toContain("tx.auditLog.create");
       expect(source).toContain('redaction: "buildTenantDashboardView"');
       expect(source).toContain("includesSensitiveProfileFlags");
     }
+    expect(detailRouteSource).toContain("clientIdEchoed: false");
+    expect(detailRouteSource).toContain("tenantIdEchoed: false");
+    expect(detailRouteSource).toContain("relatedBookingIdsEchoed: false");
+    expect(detailRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(listRouteSource).toContain("buildSafeClientListRecord");
+    expect(listRouteSource).toContain("clientIdsEchoed: false");
+    expect(listRouteSource).toContain("tenantIdEchoed: false");
+    expect(listRouteSource).toContain("relatedBookingIdsEchoed: false");
+    expect(listRouteSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(listRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(listRouteSource).toContain("relatedBookingLinked: Boolean");
+    expect(listRouteSource).not.toContain("id: row.id");
+    expect(listRouteSource).not.toContain("tenantId: row.tenantId");
+    expect(listRouteSource).not.toContain("tenantId,\n          error:");
+    expect(detailRouteSource).not.toContain("id: result.row.id");
+    expect(detailRouteSource).not.toContain("tenantId: result.row.tenantId");
+    expect(detailRouteSource).not.toContain("id: booking.id");
   });
 
   it("keeps local fallback projected and database outage states explicit", () => {

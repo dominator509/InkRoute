@@ -1,5 +1,5 @@
 import { prisma } from "@inkroute/db";
-import type { SearchConsoleOperation } from "@inkroute/seo";
+import type { SearchConsoleOperation, SearchConsoleOperationPlan } from "@inkroute/seo";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildTenantSearchConsoleOperation,
@@ -33,6 +33,50 @@ function json(payload: Record<string, unknown>, status = 200) {
   return NextResponse.json(payload, { status, headers: noStoreHeaders });
 }
 
+function buildSafeSearchConsolePlanResponse(plan: SearchConsoleOperationPlan) {
+  return {
+    status: plan.status,
+    operation: plan.operation,
+    tenantSlug: plan.tenantSlug,
+    propertyType: plan.propertyType,
+    verificationMethod: plan.verificationMethod,
+    canExecuteProviderCall: plan.canExecuteProviderCall,
+    requiresCredential: plan.requiresCredential,
+    requiresTenantOwnershipCheck: plan.requiresTenantOwnershipCheck,
+    shouldStoreImportedRows: plan.shouldStoreImportedRows,
+    dashboardStatus: plan.dashboardStatus,
+    blockers: plan.blockers,
+    requiredEnv: plan.requiredEnv,
+    stepSummaries: plan.steps.map((step) => ({
+      id: step.id,
+      providerEndpoint: step.providerEndpoint,
+      requiresCredential: step.requiresCredential,
+      writesTenantData: step.writesTenantData,
+      summaryEchoed: false,
+    })),
+    rawSiteUrlEchoed: false,
+    rawSitemapUrlEchoed: false,
+    rawStepSummaryEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawProviderPayloadEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSearchConsoleResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    rawSiteUrlEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawProviderPayloadEchoed: false,
+    rawCredentialsEchoed: false,
+    rawPrivateKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -53,10 +97,11 @@ export async function GET(request: NextRequest) {
 
   return json({
     ok: true,
-    tenantId,
+    tenantScope: { actorTenantMatched: true },
     status,
-    siteUrl: searchConsoleSiteUrl(),
+    siteUrlConfigured: Boolean(searchConsoleSiteUrl()),
     credentialsConfigured,
+    responseProjection: buildSearchConsoleResponseProjection(),
     requiredEnv: searchConsoleRequiredEnv,
     runtime: searchConsoleRuntimeContract,
     artifactPaths: searchConsoleArtifactPaths,
@@ -84,9 +129,9 @@ export async function POST(request: NextRequest) {
   const plan = buildTenantSearchConsoleOperation({
     operation,
     tenantId,
-    tenantSlug: stringValue(body.tenantSlug),
-    siteUrl: stringValue(body.siteUrl),
-    sitemapUrl: stringValue(body.sitemapUrl),
+    ...(stringValue(body.tenantSlug) ? { tenantSlug: stringValue(body.tenantSlug) } : {}),
+    ...(stringValue(body.siteUrl) ? { siteUrl: stringValue(body.siteUrl) } : {}),
+    ...(stringValue(body.sitemapUrl) ? { sitemapUrl: stringValue(body.sitemapUrl) } : {}),
     dateRangeDays: numberValue(body.dateRangeDays, 28),
     propertyOwnerTenantId: stringValue(body.propertyOwnerTenantId) ?? tenantId,
   });
@@ -96,7 +141,8 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildSearchConsoleResponseProjection(),
         error: {
           code: "PROVIDER_SEARCH_CONSOLE_AUDIT_NOT_CONFIGURED",
           message: "Production Search Console operations require DB-backed actor resolution and auditable operation metadata; local fallback planning is disabled.",
@@ -118,7 +164,9 @@ export async function POST(request: NextRequest) {
           action: `seo.searchConsole.${operation}`,
           entityType: "SearchConsoleOperation",
           metadata: {
-            idempotencyKey,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             status: plan.status,
             dashboardStatus: plan.dashboardStatus,
             providerEndpoint: plan.steps[0]?.providerEndpoint,
@@ -136,7 +184,8 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId,
+            tenantScope: { actorTenantMatched: true },
+            responseProjection: buildSearchConsoleResponseProjection(),
             error: {
               code: "PROVIDER_SEARCH_CONSOLE_AUDIT_NOT_CONFIGURED",
               message: "Production Search Console operations require dashboard database audit persistence; unaudited provider operation plans are disabled.",
@@ -155,9 +204,12 @@ export async function POST(request: NextRequest) {
     {
       ok: plan.canExecuteProviderCall,
       status: plan.dashboardStatus,
-      plan,
-      idempotencyKey,
-      auditId,
+      tenantScope: { actorTenantMatched: true },
+      plan: buildSafeSearchConsolePlanResponse(plan),
+      idempotencyKeyPresent: Boolean(idempotencyKey),
+      rawIdempotencyKeyEchoed: false,
+      auditLogged: Boolean(auditId),
+      responseProjection: buildSearchConsoleResponseProjection(),
       gapIds: ["GAP-075"],
       boundary: "Search Console operation is planned and audited when DB-backed; live provider execution remains credential-gated.",
     },

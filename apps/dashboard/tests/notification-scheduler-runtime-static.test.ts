@@ -118,6 +118,32 @@ describe("dashboard notification scheduler runtime contract", () => {
     expect(queueRouteSource).toContain("tx.idempotencyKey.update");
     expect(queueRouteSource).toContain("idempotencyKeyId");
     expect(queueRouteSource).toContain("idempotencyReplay");
+    expect(queueRouteSource).toContain("summarizeQueueReplayResult");
+    expect(queueRouteSource).toContain("rawIdempotencyResultEchoed: false");
+    expect(queueRouteSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(queueRouteSource).not.toContain("result: result.result");
+    expect(queueRouteSource).toContain("summarizeDeliveryPlanForResponse");
+    expect(queueRouteSource).toContain("notificationResponseAllowlisted: true");
+    expect(queueRouteSource).toContain("rawDestinationsEchoed: false");
+    expect(queueRouteSource).toContain("tenantIdEchoed: false");
+    expect(queueRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(queueRouteSource).toContain("clientProfileNameSelectedFromDatabase: false");
+    expect(queueRouteSource).toContain("select: { id: true, email: true, phone: true, marketingOptIn: true, smsOptIn: true }");
+    expect(queueRouteSource).toContain("bodyPreviewStored: false");
+    expect(queueRouteSource).toContain("bodyPreviewEchoed: false");
+    expect(queueRouteSource).not.toContain("...result.notification");
+    expect(queueRouteSource).not.toContain("preferredName: true");
+    expect(queueRouteSource).not.toContain("bodyPreview: input.body.slice");
+    expect(routeSource).toContain("plan: buildSafeNotificationSchedulerPlanResponse(plan)");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("rawScheduledJobsEchoed: false");
+    expect(routeSource).toContain("rawWritePayloadsEchoed: false");
+    expect(routeSource).toContain("rawCancellationReasonEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("ok: true,\n      tenantId,");
+    expect(routeSource).not.toContain("ok: false,\n        tenantId,");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
     expect(routeSource).toContain("NOTIFICATION_SCHEDULER_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("schedulerLocalContractFallbackDisabled");
     expect(routeSource).not.toContain("schedulerPlanOnlyWritesDisabled");
@@ -203,6 +229,10 @@ describe("dashboard notification scheduler runtime contract", () => {
         deadLetterPayload: "failed private payload",
         publicStatus: "retry-scheduled",
       },
+      safeNote:
+        "evidence_notification_scheduler_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/notification-scheduler/private-proof.json",
+      safeQueuePath: "test-results/notification-scheduler-runtime/private-queue.json",
+      safeWorkerRun: "scheduler_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     });
 
     expect(redacted.secretSafe).toBe(true);
@@ -212,6 +242,9 @@ describe("dashboard notification scheduler runtime contract", () => {
       "providerDispatchUrl",
       "workerAuditLogId",
       "nested.deadLetterPayload",
+      "safeNote",
+      "safeQueuePath",
+      "safeWorkerRun",
     ]);
     expect(redacted.artifact).toEqual({
       tenantId: "[redacted]",
@@ -223,7 +256,21 @@ describe("dashboard notification scheduler runtime contract", () => {
         deadLetterPayload: "[redacted]",
         publicStatus: "retry-scheduled",
       },
+      safeQueuePath: "[redacted]",
+      safeWorkerRun: "[redacted]",
     });
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "evidence_notification_scheduler_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "artifacts/notification-scheduler/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "test-results/notification-scheduler-runtime/private-queue.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "scheduler_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildNotificationSchedulerArtifactReview({
       publicSummary: "safe notification scheduler artifact",

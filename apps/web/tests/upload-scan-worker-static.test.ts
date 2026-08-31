@@ -148,6 +148,9 @@ describe("GAP-096 upload scan worker static contract", () => {
 
     expect(uploadPolicyRoute).toContain("buildUploadScanPipelinePlan");
     expect(uploadPolicyRoute).toContain("scanPipelinePreview");
+    expect(uploadPolicyRoute).toContain("buildSafeUploadScanPipelinePreview");
+    expect(uploadPolicyRoute).toContain("rawValidationObjectEchoed: false");
+    expect(uploadPolicyRoute).toContain("malwareVerdictEchoed: false");
     expect(uploadPolicyRoute).toContain("malwareVerdict: \"not_run\"");
     expect(uploadPolicyRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(uploadPolicyRoute).toContain("{ headers: noStoreHeaders }");
@@ -360,14 +363,29 @@ describe("GAP-096 upload scan worker static contract", () => {
     expect(JSON.stringify(writes)).toContain('"entityType":"FileAsset"');
     expect(JSON.stringify(writes)).toContain('"action":"upload.scan_verdict"');
     expect(JSON.stringify(writes)).not.toContain("private/tenant_demo/portfolio/fileasset_clean.jpg");
+    expect(JSON.stringify(writes)).toContain("tenantIdHash");
+    expect(JSON.stringify(writes)).toContain("fileAssetIdHash");
+    expect(JSON.stringify(writes)).toContain("objectKeyHash");
+    expect(JSON.stringify(writes)).toContain("rawTenantIdStored");
+    expect(JSON.stringify(writes)).toContain("rawFileAssetIdStored");
+    expect(JSON.stringify(writes)).toContain("rawObjectKeyStored");
   });
 
   it("redacts GAP-096 scanner and storage artifacts before review", () => {
     const rawArtifact = {
       scanner_api_key: "scanner-secret-key",
       storageToken: "storage-secret-token",
+      tenantId: "tenant_upload_scan_private",
+      fileAssetId: "file_asset_upload_scan_private",
+      bucket: "private-originals-bucket",
+      scanJobId: "scan_job_upload_private",
+      malwareScanId: "malware_scan_private",
+      auditId: "audit_upload_scan_private",
+      checksumSha256: "checksum_upload_scan_private",
       signedUrl: "https://storage.example/private?signature=abc123",
       objectKey: "private/tenant_demo/reference/fileasset_demo.jpg",
+      quarantineObjectKey: "quarantine/tenant_demo/reference/fileasset_demo.jpg",
+      derivativeObjectKey: "public/tenant_demo/reference/fileasset_demo.webp",
       scannerPayload: { rawBody: "{\"email\":\"artist@example.com\",\"phone\":\"+1 555 123 4567\"}" },
       nested: ["Authorization: Bearer upload-secret-token", "owner artist@example.com"],
       stack: "Error: scanner failed",
@@ -379,8 +397,17 @@ describe("GAP-096 upload scan worker static contract", () => {
 
     expect(serialized).not.toContain("scanner-secret-key");
     expect(serialized).not.toContain("storage-secret-token");
+    expect(serialized).not.toContain("tenant_upload_scan_private");
+    expect(serialized).not.toContain("file_asset_upload_scan_private");
+    expect(serialized).not.toContain("private-originals-bucket");
+    expect(serialized).not.toContain("scan_job_upload_private");
+    expect(serialized).not.toContain("malware_scan_private");
+    expect(serialized).not.toContain("audit_upload_scan_private");
+    expect(serialized).not.toContain("checksum_upload_scan_private");
     expect(serialized).not.toContain("signature=abc123");
     expect(serialized).not.toContain("private/tenant_demo/reference/fileasset_demo.jpg");
+    expect(serialized).not.toContain("quarantine/tenant_demo/reference/fileasset_demo.jpg");
+    expect(serialized).not.toContain("public/tenant_demo/reference/fileasset_demo.webp");
     expect(serialized).not.toContain("artist@example.com");
     expect(serialized).not.toContain("+1 555 123 4567");
     expect(serialized).not.toContain("upload-secret-token");

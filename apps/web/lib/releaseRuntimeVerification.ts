@@ -86,10 +86,12 @@ export interface ReleaseRuntimeVerificationArtifactReview {
 }
 
 const releaseRuntimeSensitiveKeyPattern =
-  /(?:authorization|clientsecret|cookie|credential|email|password|phone|private|secret|stack|token)/i;
+  /(?:authorization|artifact|build|check|ci|clientsecret|commit|cookie|credential|database|dsn|email|error|github|job|log|output|password|path|payload|phone|private|raw|release|route|run|secret|stack|tenant|token|url|uri|workflow)/i;
 const releaseRuntimeEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const releaseRuntimePhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const releaseRuntimeTokenPattern = /\b(?:bearer|ghp|github_pat|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
+const releaseRuntimeUrlPattern = /https?:\/\/[^\s"'<>]+/gi;
+const releaseRuntimeSelectorPattern = /\b(?:release|feature|tenant|workflow|run|commit|artifact|route|build)_[A-Za-z0-9_-]+\b/gi;
 
 function redactReleaseRuntimeArtifactValue(value: unknown, key = ""): unknown {
   if (value === null || value === undefined) {
@@ -104,7 +106,9 @@ function redactReleaseRuntimeArtifactValue(value: unknown, key = ""): unknown {
     return value
       .replace(releaseRuntimeEmailPattern, "[REDACTED_EMAIL]")
       .replace(releaseRuntimePhonePattern, "[REDACTED_PHONE]")
-      .replace(releaseRuntimeTokenPattern, "[REDACTED_TOKEN]");
+      .replace(releaseRuntimeTokenPattern, "[REDACTED_TOKEN]")
+      .replace(releaseRuntimeUrlPattern, "[REDACTED_URL]")
+      .replace(releaseRuntimeSelectorPattern, "[REDACTED_SELECTOR]");
   }
 
   if (Array.isArray(value)) {

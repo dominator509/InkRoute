@@ -396,7 +396,7 @@ export const buildPublicContentExecutionPlan = (): PublicContentExecutionPlan =>
 });
 
 const publicContentSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|file|portfolio|artist|booking|email|phone|objectKey|attribution|plan|status)/i;
+  /(apiJson|artist|attribution|booking|body|cache|client|database|db|destination|domain|email|faq|file|html|idempotency|message|objectKey|password|phone|plan|portfolio|private|raw|rendered|request|review|secret|status|tenant|token|travel|uri|url|waitlist)/i;
 
 export const buildRedactedPublicContentArtifact = (artifact: unknown): Pick<PublicContentArtifactReview, "artifact" | "redactions"> => {
   const redactions: string[] = [];

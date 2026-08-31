@@ -264,9 +264,13 @@ describe("signed ICS feed web contract", () => {
       resolve(repoRoot, "apps/web/app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route.ts"),
       "utf8",
     );
+    const apiContractsSource = readFileSync(resolve(repoRoot, "API_CONTRACTS.md"), "utf8");
 
     expect(routeSource).toContain("evaluateSignedIcsFeedRequest");
     expect(routeSource).toContain("X-InkRoute-Feed-Access-Logged");
     expect(routeSource).toContain("private");
+    expect(apiContractsSource).toContain("Implemented as a signed-feed route boundary.");
+    expect(apiContractsSource).toContain("production fails closed until durable signed-token persistence");
+    expect(apiContractsSource).not.toContain("static-demo-not-signed");
   });
 });

@@ -47,7 +47,8 @@ describe("release health route", () => {
       tenantSlug: string;
       source: string;
       status: string;
-      release: { id: string; productionBlocked: boolean };
+      responseProjection: { tenantIdEchoed: boolean; releaseRecordIdEchoed: boolean; commitShaEchoed: boolean; runtimeContextTenantIdEchoed: boolean; internalPersistenceIdsEchoed: boolean };
+      release: { productionBlocked: boolean; responseProjection: { releaseCandidateIdEchoed: boolean; commitShaEchoed: boolean } };
       healthChecks: Array<{ id: string; status: string }>;
       publicFeatureSnapshot: Array<{ key: string; reason: string }>;
       boundary: string;
@@ -57,7 +58,19 @@ describe("release health route", () => {
     expect(payload.tenantSlug).toBe("inkroute-demo");
     expect(payload.source).toBe("local-fallback");
     expect(payload.status).toBe("local-preview");
-    expect(payload.release.id).toContain("rel_");
+    expect(payload.responseProjection).toMatchObject({
+      tenantIdEchoed: false,
+      releaseRecordIdEchoed: false,
+      commitShaEchoed: false,
+      runtimeContextTenantIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    });
+    expect(payload.release).not.toHaveProperty("id");
+    expect(payload.release).not.toHaveProperty("commitSha");
+    expect(payload.release.responseProjection).toMatchObject({
+      releaseCandidateIdEchoed: false,
+      commitShaEchoed: false,
+    });
     expect(payload.healthChecks.map((check) => check.id)).toEqual(["dependencies-installed", "production-gates", "rollback-plan"]);
     expect(payload.publicFeatureSnapshot.length).toBeGreaterThan(0);
     expect(payload.publicFeatureSnapshot.every((flag) => flag.reason === "local-fallback")).toBe(true);
@@ -142,34 +155,51 @@ describe("release health route", () => {
       params: Promise.resolve({ tenantSlug: "inkroute-demo" }),
     });
     const payload = (await response.json()) as {
-      tenantId: string;
       source: string;
       status: string;
-      release: { version: string; channel: string; commitSha: string; gates: Array<{ id: string; status: string }> };
-      releaseRecords: Array<{ id: string; version: string; channel: string; createdAt: string }>;
+      responseProjection: { tenantIdEchoed: boolean; releaseRecordIdEchoed: boolean; commitShaEchoed: boolean; runtimeContextTenantIdEchoed: boolean; internalPersistenceIdsEchoed: boolean };
+      release: { version: string; channel: string; gates: Array<{ id: string; status: string }>; responseProjection: { releaseCandidateIdEchoed: boolean; commitShaEchoed: boolean } };
+      releaseRecords: Array<{ version: string; channel: string; createdAt: string; responseProjection: { releaseRecordIdEchoed: boolean; commitShaEchoed: boolean } }>;
       publicFeatureSnapshot: Array<{ key: string; enabled: boolean; reason: string }>;
       decisions: Array<{ key: string; enabled: boolean; reason: string }>;
       boundary: string;
     };
 
     expect(response.status).toBe(200);
-    expect(payload.tenantId).toBe("tenant_release_test");
+    expect(payload).not.toHaveProperty("tenantId");
+    expect(payload.responseProjection).toMatchObject({
+      tenantIdEchoed: false,
+      releaseRecordIdEchoed: false,
+      commitShaEchoed: false,
+      runtimeContextTenantIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    });
     expect(payload.source).toBe("database");
     expect(payload.status).toBe("authenticated-readiness-boundary");
     expect(payload.release).toMatchObject({
       version: "0.12.0-phase12",
       channel: "preview",
-      commitSha: "abc123release",
+      responseProjection: {
+        releaseCandidateIdEchoed: false,
+        commitShaEchoed: false,
+      },
     });
+    expect(payload.release).not.toHaveProperty("id");
+    expect(payload.release).not.toHaveProperty("commitSha");
     expect(payload.release.gates).toEqual(expect.arrayContaining([expect.objectContaining({ id: "database-persistence", status: "pass" })]));
     expect(payload.releaseRecords).toEqual([
       expect.objectContaining({
-        id: "release_db_1",
         version: "0.12.0-phase12",
         channel: "preview",
         createdAt: "2026-06-08T19:15:00.000Z",
+        responseProjection: {
+          releaseRecordIdEchoed: false,
+          commitShaEchoed: false,
+        },
       }),
     ]);
+    expect(payload.releaseRecords[0]).not.toHaveProperty("id");
+    expect(payload.releaseRecords[0]).not.toHaveProperty("commitSha");
     expect(payload.publicFeatureSnapshot).toEqual(expect.arrayContaining([expect.objectContaining({ key: "nomad_mode.enabled", enabled: true })]));
     expect(payload.decisions.length).toBeGreaterThan(0);
     expect(payload.boundary).toContain("tenant-scoped ReleaseRecord and FeatureFlag rows");

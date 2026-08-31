@@ -27,6 +27,7 @@ const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"),
 const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
 const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
 const structuredDataCrawlQaSource = readFileSync(join(process.cwd(), "apps/web/lib/structuredDataCrawlQa.ts"), "utf8");
+const jsonLdScriptSource = readFileSync(join(process.cwd(), "apps/web/components/JsonLdScript.tsx"), "utf8");
 
 describe("GAP-073 structured-data crawl QA contract", () => {
   it("defines rendered public route inventory across JSON-LD, canonical, sitemap, robots, and noindex surfaces", () => {
@@ -43,6 +44,9 @@ describe("GAP-073 structured-data crawl QA contract", () => {
     );
     expect(scripts.map((script) => script["@type"])).toEqual(["FAQPage", "ImageObject"]);
     expect(structuredDataCrawlQaSource).toContain("extractRenderedJsonLdScriptsFromHtml");
+    expect(jsonLdScriptSource).toContain("serializeJsonLd");
+    expect(jsonLdScriptSource).toContain('.replace(/</g, "\\\\u003c")');
+    expect(jsonLdScriptSource).toContain("dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}");
   });
 
   it("builds local crawl artifacts for rendered JSON-LD, canonical, sitemap, and noindex checks", () => {
@@ -93,6 +97,13 @@ describe("GAP-073 structured-data crawl QA contract", () => {
       artifacts: [
         {
           path: "coverage/structured-data-crawl.json",
+          routeUrl: "https://inkroute.example/tenant-demo/cities/seattle",
+          tenantSlug: "tenant-demo",
+          renderedHtml: "<script type=\"application/ld+json\">private schema</script>",
+          jsonLdScripts: ["{\"@type\":\"LocalBusiness\",\"url\":\"https://inkroute.example/private\"}"],
+          canonicalUrl: "https://inkroute.example/tenant-demo/cities/seattle",
+          sitemapUrl: "https://inkroute.example/sitemap.xml",
+          schemaGraph: { "@type": "TattooParlor", name: "Private Studio" },
           privateDraftContent: "private-client launch copy",
           providerPayload: { authorization: "Bearer provider-token", email: "ari@example.test" },
           nested: [{ phone: "+1 206 555 0142", secret: "crawl-secret" }],
@@ -101,6 +112,12 @@ describe("GAP-073 structured-data crawl QA contract", () => {
     });
 
     expect(review.status).toBe("passed");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("https://inkroute.example/tenant-demo/cities/seattle");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("tenant-demo");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("private schema");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("https://inkroute.example/private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("https://inkroute.example/sitemap.xml");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("Private Studio");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("private-client");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("provider-token");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("ari@example.test");

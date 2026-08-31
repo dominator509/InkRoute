@@ -1,5 +1,6 @@
 import {
   buildDashboardAuthGuardEvidencePlan,
+  dashboardAuthGuardRequiredCommands,
   dashboardAuthGuardRequiredControls,
 } from "@inkroute/auth";
 
@@ -39,20 +40,7 @@ export const dashboardAuthGuardRouteMethodPermissionContract = {
   routeOverrideRequiredForMixedPermissionRoutes: true,
 } as const satisfies DashboardAuthGuardRouteMethodPermissionContract;
 
-export const dashboardAuthGuardRuntimeCommands = [
-  "pnpm --filter @inkroute/auth typecheck",
-  "pnpm --filter @inkroute/auth test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard middleware auth guard tests",
-  "dashboard protected layout auth guard tests",
-  "dashboard API auth guard tests",
-  "browser dashboard login/logout smoke",
-  "browser dashboard tenant-switch smoke",
-  "browser dashboard cross-tenant denial smoke",
-  "auth AuditLog persistence tests",
-  "GitHub Actions dashboard auth guard evidence job",
-] as const;
+export const dashboardAuthGuardRuntimeCommands = dashboardAuthGuardRequiredCommands;
 
 export const dashboardAuthGuardReadinessAreas = [
   "provider-backed-dashboard-session",
@@ -448,7 +436,7 @@ export interface DashboardAuthGuardArtifactReview {
 }
 
 export const dashboardAuthGuardRequiredExternalEvidence = [
-  "provider-backed dashboard session evidence",
+  "provider-backed dashboard session evidence with raw provider/session selectors suppressed",
   "dashboard route-method permission mapping evidence",
   "persisted TenantMember lookup evidence",
   "persisted CustomRole lookup evidence",
@@ -458,7 +446,7 @@ export const dashboardAuthGuardRequiredExternalEvidence = [
   "auth AuditLog persistence evidence",
   "dashboard typecheck and build evidence",
   "fresh CI dashboard auth guard evidence",
-  "secret-safe dashboard auth artifact review",
+  "secret-safe dashboard auth artifact review with provider identity/session/token selectors redacted",
 ] as const;
 
 export const dashboardAuthGuardExecutionPolicy: DashboardAuthGuardExecutionPolicy = {
@@ -510,7 +498,9 @@ export const buildDashboardAuthGuardExecutionPlan = (): DashboardAuthGuardExecut
 });
 
 const dashboardAuthGuardSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|role|member|auth|audit|medical|payment|header|authorization|crossTenant|login|logout)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|csrf|email|phone|role|member|membership|custom|auth|identity|subject|principal|sub|jti|oauth|oidc|saml|access|refresh|bearer|audit|medical|payment|header|authorization|crossTenant|login|logout|tenantSwitch|denial|forbidden|unauthorized|route|method|permission|layout|middleware|helper|browser|playwright|trace|screenshot|video|payload|body|response|noStore|cache|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|id|key)/i;
+const dashboardAuthGuardSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|session_|access_|refresh_|bearer_)[A-Za-z0-9_-]*|authorization:\s*[^\s"']+|(?:tenant|client|member|membership|role|custom|session|provider|audit|auth|identity|subject|principal|sub|jti|oauth|oidc|saml|access|refresh|bearer|login|logout|switch|denial|forbidden|route|browser|trace|artifact|workflow|ci|run|commit|database|persistence)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|private-tenant|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedDashboardAuthGuardArtifact = (
   artifact: unknown,
@@ -535,6 +525,17 @@ export const buildRedactedDashboardAuthGuardArtifact = (
           return [key, redact(entry, entryPath)];
         }),
       );
+    }
+
+    if (typeof value === "string") {
+      const redactedValue = value.replace(
+        dashboardAuthGuardSensitiveArtifactValuePattern,
+        "[REDACTED_DASHBOARD_AUTH_PRIVATE_VALUE]",
+      );
+      if (redactedValue !== value) {
+        redactions.push(path || "$");
+      }
+      return redactedValue;
     }
 
     return value;

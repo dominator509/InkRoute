@@ -1,4 +1,7 @@
-﻿import { buildProviderEnvironmentRuntimeReadinessPlan } from "@inkroute/deployment";
+﻿import {
+  buildProviderEnvironmentRuntimeReadinessPlan,
+  providerEnvironmentRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 import type { ProviderEnvironmentSurface } from "@inkroute/deployment";
 
 export type ProviderEnvironmentRuntimeStatus =
@@ -86,19 +89,7 @@ export const providerEnvironmentRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const providerEnvironmentRuntimeCommands = [
-  "pnpm deploy:verify-provider-envs",
-  "pnpm deploy:check-env:strict",
-  "provider web/dashboard route smoke",
-  "provider database migration dry-run",
-  "provider storage private ACL smoke",
-  "eas build --profile preview",
-  "sentry release/source-map smoke",
-  "github environment protection audit",
-  "verify provider secret-store destinations",
-  "record redacted provider evidence labels",
-  "capture provider environment CI artifacts"
-] as const;
+export const providerEnvironmentRuntimeCommands = providerEnvironmentRuntimeRequiredCommands;
 
 export const providerEnvironmentRuntimeRequiredExternalEvidence = [
   "Preview, staging, and production provider project proof must be captured outside Codex with raw project IDs redacted.",
@@ -134,6 +125,7 @@ export const providerEnvironmentRuntimeLocalArtifacts = [
   "coverage/provider-environment-runtime.json",
   "coverage/provider-environment-verifier.json",
   "coverage/provider-redacted-handoff-labels.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "test-results/provider-environment-runtime",
 ] as const satisfies readonly ProviderEnvironmentRuntimeArtifact[];
 
@@ -146,6 +138,7 @@ export const providerEnvironmentRuntimeExternalArtifacts = [
   "coverage/provider-sentry-release-smoke-redacted.json",
   "coverage/provider-github-environment-protection-redacted.json",
   "coverage/provider-secret-store-destinations-redacted.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "coverage/provider-environment-ci-run-redacted.json",
 ] as const satisfies readonly ProviderEnvironmentRuntimeArtifact[];
 
@@ -238,15 +231,22 @@ export interface ProviderEnvironmentRuntimeRedactedHandoffPacket {
 }
 
 const sensitiveProviderEnvironmentKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|projectId|resourceId|ciRunUrl|deployUrl|previewUrl|stagingUrl|productionUrl|sentry|eas|github|bucket|secretStore|tenantId|userId|runId|email|phone)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|projectId|resourceId|ciRunUrl|deployUrl|previewUrl|stagingUrl|productionUrl|sentry|eas|github|bucket|secretStore|tenantId|userId|runId|email|phone|raw|payload|body|stack|error|log|output|transcript|database|dsn|migration|storage|acl|source.?map|protection|handoff|artifact|label|smoke|strict|verifier|url|uri|repository|repo|branch|pull|pr|reviewer|codeowner|neutralCiTrace)/i;
 
 const sensitiveProviderEnvironmentStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|bucket|run|env|eas|sentry|gh)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
+  [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
+  [/\bpr[_:#-][A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
+  [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
+  [/\b(?:tenant|user|project|provider|bucket|run|env|eas|sentry|gh|github|vercel|neon|supabase|render|resource|secret|workflow|ci|commit|deployment|preview|staging|production|source.?map|release)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|test-results|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export type ProviderEnvironmentRunRecordInput = ProviderEnvironmentRuntimeEvidenceInput & {
@@ -394,6 +394,9 @@ function redactProviderEnvironmentString(value: string, redactions: Set<string>)
 
 function redactProviderEnvironmentValue(value: unknown, redactions: Set<string>, key?: string): unknown {
   if (key && sensitiveProviderEnvironmentKeyPattern.test(key)) {
+    if (typeof value === "string") {
+      redactProviderEnvironmentString(value, redactions);
+    }
     redactions.add(key);
     return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
   }

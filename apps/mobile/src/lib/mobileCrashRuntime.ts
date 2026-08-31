@@ -1,4 +1,4 @@
-﻿import { buildMobileCrashRuntimeReadinessPlan } from "@inkroute/observability";
+import { buildMobileCrashRuntimeReadinessPlan, mobileCrashRuntimeRequiredCommands } from "@inkroute/observability";
 
 export type MobileCrashRuntimeStatus =
   | "wired"
@@ -16,14 +16,7 @@ export interface MobileCrashRuntimeMatrixEntry {
   readonly status: MobileCrashRuntimeStatus;
 }
 
-export const mobileCrashRuntimeCommands = [
-  "pnpm --filter @inkroute/observability typecheck",
-  "pnpm --filter @inkroute/observability test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "Expo simulator forced crash smoke test",
-  "Expo physical-device forced crash smoke test",
-  "Sentry source-map/debug-symbol resolution check",
-] as const;
+export const mobileCrashRuntimeCommands = mobileCrashRuntimeRequiredCommands;
 
 export const mobileCrashArtifactPaths = [
   "coverage/mobile-crash-runtime.json",
@@ -276,7 +269,7 @@ export const mobileCrashRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileCrashRuntimeMatrixEntry[];
 
-export const mobileCrashRuntimeReadiness = buildMobileCrashRuntimeReadinessPlan({
+const mobileCrashPackageReadiness = buildMobileCrashRuntimeReadinessPlan({
   packageScripts: ["test", "typecheck"],
   observabilityTestsPassed: false,
   observabilityTypecheckPassed: false,
@@ -297,12 +290,19 @@ export const mobileCrashRuntimeReadiness = buildMobileCrashRuntimeReadinessPlan(
   noPiiProviderPayloadVerified: false,
 });
 
+export const mobileCrashRuntimeReadiness = {
+  ...mobileCrashPackageReadiness,
+  requiredEvidence: mobileCrashEvidenceFlags,
+};
+
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileCrashArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|email|phone|medical|payment|tattoo)/i;
+const sensitiveMobileCrashArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|email|phone|medical|payment|tattoo|artifact|path|ci|workflow|run|evidence|repository|repo|branch|pull|pr|reviewer|codeowner|id|key)/i;
+const sensitiveMobileCrashArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|sentry)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|sentry|dsn|auth|source.?map|debug.?symbol|device|crash|stack|error|report|dashboard|triage|payload|provider|artifact|workflow|ci|run|evidence|mobile|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileCrashArtifactValue = (
   value: unknown,
@@ -326,6 +326,13 @@ const redactMobileCrashArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileCrashArtifactValue.test(value)) {
+    sensitiveMobileCrashArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileCrashArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileCrashArtifactValue.lastIndex = 0;
   return value;
 };
 

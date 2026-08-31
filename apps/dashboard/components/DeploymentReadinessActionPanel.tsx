@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type DeploymentReadinessState =
   | { status: "idle"; message: string }
@@ -24,7 +25,7 @@ export function DeploymentReadinessActionPanel() {
         body: JSON.stringify({
           operation: "readiness-review",
           targetEnvironment: "production",
-          requestId: `dashboard-deployment-readiness-${Date.now()}`,
+          requestId: createClientRequestKey("dashboard-deployment-readiness"),
           reason: "Dashboard operator requested a production readiness review without provider execution.",
           blockerIds: ["GAP-014", "GAP-089"],
         }),

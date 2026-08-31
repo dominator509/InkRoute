@@ -379,6 +379,8 @@ describe("GAP-099 retention enforcement contract", () => {
   it("redacts GAP-099 retention dry-run, tombstone, storage, and rollback artifacts before review", () => {
     const rawArtifact = {
       workerRunId: "retention-run-private",
+      recordId: "message_due_private",
+      sourceRecordId: "reference_due_private",
       dryRunFingerprint: "sha256:private-fingerprint",
       storageObjectKey: "private/tenant_demo/reference/reference_due.jpg",
       exportArtifact: "privacy/tenant_demo/export.zip",
@@ -393,6 +395,8 @@ describe("GAP-099 retention enforcement contract", () => {
     const serialized = JSON.stringify({ redacted, review });
 
     expect(serialized).not.toContain("retention-run-private");
+    expect(serialized).not.toContain("message_due_private");
+    expect(serialized).not.toContain("reference_due_private");
     expect(serialized).not.toContain("sha256:private-fingerprint");
     expect(serialized).not.toContain("private/tenant_demo/reference/reference_due.jpg");
     expect(serialized).not.toContain("privacy/tenant_demo/export.zip");

@@ -26,7 +26,12 @@ describe("dashboard deployment readiness route static contract", () => {
     expect(routeSource).toContain('"DATABASE_URL"');
     expect(routeSource).toContain('"SENTRY_AUTH_TOKEN"');
     expect(routeSource).toContain('"VERCEL_TOKEN"');
-    expect(routeSource).toContain("auditId: audit.id");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("tenantId: actor.tenantId");
+    expect(routeSource).not.toContain("auditId: audit.id");
   });
 
   it("keeps mutation operations provider-gated and no-store", () => {
@@ -35,6 +40,19 @@ describe("dashboard deployment readiness route static contract", () => {
     expect(routeSource).toContain("request-production-approval");
     expect(routeSource).toContain("statusCode: 409");
     expect(routeSource).toContain("does not perform external provider calls");
+    expect(routeSource).toContain("requestIdReceived: Boolean(input.requestId)");
+    expect(routeSource).toContain("rawRequestIdEchoed: false");
+    expect(routeSource).toContain("rawRequestIdStored: false");
+    expect(routeSource).toContain("workflowRunIdVerified: false");
+    expect(routeSource).toContain("workflowRunIdEchoed: false");
+    expect(routeSource).toContain("workflowRunUrlEchoed: false");
+    expect(routeSource).toContain("workflowRunLinked: false");
+    expect(routeSource).toContain("buildSafeReleaseRecordCiResultMetadata");
+    expect(routeSource).toContain("buildSafeReleaseRecordCiResultWritePlan");
+    expect(routeSource).not.toContain("requestId: input.requestId");
+    expect(routeSource).not.toContain("workflowRunId: null");
+    expect(routeSource).not.toContain("workflowRunUrl: null");
+    expect(routeSource).not.toContain("workflowRunId: input.requestId");
   });
 
   it("documents the no-store readiness API seam on the dashboard page", () => {

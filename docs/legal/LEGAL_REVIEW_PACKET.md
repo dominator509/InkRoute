@@ -34,7 +34,7 @@ Before production launch, qualified counsel must review and approve the customer
 
 - Do not paste attorney communications, privileged material, secrets, live client data, or raw vendor account details into the repo.
 - Record only redacted evidence labels, reviewer role, date, jurisdiction scope, and approved artifact references.
-- Keep `LEGAL_REVIEW_STATUS` as `scaffolded` or `review-required` until all required review items are approved.
+- Keep `LEGAL_REVIEW_STATUS` as `scaffolded`, `pending`, or `review-required` until all required review items are approved.
 
 ## Production boundary
 

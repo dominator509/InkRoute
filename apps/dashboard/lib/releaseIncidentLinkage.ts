@@ -96,7 +96,7 @@ export interface ReleaseIncidentLinkageArtifactReview {
 }
 
 const releaseIncidentSensitiveKeyPattern =
-  /(?:authorization|clientsecret|contact|credential|email|password|phone|private|secret|sentry|token|webhook)/i;
+  /(?:authorization|clientsecret|contact|credential|email|password|phone|private|secret|sentry|token|webhook|tenantId|releaseId|releaseRecordId|reportId|errorReportId|linkedReportId|releaseIncidentLinkId|auditId|fingerprint|issueUrl|providerIssueUrl|route|payload)/i;
 const releaseIncidentEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const releaseIncidentPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const releaseIncidentTokenPattern = /\b(?:bearer|sentry|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;

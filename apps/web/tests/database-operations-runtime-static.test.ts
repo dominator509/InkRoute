@@ -39,6 +39,7 @@ describe("GAP-117 database operations runtime wiring", () => {
       "pnpm deploy:verify-database-ops",
       "pnpm db:generate",
       "pnpm --filter @inkroute/db db:validate",
+      "pnpm db:migrate",
       "database migration dry-run",
       "database generated SQL review",
       "database staging migration apply",
@@ -150,8 +151,8 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(ciWorkflow).toContain("test-results/database-operations-runtime");
     expect(unitManifest).toContain("unit-web-database-operations-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/databaseOperationsRuntime.ts");
-    expect(gapTracker).toContain("Database operations evidence classifier wired and provider DB proof gated");
-    expect(gapTracker).toContain("GAP-117 is database-operations-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Database operations evidence classifier wired with execution policy");
+    expect(gapTracker).toContain("GAP-117 is database-operations-runtime-matrix wired with split migration dry-run");
     expect(gapTracker).toContain("databaseOperationsRuntimeCommands");
     expect(gapTracker).toContain("buildDatabaseOperationsRuntimeExecutionPlan");
     expect(gapTracker).toContain("databaseOperationsRuntimeExecutionPolicy");
@@ -233,6 +234,7 @@ describe("GAP-117 database operations runtime wiring", () => {
       ciDatabaseOperationsArtifactsCaptured: false,
       requiredCommandsRun: databaseOperationsRuntimeCommands.filter(
         (command) =>
+          command !== "pnpm db:migrate" &&
           command !== "database migration dry-run" &&
           command !== "database generated SQL review" &&
           command !== "database staging migration apply" &&
@@ -265,6 +267,7 @@ describe("GAP-117 database operations runtime wiring", () => {
         "Capture branch promotion approval.",
         "Capture production data-safety review.",
         "Capture CI database-operations artifacts.",
+        "Required command not recorded: pnpm db:migrate",
         "Required command not recorded: database migration dry-run",
         "Required command not recorded: database generated SQL review",
         "Required command not recorded: database staging migration apply",
@@ -324,6 +327,7 @@ describe("GAP-117 database operations runtime wiring", () => {
 
     expect(plan.localCommands).toBe(databaseOperationsRuntimeLocalCommands);
     expect(plan.externalCommands).toBe(databaseOperationsRuntimeExternalCommands);
+    expect(plan.externalCommands).toContain("pnpm db:migrate");
     expect(plan.localArtifacts).toBe(databaseOperationsRuntimeLocalArtifacts);
     expect(plan.externalArtifacts).toBe(databaseOperationsRuntimeExternalArtifacts);
     expect(plan.localArtifacts).toEqual(
@@ -389,6 +393,10 @@ describe("GAP-117 database operations runtime wiring", () => {
         authorization: "Bearer database-operations-token",
         phone: "+1 555 333 9090",
       },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_117_database_operations",
+      reviewerHandle: "reviewer_database_owner",
+      codeownerSelector: "CODEOWNER:database-platform-team",
     };
     const redacted = buildRedactedDatabaseOperationsArtifact(rawArtifact);
     const review = buildDatabaseOperationsRuntimeArtifactReview("coverage/database-migration-dry-run-redacted.json", rawArtifact);
@@ -404,17 +412,25 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 333 9090");
     expect(serialized).not.toContain("Bearer database-operations-token");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_117_database_operations");
+    expect(serialized).not.toContain("reviewer_database_owner");
+    expect(serialized).not.toContain("CODEOWNER:database-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "authorization",
+        "codeownerSelector",
         "ciRunUrl",
         "databaseUrl",
         "destructiveSqlScan",
         "directUrl",
         "generatedSql",
         "providerBranch",
+        "pullRequestSelector",
+        "repositorySelector",
         "restoreId",
+        "reviewerHandle",
         "snapshotId",
       ]),
     );

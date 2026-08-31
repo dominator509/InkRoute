@@ -147,6 +147,16 @@ describe("booking provider handoff runtime contract", () => {
         webhookSecret: "webhook_secret_private",
         publicSummary: "booking provider handoff evidence captured",
       },
+      stripeSandboxTranscript: "stripe_pi_01HZYXZYXZYXZYXZYXZYXZYXZ created for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      notificationSandboxDelivery: "notification_job_01HZYXZYXZYXZYXZYXZYXZYXZ sent to +1 555 333 4444",
+      calendarTentativeHold: "calendar_event_01HZYXZYXZYXZYXZYXZYXZYXZ held for client_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      workerRetryTranscript: "worker_retry_01HZYXZYXZYXZYXZYXZYXZYXZ replayed idempotency_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      operatorReviewPayload: "operator_review_01HZYXZYXZYXZYXZYXZYXZYXZ approved rollback audit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciArtifactPath: "test-results/booking-provider-handoff-runtime/provider-handoff.log",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_provider_handoff",
+      reviewerHandle: "reviewer_provider_handoff_owner",
+      codeownerSelector: "CODEOWNER:booking-platform-team",
     });
     const directRedaction = buildRedactedBookingProviderHandoffArtifact({
       publicSummary: "safe provider handoff evidence",
@@ -183,11 +193,29 @@ describe("booking provider handoff runtime contract", () => {
       "clientEmail",
       "notificationProviderToken",
       "nested.webhookSecret",
+      "stripeSandboxTranscript",
+      "notificationSandboxDelivery",
+      "calendarTentativeHold",
+      "workerRetryTranscript",
+      "operatorReviewPayload",
+      "ciArtifactPath",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("notification_job_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("calendar_event_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("worker_retry_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("pr_provider_handoff");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("reviewer_provider_handoff_owner");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("CODEOWNER:booking-platform-team");
     expect(JSON.stringify(artifactReview.artifact)).toContain("booking provider handoff evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["rollbackAuditPayload"]);

@@ -120,7 +120,8 @@ describe("dashboard privacy runtime contract", () => {
     expect(formActionPanel).toContain("private upload retention, and attorney-reviewed copy remain evidence-gated");
     expect(formReadRouteTest).toContain("archive-only form metadata write seam");
     expect(privacyRouteTest).toContain("DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
-    expect(privacyRouteTest).toContain("Persist PrivacyRequest row + case notes");
+    expect(privacyRouteTest).toContain("persistedPrivacyRequestStoreConfigured: true");
+    expect(privacyRouteTest).toContain("auditLogPersistencePassed: true");
     expect(trustRouteTest).toContain("tenant and role gates");
   });
 
@@ -189,6 +190,10 @@ describe("dashboard privacy runtime contract", () => {
         smsMessageBody: "sms: private appointment reminder",
         publicSummary: "dashboard privacy evidence captured",
       },
+      safeNote:
+        "evidence_dashboard_privacy_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/dashboard-privacy/private-proof.json",
+      safeWorkflowPath: "test-results/dashboard-privacy-runtime/private-workflow.json",
+      safeLegalApproval: "legal_approval_01HZYXZYXZYXZYXZYXZYXZYXZ",
     });
     const directRedaction = buildRedactedDashboardPrivacyArtifact({
       publicSummary: "safe dashboard privacy evidence",
@@ -242,11 +247,26 @@ describe("dashboard privacy runtime contract", () => {
       "medicalNotes",
       "consentSignatureFileUrl",
       "nested.smsMessageBody",
+      "safeNote",
+      "safeWorkflowPath",
+      "safeLegalApproval",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("medical:");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("consent-signature");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "evidence_dashboard_privacy_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "artifacts/dashboard-privacy/private-proof.json",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "test-results/dashboard-privacy-runtime/private-workflow.json",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "legal_approval_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard privacy evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["deleteWorkflowLog"]);

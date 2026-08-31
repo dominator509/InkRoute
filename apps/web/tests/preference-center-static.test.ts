@@ -51,9 +51,13 @@ describe("preference center and unsubscribe contract", () => {
       action: "unsubscribe_email",
       email: "client@example.test",
       token: "raw-token-secret",
+      tokenHash: "pref_hash_internal_selector",
+      idempotencyKey: "preference:unsubscribe:internal",
       nested: {
         phone: "+12065550142",
         messageBody: "private preference note",
+        destinationHash: "sha256:destination-selector",
+        listUnsubscribe: "<https://example.test/preferences/unsubscribe?token=raw-token-secret>",
       },
     });
 
@@ -61,13 +65,20 @@ describe("preference center and unsubscribe contract", () => {
       action: "unsubscribe_email",
       email: "[redacted]",
       token: "[redacted]",
+      tokenHash: "[redacted]",
+      idempotencyKey: "[redacted]",
       nested: {
         phone: "[redacted]",
         messageBody: "[redacted]",
+        destinationHash: "[redacted]",
+        listUnsubscribe: "[redacted]",
       },
     });
     expect(JSON.stringify(metadata)).not.toContain("client@example.test");
     expect(JSON.stringify(metadata)).not.toContain("raw-token-secret");
+    expect(JSON.stringify(metadata)).not.toContain("pref_hash_internal_selector");
+    expect(JSON.stringify(metadata)).not.toContain("preference:unsubscribe:internal");
+    expect(JSON.stringify(metadata)).not.toContain("sha256:destination-selector");
     expect(JSON.stringify(metadata)).not.toContain("+12065550142");
   });
 
@@ -92,6 +103,8 @@ describe("preference center and unsubscribe contract", () => {
     expect(repository.state.suppressions.length).toBeGreaterThanOrEqual(2);
     expect(repository.state.tenantChannelSettings).toHaveLength(1);
     expect(repository.state.preferenceAudits.length).toBeGreaterThanOrEqual(4);
+    expect(JSON.stringify(repository.state.preferenceAudits)).not.toContain("pref_hash_");
+    expect(JSON.stringify(repository.state.preferenceAudits)).not.toContain("preference:issue:demo");
   });
 
   it("maps the Prisma preference repository to hash-only token, preference, suppression, tenant setting, idempotency, and audit writes", async () => {
@@ -177,11 +190,55 @@ describe("preference center and unsubscribe contract", () => {
     expect(preferenceRouteSource).toContain("idempotencyKey.upsert");
     expect(preferenceRouteSource).toContain("auditLog.create");
     expect(preferenceRouteSource).toContain("preference.public_mutation");
+    expect(preferenceRouteSource).toContain("clientEmailSelectedFromDatabase: false");
+    expect(preferenceRouteSource).not.toContain("select: { id: true, email: true }");
     expect(preferenceRouteSource).toContain('"Cache-Control": "no-store"');
     expect(preferenceRouteSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(preferenceRouteSource).not.toContain('}, { status: 400 });');
     expect(preferenceRouteSource).toContain("PROVIDER_PREFERENCE_PERSISTENCE_NOT_CONFIGURED");
     expect(preferenceRouteSource).toContain("localContractMutationFallbackDisabled");
+    expect(preferenceRouteSource).toContain("function buildSafePreferencePlanResponse");
+    expect(preferenceRouteSource).toContain("function buildSafePreferenceContractResponse");
+    expect(preferenceRouteSource).toContain("contract: buildSafePreferenceContractResponse()");
+    expect(preferenceRouteSource).toContain("rawContractPlansEchoed: false");
+    expect(preferenceRouteSource).toContain("rawEmailEchoed: false");
+    expect(preferenceRouteSource).toContain("rawPhoneEchoed: false");
+    expect(preferenceRouteSource).toContain("function buildSafePreferencePersistenceResponse");
+    expect(preferenceRouteSource).toContain("plan: buildSafePreferencePlanResponse(plan)");
+    expect(preferenceRouteSource).toContain("persisted: buildSafePreferencePersistenceResponse(persisted)");
+    expect(preferenceRouteSource).toContain("clientIdEchoed: false");
+    expect(preferenceRouteSource).toContain("preferenceIdEchoed: false");
+    expect(preferenceRouteSource).toContain("suppressionIdEchoed: false");
+    expect(preferenceRouteSource).toContain("idempotencyKeyIdEchoed: false");
+    expect(preferenceRouteSource).toContain("auditIdEchoed: false");
+    expect(preferenceRouteSource).toContain("tenantIdEchoed: false");
+    expect(preferenceRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(preferenceRouteSource).toContain("idempotencyKey.update");
+    expect(preferenceRouteSource).toContain("internalPersistenceIdsStored: false");
+    expect(preferenceRouteSource).toContain("clientMatched: Boolean(client)");
+    expect(preferenceRouteSource).toContain("preferencePersisted: true");
+    expect(preferenceRouteSource).toContain("suppressionPersisted: Boolean(suppression)");
+    expect(preferenceRouteSource).toContain("idempotencyPersisted: true");
+    expect(preferenceRouteSource).toContain("rawTokenEchoed: false");
+    expect(preferenceRouteSource).toContain("tokenHashEchoed: false");
+    expect(preferenceRouteSource).toContain("idempotencyKeyEchoed: false");
+    expect(preferenceRouteSource).toContain("writePayloadsEchoed: false");
+    expect(preferenceRouteSource).toContain("rawPreferenceWritePayloadsEchoed: false");
+    expect(preferenceRouteSource).toContain('persistence: "local-contract"');
+    expect(preferenceRouteSource).toContain("clientIdEchoed: false");
+    expect(preferenceRouteSource).toContain("preferenceIdEchoed: false");
+    expect(preferenceRouteSource).toContain("suppressionIdEchoed: false");
+    expect(preferenceRouteSource).toContain("auditIdEchoed: false");
+    expect(preferenceRouteSource).not.toContain("clientId: persisted.client?.id");
+    expect(preferenceRouteSource).not.toContain("preferenceId: persisted.preference.id");
+    expect(preferenceRouteSource).not.toContain("suppressionId: persisted.suppression?.id");
+    expect(preferenceRouteSource).not.toContain("idempotencyKeyId: persisted.idempotency.id");
+    expect(preferenceRouteSource).not.toContain("auditId: persisted.audit.id");
+    expect(preferenceRouteSource).not.toContain("tenantId: tenant.tenantId,\n          persistence");
+    expect(preferenceRouteSource).not.toContain("clientId: client?.id ?? null");
+    expect(preferenceRouteSource).not.toContain("preferenceId: preference.id");
+    expect(preferenceRouteSource).not.toContain("suppressionId: suppression?.id ?? null");
+    expect(preferenceRouteSource).not.toContain("idempotencyKeyId: idempotency.id");
     expect(unsubscribeRouteSource).toContain('action: "unsubscribe_email"');
     expect(unsubscribeRouteSource).toContain("buildPreferenceTokenHash");
     expect(unsubscribeRouteSource).toContain("x-preference-token");
@@ -204,9 +261,48 @@ describe("preference center and unsubscribe contract", () => {
     expect(unsubscribeRouteSource).toContain("idempotencyKey.upsert");
     expect(unsubscribeRouteSource).toContain("auditLog.create");
     expect(unsubscribeRouteSource).toContain("preference.one_click_unsubscribe");
+    expect(unsubscribeRouteSource).toContain("clientEmailSelectedFromDatabase: false");
+    expect(unsubscribeRouteSource).not.toContain("select: { id: true, email: true }");
     expect(unsubscribeRouteSource).toContain("listUnsubscribeHeaders");
     expect(unsubscribeRouteSource).toContain("PROVIDER_UNSUBSCRIBE_PERSISTENCE_NOT_CONFIGURED");
     expect(unsubscribeRouteSource).toContain("localContractUnsubscribeFallbackDisabled");
+    expect(unsubscribeRouteSource).toContain("function buildSafePreferencePlanResponse");
+    expect(unsubscribeRouteSource).toContain("function buildSafeUnsubscribePersistenceResponse");
+    expect(unsubscribeRouteSource).toContain("plan: buildSafePreferencePlanResponse(plan)");
+    expect(unsubscribeRouteSource).toContain("persisted: buildSafeUnsubscribePersistenceResponse(persisted)");
+    expect(unsubscribeRouteSource).toContain("clientIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("preferenceIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("suppressionIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("idempotencyKeyIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("auditIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("tenantIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(unsubscribeRouteSource).toContain("idempotencyKey.update");
+    expect(unsubscribeRouteSource).toContain("internalPersistenceIdsStored: false");
+    expect(unsubscribeRouteSource).toContain("clientMatched: Boolean(client)");
+    expect(unsubscribeRouteSource).toContain("preferencePersisted: true");
+    expect(unsubscribeRouteSource).toContain("suppressionPersisted: Boolean(suppression)");
+    expect(unsubscribeRouteSource).toContain("idempotencyPersisted: true");
+    expect(unsubscribeRouteSource).toContain("rawTokenEchoed: false");
+    expect(unsubscribeRouteSource).toContain("tokenHashEchoed: false");
+    expect(unsubscribeRouteSource).toContain("idempotencyKeyEchoed: false");
+    expect(unsubscribeRouteSource).toContain("writePayloadsEchoed: false");
+    expect(unsubscribeRouteSource).toContain("rawPreferenceWritePayloadsEchoed: false");
+    expect(unsubscribeRouteSource).toContain('persistence: "local-contract"');
+    expect(unsubscribeRouteSource).toContain("clientIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("preferenceIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("suppressionIdEchoed: false");
+    expect(unsubscribeRouteSource).toContain("auditIdEchoed: false");
+    expect(unsubscribeRouteSource).not.toContain("clientId: persisted.client?.id");
+    expect(unsubscribeRouteSource).not.toContain("tenantId: tenant.tenantId,\n          persistence");
+    expect(unsubscribeRouteSource).not.toContain("preferenceId: persisted.preference.id");
+    expect(unsubscribeRouteSource).not.toContain("suppressionId: persisted.suppression?.id");
+    expect(unsubscribeRouteSource).not.toContain("idempotencyKeyId: persisted.idempotency.id");
+    expect(unsubscribeRouteSource).not.toContain("auditId: persisted.audit.id");
+    expect(unsubscribeRouteSource).not.toContain("clientId: client?.id ?? null");
+    expect(unsubscribeRouteSource).not.toContain("preferenceId: preference.id");
+    expect(unsubscribeRouteSource).not.toContain("suppressionId: suppression?.id ?? null");
+    expect(unsubscribeRouteSource).not.toContain("idempotencyKeyId: idempotency.id");
     expect(unsubscribeRouteSource).not.toContain("writePlanOnlyUnsubscribeDisabled");
     expect(unsubscribeRouteSource).toContain("never stores raw preference tokens");
     expect(unsubscribeRouteSource).toContain("rejects missing, forged, expired, reused, or revoked preference tokens");
@@ -215,6 +311,8 @@ describe("preference center and unsubscribe contract", () => {
     expect(preferenceRouteSource).toContain("Preference POST returns the local mutation contract");
     expect(preferenceRouteSource).not.toContain("writePlanOnlyMutationDisabled");
     expect(preferenceRouteSource).not.toContain("Preference POST returns the mutation/write plan");
+    expect(preferenceRouteSource).not.toContain(" plan,");
+    expect(unsubscribeRouteSource).not.toContain(" plan,");
     expect(unsubscribeRouteSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(unsubscribeRouteSource).toContain("headers: noStoreHeaders");
     expect(unsubscribeRouteSource).not.toContain('headers: { "Cache-Control": "no-store" }');

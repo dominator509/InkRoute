@@ -20,6 +20,49 @@ function redactAssetMetadata(metadata: unknown): Record<string, unknown> {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildPortfolioDetailResponseProjection() {
+  return {
+    portfolioItemIdEchoed: false,
+    tenantIdEchoed: false,
+    attributedBookingIdsEchoed: false,
+    portfolioImageIdsEchoed: false,
+    fileAssetIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafePortfolioDetailRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    attributedBookingId: _attributedBookingId,
+    attributedBookingIds: _attributedBookingIds,
+    attributedBookings,
+    images,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    attributedBookings: Array.isArray(attributedBookings)
+      ? attributedBookings.map((booking) => {
+          if (typeof booking !== "object" || booking === null) return booking;
+          const { id: _bookingId, ...safeBooking } = booking as Record<string, unknown>;
+          return safeBooking;
+        })
+      : attributedBookings,
+    images: Array.isArray(images)
+      ? images.map((image) => {
+          if (typeof image !== "object" || image === null) return image;
+          const { id: _imageId, fileAssetId: _fileAssetId, ...safeImage } = image as Record<string, unknown>;
+          return safeImage;
+        })
+      : images,
+    responseProjection: buildPortfolioDetailResponseProjection(),
+  };
+}
+
 type PortfolioStyleRow = {
   slug: string | null;
   label: string | null;
@@ -95,13 +138,13 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          portfolioId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard portfolio reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioDetailResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -116,9 +159,10 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        portfolioItem: item,
+        portfolioItem: buildSafePortfolioDetailRecord(item as Record<string, unknown>),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPortfolioDetailResponseProjection(),
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns a tenant-projected demo portfolio item only; database mode is required for live portfolio reads.",
       },
@@ -128,10 +172,7 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
 
     try {
     const result = await prisma.$transaction(async (tx) => {
-      const portfolioItemModel = tx.portfolioItem as {
-        findFirst: (args: unknown) => Promise<PortfolioDetailRow | null>;
-      };
-      const row = await portfolioItemModel.findFirst({
+      const row = await tx.portfolioItem.findFirst({
         where: { id: portfolioId, tenantId },
         select: {
           id: true,
@@ -165,11 +206,7 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
                   id: true,
                   kind: true,
                   visibility: true,
-                  bucket: true,
-                  objectKey: true,
-                  checksumSha256: true,
                   publicUrl: true,
-                  signedUrlExpiresAt: true,
                   metadata: true,
                 },
               },
@@ -211,8 +248,6 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
       source: "repository",
       records: [
         {
-          id: result.row.id,
-          tenantId: result.row.tenantId,
           title: result.row.title,
           slug: result.row.slug,
           caption: result.row.caption,
@@ -228,25 +263,27 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
           attributionCount: result.row.attributedBookingRequests.length,
           styles: result.row.styles.map((style: PortfolioStyleRow) => style.slug || style.label),
           attributedBookings: result.row.attributedBookingRequests.map((booking: PortfolioBookingRequestRow) => ({
-            id: booking.id,
             status: booking.status,
             clientName: "[redacted-dashboard-field]",
           })),
           needsAltTextReview: result.row.images.some((image) => image.altText.trim().length < 24),
           images: result.row.images.map((image) => ({
-            id: image.id,
             imageUrl: image.fileAsset?.visibility === "public" ? image.imageUrl : "[redacted-dashboard-field]",
             altText: image.altText,
             width: image.width,
             height: image.height,
             isPrimary: image.isPrimary,
             sortOrder: image.sortOrder,
-            fileAssetId: image.fileAsset?.id ?? null,
+            fileAssetLinked: Boolean(image.fileAsset?.id),
             visibility: image.fileAsset?.visibility ?? null,
-            objectKey: image.fileAsset?.objectKey ?? null,
-            bucket: image.fileAsset?.bucket ?? null,
-            checksumSha256: image.fileAsset?.checksumSha256 ?? null,
-            signedUrlExpiresAt: image.fileAsset?.signedUrlExpiresAt?.toISOString() ?? null,
+            objectKey: "[redacted-dashboard-field]",
+            bucket: "[redacted-dashboard-field]",
+            checksumSha256: "[redacted-dashboard-field]",
+            signedUrlExpiresAt: "[redacted-dashboard-field]",
+            objectKeySelectedFromDatabase: false,
+            bucketSelectedFromDatabase: false,
+            checksumSelectedFromDatabase: false,
+            signedUrlExpirySelectedFromDatabase: false,
             metadata: redactAssetMetadata(image.fileAsset?.metadata),
           })),
         },
@@ -258,10 +295,11 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
-        portfolioItem: view.records[0],
-        auditId: result.audit.id,
+        portfolioItem: buildSafePortfolioDetailRecord(view.records[0] as Record<string, unknown>),
+        auditLogged: true,
+        tenantScope: { actorTenantMatched: true, portfolioTenantMatched: true },
+        responseProjection: buildPortfolioDetailResponseProjection(),
         gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard portfolio detail reads are tenant-scoped, file-key redacted, no-store, and audited.",
       },
@@ -273,9 +311,9 @@ export async function GET(request: NextRequest, context: PortfolioDetailRouteCon
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          portfolioId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Portfolio detail reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPortfolioDetailResponseProjection(),
           gapIds: ["GAP-005", "GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },

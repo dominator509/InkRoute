@@ -20,6 +20,7 @@ describe("mobile push static contract", () => {
 
   it("uses notification package Expo push planning primitives", () => {
     expect(pushSource).toContain("buildExpoPushRegistrationPlan");
+    expect(pushSource).toContain("buildMobilePushRegistrationReceipt");
     expect(pushSource).toContain("buildMobilePushLocalContract");
     expect(pushSource).toContain("buildExpoPushDeliveryPlan");
     expect(pushSource).toContain("buildExpoPushReceiptProcessingPlan");
@@ -88,6 +89,25 @@ describe("mobile push static contract", () => {
     expect(JSON.stringify(payload)).not.toContain("ExponentPushToken[secret]");
     expect(JSON.stringify(payload)).not.toContain("expo_access_secret");
     expect(JSON.stringify(payload)).not.toContain("native_device_secret");
+  });
+
+  it("projects push registration without raw token or identity echoes", () => {
+    expect(mobilePushContractPreview.registrationReceipt).toMatchObject({
+      status: "ready",
+      provider: "expo",
+      tokenPersistenceRequired: true,
+      tokenMaskedAvailable: true,
+      responseProjection: {
+        rawExpoPushTokenEchoed: false,
+        rawNativeDeviceTokenEchoed: false,
+        rawAccessTokenEchoed: false,
+        tenantIdEchoed: false,
+        userIdEchoed: false,
+        deviceIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+      },
+    });
+    expect(JSON.stringify(mobilePushContractPreview.registrationReceipt)).not.toContain("ExponentPushToken");
   });
 
   it("executes a local Expo push repository contract for receipt idempotency, invalid-token suppression, tap interaction, opt-out, and audit persistence", async () => {

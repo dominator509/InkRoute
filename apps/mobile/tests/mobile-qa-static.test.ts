@@ -49,14 +49,14 @@ describe("mobile QA execution static contract", () => {
   });
 
   it("surfaces mobile portfolio upload as a provider-gated contract, not an absent implementation", () => {
-    expect(portfolioUploadScreen).toContain("metadata and upload-intent contract are wired");
+    expect(portfolioUploadScreen).toContain("portfolioUploadDraft.storageBoundary");
     expect(portfolioUploadScreen).toContain("Mobile upload contract flow");
     expect(portfolioUploadScreen).toContain("object keys");
-    expect(portfolioUploadScreen).toContain("signed provider storage remains runtime-gated");
     expect(portfolioUploadScreen).toContain("Object key contract");
     expect(mobileDemoSource).toContain("buildMobileUploadIntentContract");
     expect(mobileDemoSource).toContain("mobilePortfolioUploadContract.objectKey");
     expect(mobileDemoSource).toContain("Metadata and upload-intent contracts are wired");
+    expect(mobileDemoSource).toContain("signed provider storage, derivatives, moderation, and byte transfer remain runtime-gated");
     expect(portfolioUploadScreen).not.toContain("Static mobile upload flow");
     expect(mobileDemoSource).not.toContain("signed uploads are not wired");
     expect(portfolioUploadScreen).not.toContain("Storage remains scaffolded only");

@@ -1,4 +1,7 @@
-import { buildDeploymentToolingRuntimeVerificationPlan } from "@inkroute/deployment";
+import {
+  buildDeploymentToolingRuntimeVerificationPlan,
+  deploymentToolingRuntimeVerificationRequiredCommands,
+} from "@inkroute/deployment";
 
 export type DeploymentToolingRuntimeStatus =
   | "wired"
@@ -129,22 +132,7 @@ export const deploymentToolingRuntimeProofFiles = [
   ".github/workflows/ci.yml",
 ] as const;
 
-export const deploymentToolingRuntimeCommands = [
-  "pnpm install --frozen-lockfile",
-  "pnpm --filter @inkroute/deployment typecheck",
-  "pnpm --filter @inkroute/deployment test",
-  "pnpm test:unit -- apps/web/tests/dashboard-deployment-readiness-route.test.ts",
-  "pnpm deploy:check-env",
-  "pnpm deploy:checklist",
-  "pnpm deploy:gaps",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard deployment page smoke",
-  "dashboard deployment readiness API smoke",
-  "verify rollback preflight remains non-mutating",
-  "verify production approval boundary remains blocked without required evidence",
-  "capture CI deployment reports",
-  "capture deployment blocker-owner artifact"
-] as const;
+export const deploymentToolingRuntimeCommands = deploymentToolingRuntimeVerificationRequiredCommands;
 
 export const deploymentToolingRuntimeLocalCommands = [
   "pnpm --filter @inkroute/deployment typecheck",
@@ -176,6 +164,7 @@ export type DeploymentToolingRuntimeExecutionPolicy = {
   readonly productionApprovalMustRemainHumanGated: true;
   readonly ciProviderRequiredForDeploymentReports: true;
   readonly providerEnvironmentRequiredForPersistence: true;
+  readonly externalEvidenceRequired: typeof deploymentToolingRuntimeRequiredExternalEvidence;
 };
 
 export const deploymentToolingRuntimeExecutionPolicy: DeploymentToolingRuntimeExecutionPolicy = {
@@ -185,6 +174,7 @@ export const deploymentToolingRuntimeExecutionPolicy: DeploymentToolingRuntimeEx
   productionApprovalMustRemainHumanGated: true,
   ciProviderRequiredForDeploymentReports: true,
   providerEnvironmentRequiredForPersistence: true,
+  externalEvidenceRequired: deploymentToolingRuntimeRequiredExternalEvidence,
 };
 
 export type DeploymentToolingRuntimeArtifact = (typeof deploymentToolingRuntimeArtifactPaths)[number];
@@ -330,7 +320,7 @@ export const deploymentToolingBlockerOwnerContract: readonly DeploymentToolingBl
 ] as const;
 
 const sensitiveDeploymentToolingKeyPattern =
-  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|ciRunUrl|deployUrl|previewUrl|approval|payload|tenantId|userId|runId|email|phone|blockerOwner)/i;
+  /(token|secret|password|authorization|cookie|env|databaseUrl|dbUrl|provider|ciRunUrl|deployUrl|previewUrl|approval|payload|tenantId|userId|runId|email|phone|blockerOwner|repository|repo|branch|pull|pr|reviewer|codeowner)/i;
 
 const sensitiveDeploymentToolingStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -338,6 +328,11 @@ const sensitiveDeploymentToolingStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|whsec)_(?:live|test)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
+  [/\brepo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REPOSITORY_SELECTOR]"],
+  [/\bbranch:[A-Za-z0-9_./-]+\b/gi, "[REDACTED_BRANCH_SELECTOR]"],
+  [/\bpr[_:#-][A-Za-z0-9_.-]+\b/gi, "[REDACTED_PR_SELECTOR]"],
+  [/\breviewer[_:@-]?[A-Za-z0-9_.-]+\b/gi, "[REDACTED_REVIEWER_SELECTOR]"],
+  [/\bCODEOWNER:[A-Za-z0-9_.@/-]+\b/g, "[REDACTED_CODEOWNER_SELECTOR]"],
   [/\b(?:tenant|user|owner|deployment|run|approval)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
 ];
 
@@ -419,6 +414,9 @@ function redactDeploymentToolingString(value: string, redactions: Set<string>): 
 
 function redactDeploymentToolingValue(value: unknown, redactions: Set<string>, key?: string): unknown {
   if (key && sensitiveDeploymentToolingKeyPattern.test(key)) {
+    if (typeof value === "string") {
+      redactDeploymentToolingString(value, redactions);
+    }
     redactions.add(key);
     return `[REDACTED_${key.replace(/[^A-Za-z0-9]/g, "_").toUpperCase()}]`;
   }

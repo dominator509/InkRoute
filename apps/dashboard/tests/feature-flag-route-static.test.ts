@@ -24,7 +24,10 @@ describe("dashboard feature-flag route contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "feature_flag:read:list"');
     expect(routeSource).toContain('entityType: "FeatureFlag"');
-    expect(routeSource).toContain("auditId: result.audit.id");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
     expect(routeSource).toContain("evaluateFeatureFlags(definitions, context)");
     expect(routeSource).toContain("const environment = query.data.environment");
   });
@@ -40,10 +43,16 @@ describe("dashboard feature-flag route contract", () => {
     expect(routeSource).toContain("tx.idempotencyKey.update");
     expect(routeSource).toContain("idempotencyKeyId");
     expect(routeSource).toContain("idempotencyReplay");
+    expect(routeSource).toContain("featureFlagPersisted: true");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).toContain("replayFeatureFlag = await tx.featureFlag.findUnique");
     expect(routeSource).toContain("tx.featureFlag.upsert");
     expect(routeSource).toContain('action: "feature_flag:update"');
     expect(routeSource).toContain("previousEnabled");
     expect(routeSource).toContain("previousScope");
+    expect(routeSource).not.toContain("featureFlagId: featureFlag.id");
+    expect(routeSource).not.toContain("auditId: audit.id");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("{ status: 201, headers: noStoreHeaders }");
     expect(routeSource).toContain("{ status: 409, headers: noStoreHeaders }");

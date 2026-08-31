@@ -1,5 +1,9 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { ISODateString, PaymentStatus } from "@inkroute/types";
+
+function buildHashedPaymentIdempotencyKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
 
 export type CurrencyCode = "usd";
 export type AppointmentPaymentType = "consultation" | "flash" | "custom" | "large_scale" | "touch_up" | "guest_spot";
@@ -824,7 +828,7 @@ export function calculateDepositPolicy(input: DepositPolicyInput): DepositPolicy
 }
 
 export function buildStripeCheckoutSessionDraft(input: CreateDepositSessionInput): StripeCheckoutSessionDraft {
-  const idempotencyKey = `deposit:${input.tenantId}:${input.bookingRequestId}:${input.amountCents}:${input.currency}`;
+  const idempotencyKey = buildHashedPaymentIdempotencyKey("deposit", [input.tenantId, input.bookingRequestId, String(input.amountCents), input.currency]);
   const description = input.description ?? "Tattoo appointment deposit";
   const lineItemName = input.artistDisplayName ? `${input.artistDisplayName} tattoo deposit` : "Tattoo deposit";
   const customerEmail = input.clientEmail && input.clientEmail.includes("@") ? input.clientEmail : undefined;
@@ -842,8 +846,11 @@ export function buildStripeCheckoutSessionDraft(input: CreateDepositSessionInput
     successUrl: input.successUrl,
     cancelUrl: input.cancelUrl,
     metadata: {
-      tenantId: input.tenantId,
-      bookingRequestId: input.bookingRequestId,
+      tenantScopePersisted: "true",
+      bookingRequestPersisted: "true",
+      rawTenantIdStored: "false",
+      rawBookingRequestIdStored: "false",
+      internalPersistenceIdsStored: "false",
       policyVersion: input.policyVersion ?? defaultDepositPolicyRules.policyVersion,
       product: "inkroute_suite",
     },
@@ -950,12 +957,12 @@ export function buildStripeCheckoutRouteRuntimeReadinessPlan(
 
 export async function createDepositSession(_input: CreateDepositSessionInput): Promise<CreateDepositSessionResult> {
   const draft = buildStripeCheckoutSessionDraft(_input);
-  const providerSessionId = `cs_mock_${draft.idempotencyKey}`;
-  const checkoutTenant = encodeURIComponent(_input.tenantId);
+  const idempotencyFingerprint = createHash("sha256").update(draft.idempotencyKey).digest("hex").slice(0, 24);
+  const providerSessionId = `cs_mock_${idempotencyFingerprint}`;
 
   return {
     provider: "stripe",
-    checkoutUrl: `/api/public/${checkoutTenant}/checkout/${providerSessionId}`,
+    checkoutUrl: `https://mock-inkroute.local/checkout/${idempotencyFingerprint}`,
     providerSessionId,
   };
 }
@@ -1211,9 +1218,9 @@ export function buildStripeWebhookReconciliationPlan(input: StripeWebhookReconci
   const requiredChecks = [
     "Verify Stripe-Signature with STRIPE_WEBHOOK_SECRET before calling this reconciliation plan.",
     "Resolve tenant and booking/deposit records from trusted provider metadata or persisted provider IDs.",
-    "Persist PaymentAuditLog with the raw provider event id and redacted payload summary.",
+    "Persist PaymentAuditLog with provider event receipt proof and redacted payload summary while avoiding raw provider event ids in audit metadata.",
   ];
-  const idempotencyKey = `stripe-webhook:${input.eventId}`;
+  const idempotencyKey = buildHashedPaymentIdempotencyKey("stripe-webhook", [input.eventId]);
 
   if (!input.eventId.trim()) {
     blockers.push("Missing Stripe event id.");
@@ -1362,6 +1369,25 @@ function paymentLifecycleWriteModels(action: PaymentLifecycleAction): PaymentLif
   }
 }
 
+function providerIdentifierFingerprint(value: string | null | undefined): string | null {
+  return value?.trim() ? createHash("sha256").update(value).digest("hex") : null;
+}
+
+function buildPaymentAuditProviderProof(input: {
+  providerSessionId?: string | null;
+  providerPaymentIntentId?: string | null;
+  providerChargeId?: string | null;
+}): Record<string, unknown> {
+  return {
+    providerSessionIdHash: providerIdentifierFingerprint(input.providerSessionId),
+    providerPaymentIntentIdHash: providerIdentifierFingerprint(input.providerPaymentIntentId),
+    providerChargeIdHash: providerIdentifierFingerprint(input.providerChargeId),
+    rawProviderSessionIdStored: false,
+    rawProviderPaymentIntentIdStored: false,
+    rawProviderChargeIdStored: false,
+  };
+}
+
 export function buildPaymentLifecyclePersistencePlan(input: PaymentLifecyclePlanInput): PaymentLifecyclePersistencePlan {
   const blockers: string[] = [];
   const targetStatus = paymentLifecycleTargetStatus(input.action);
@@ -1396,7 +1422,15 @@ export function buildPaymentLifecyclePersistencePlan(input: PaymentLifecyclePlan
     tenantId: input.tenantId,
     payload: model === "PaymentAuditLog"
       ? {
-          ...basePayload,
+          bookingRequestId: basePayload.bookingRequestId,
+          depositId: basePayload.depositId,
+          paymentId: basePayload.paymentId,
+          amountCents: basePayload.amountCents,
+          currency: basePayload.currency,
+          provider: basePayload.provider,
+          targetStatus: basePayload.targetStatus,
+          occurredAt: basePayload.occurredAt,
+          ...buildPaymentAuditProviderProof(basePayload),
           action: auditAction,
           actorId: input.actorId ?? null,
           idempotencyKey: input.idempotencyKey ?? null,
@@ -1572,7 +1606,20 @@ export function buildPaymentOperationsWorkflowPlan(input: PaymentOperationsWorkf
         }
       : model === "PaymentAuditLog"
         ? {
-            ...basePayload,
+            bookingRequestId: basePayload.bookingRequestId,
+            paymentId: basePayload.paymentId,
+            amountCents: basePayload.amountCents,
+            currency: basePayload.currency,
+            provider: basePayload.provider,
+            refundAmountCents: basePayload.refundAmountCents,
+            noShowDecision: basePayload.noShowDecision,
+            evidenceFileIds: basePayload.evidenceFileIds,
+            receiptNumber: basePayload.receiptNumber,
+            exportReviewerId: basePayload.exportReviewerId,
+            actorId: basePayload.actorId,
+            idempotencyKey: basePayload.idempotencyKey,
+            occurredAt: basePayload.occurredAt,
+            ...buildPaymentAuditProviderProof(basePayload),
             action: input.action,
             providerCall,
           }

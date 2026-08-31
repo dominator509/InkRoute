@@ -9,7 +9,7 @@
   type SmsProviderSendPlanInput,
   type SmsWebhookRuntimeReadinessPlan,
 } from "@inkroute/notifications";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export type SmsProviderMutationInput = SmsProviderSendPlanInput & {
   providerRequestId: string;
@@ -17,6 +17,8 @@ export type SmsProviderMutationInput = SmsProviderSendPlanInput & {
 
 export interface SmsProviderSendResult {
   providerMessageId: string;
+  providerMessageIdHash?: string;
+  rawProviderMessageIdEchoed?: false;
   redactedPayload: Record<string, unknown>;
 }
 
@@ -324,8 +326,15 @@ export function sanitizeSmsProviderSendResult(result: SmsProviderSendResult | nu
     return null;
   }
 
+  const providerMessageIdHash =
+    result.rawProviderMessageIdEchoed === false && result.providerMessageIdHash
+      ? result.providerMessageIdHash
+      : createHash("sha256").update(result.providerMessageId).digest("hex");
+
   return {
-    providerMessageId: result.providerMessageId,
+    providerMessageId: "[redacted-provider-message-id]",
+    providerMessageIdHash,
+    rawProviderMessageIdEchoed: false,
     redactedPayload: redactSmsProviderPayloadValue(result.redactedPayload) as Record<string, unknown>,
   };
 }
@@ -335,15 +344,15 @@ export function buildRedactedSmsWebhookPayload(payload: Record<string, unknown>)
 }
 
 function buildSmsDeliveryKey(input: { readonly tenantId: string; readonly notificationId: string; readonly deliveryId: string }): string {
-  return `${input.tenantId}:${input.notificationId}:${input.deliveryId}`;
+  return `sms-delivery:${createHash("sha256").update(JSON.stringify([input.tenantId, input.notificationId, input.deliveryId])).digest("hex")}`;
 }
 
 function buildSmsDestinationKey(input: { readonly tenantId: string; readonly destinationHash: string }): string {
-  return `${input.tenantId}:${input.destinationHash}`;
+  return `sms-destination:${createHash("sha256").update(JSON.stringify([input.tenantId, input.destinationHash])).digest("hex")}`;
 }
 
 function buildSmsIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return `sms-idempotency:${createHash("sha256").update(JSON.stringify([input.tenantId, input.key])).digest("hex")}`;
 }
 
 export function createInMemorySmsProviderRepository(

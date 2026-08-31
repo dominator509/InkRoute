@@ -23,6 +23,7 @@ import {
 const root = join(__dirname, "..", "..");
 const releaseRoute = readFileSync(join(root, "apps/dashboard/app/api/releases/route.ts"), "utf8");
 const flagRoute = readFileSync(join(root, "apps/dashboard/app/api/feature-flags/route.ts"), "utf8");
+const dashboardAuthMembership = readFileSync(join(root, "apps/dashboard/app/api/dashboardAuthMembership.ts"), "utf8");
 const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const tracker = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
 
@@ -34,23 +35,32 @@ describe("release persistence RBAC runtime seam", () => {
     expect(buildReleaseWorkflowOrchestrationMetadata({ approvalState: "approved", channel: "production", recordId: "rel_1" })).toMatchObject({
       state: "ready_for_release_governance",
       hook: ".github/workflows/release-governance.yml",
+      recordMatched: true,
+      recordIdEchoed: false,
       requiresProtectedEnvironment: true,
     });
+    expect(buildReleaseWorkflowOrchestrationMetadata({ approvalState: "approved", channel: "production", recordId: "rel_1" })).not.toHaveProperty("recordId");
   });
 
   it("adds optimistic concurrency and tenant membership metadata helpers", () => {
     expect(buildOptimisticConcurrencyMetadata({ expectedVersion: "v1", currentVersion: "v2", recordId: "rec_1" })).toMatchObject({
       conflict: true,
+      recordMatched: true,
+      recordIdEchoed: false,
       strategy: "client-supplied expected version compared before orchestration",
     });
+    expect(buildOptimisticConcurrencyMetadata({ expectedVersion: "v1", currentVersion: "v2", recordId: "rec_1" })).not.toHaveProperty("recordId");
     expect(buildTenantMembershipLookupMetadata({ actorSource: "header", actorRole: "owner", tenantId: "tenant_1" })).toMatchObject({
       source: "local-fallback",
       requiredNextStep: null,
     });
     expect(buildTenantMembershipLookupMetadata({ actorSource: "database-tenant-member", actorRole: "owner", tenantId: "tenant_1", actorUserId: "user_1", membershipId: "member_1", status: "active" })).toMatchObject({
       source: "database-tenant-member",
-      actorUserId: "user_1",
-      membershipId: "member_1",
+      actorUserIdEchoed: false,
+      tenantIdEchoed: false,
+      membershipVerified: true,
+      membershipIdEchoed: false,
+      customRoleIdEchoed: false,
       status: "active",
       requiredNextStep: null,
     });
@@ -70,6 +80,13 @@ describe("release persistence RBAC runtime seam", () => {
     expect(releaseRoute).toContain("releasePersistenceRbacArtifactPaths");
     expect(releaseRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(releaseRoute).toContain("{ status: 201, headers: noStoreHeaders }");
+  });
+
+  it("fail-closes local dashboard membership fallback in production", () => {
+    expect(dashboardAuthMembership).toContain('if (context.source === "local-fallback")');
+    expect(dashboardAuthMembership).toContain('process.env.NODE_ENV === "production"');
+    expect(dashboardAuthMembership).toContain('throw new Error("AUTH_REQUIRED")');
+    expect(dashboardAuthMembership).toContain("production requires provider-backed session plus persisted TenantMember lookup");
   });
 
   it("wires concurrency, approval audit metadata, and invalidation hooks into feature-flag writes", () => {
@@ -140,10 +157,21 @@ describe("release persistence RBAC runtime seam", () => {
     const rawArtifact = {
       database: {
         authorization: "Bearer release-db-token",
+        tenantId: "tenant_release_control_private",
+        actorUserId: "user_release_admin_private",
+        membershipId: "tenant_member_release_private",
+        customRoleId: "custom_role_release_private",
+        releaseRecordId: "release_record_private",
+        featureFlagId: "feature_flag_private",
+        auditId: "audit_release_private",
+        idempotencyKey: "idem_release_private",
         actorEmail: "release-admin@example.com",
         phone: "+1 555 010 3333",
       },
       workflow: {
+        workflowRunId: "workflow_run_release_private",
+        workflowRunUrl: "https://ci.example.invalid/workflow/private",
+        commitSha: "0123456789abcdef0123456789abcdef01234567",
         secret: "github_pat_release_secret",
         state: "ready_for_release_governance",
       },
@@ -154,6 +182,17 @@ describe("release persistence RBAC runtime seam", () => {
     const serialized = JSON.stringify(review.redactedArtifact);
 
     expect(JSON.stringify(redacted)).not.toContain("release-db-token");
+    expect(serialized).not.toContain("tenant_release_control_private");
+    expect(serialized).not.toContain("user_release_admin_private");
+    expect(serialized).not.toContain("tenant_member_release_private");
+    expect(serialized).not.toContain("custom_role_release_private");
+    expect(serialized).not.toContain("release_record_private");
+    expect(serialized).not.toContain("feature_flag_private");
+    expect(serialized).not.toContain("audit_release_private");
+    expect(serialized).not.toContain("idem_release_private");
+    expect(serialized).not.toContain("workflow_run_release_private");
+    expect(serialized).not.toContain("https://ci.example.invalid/workflow/private");
+    expect(serialized).not.toContain("0123456789abcdef0123456789abcdef01234567");
     expect(serialized).not.toContain("release-admin@example.com");
     expect(serialized).not.toContain("+1 555 010 3333");
     expect(serialized).not.toContain("github_pat_release_secret");

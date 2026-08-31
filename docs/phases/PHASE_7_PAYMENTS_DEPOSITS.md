@@ -2,7 +2,7 @@
 
 ## Status
 
-Partially implemented as a dependency-light policy engine, Stripe Checkout/webhook route boundaries, static dashboard payment controls, and a public deposit-preview page. No live money movement, Stripe SDK call, webhook signature verification, database persistence, refund execution, receipt delivery, tax export, or legal-reviewed policy language exists.
+Partially implemented (provider-gated) as a dependency-light policy engine, Stripe Checkout/webhook route boundaries, static dashboard payment controls, and a public deposit-preview page. No live money movement, Stripe SDK call, webhook signature verification, database persistence, refund execution, receipt delivery, tax export, or legal-reviewed policy language exists.
 
 ## Source review performed before coding
 
@@ -57,7 +57,7 @@ All markdown files in the extracted Phase 6 ZIP were enumerated and reviewed bef
 ## Implemented
 
 - Dependency-light payment policy code that can be typechecked without Stripe SDK.
-- Safe session-draft generation that avoids live Stripe calls.
+- Safe session-draft generation that avoids live Stripe calls (sandbox-gated).
 - Public and webhook API boundary files that now enforce guarded local DB/idempotency/audit contracts while still failing closed until live Stripe/provider proof exists.
 - Dashboard and public UI surfaces that expose payment/no-show/refund concepts without pretending to process payments.
 

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -108,7 +108,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(workspacePackageJson).toContain('"test"');
     expect(toolchainContract).toContain("workspace-toolchain-readiness");
     expect(toolchainContract).toContain("workspace:all");
-    expect(toolchainVerifier).toContain("buildWorkspaceRuntimeToolchainReadinessPlan");
+    expect(toolchainVerifier).toContain("workspace-toolchain-readiness-contract.json");
     expect(workspaceTests).toContain("buildWorkspaceRuntimeToolchainReadinessPlan");
   });
 
@@ -233,7 +233,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(gapTracker).toContain("WorkspaceRuntimeToolchainRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRuntimeToolchain.ts");
     expect(gapTracker).toContain("live package typecheck/test, workspace commands, install/build, CI, and artifact proof remain open");
-    expect(gapTracker).toContain("GAP-130 is workspace-runtime-toolchain-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-130 workspace runtime toolchain artifact hardening");
     expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainExecutionPlan");
     expect(gapTracker).toContain("workspaceRuntimeToolchainExecutionPolicy");
     expect(gapTracker).toContain("workspaceRuntimeToolchainReadinessRequiredEvidence");
@@ -323,18 +323,46 @@ describe("workspace runtime toolchain contract", () => {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      packageScriptAuditOutput: "script audit found user_private_123",
+      webBuildLog: "build failed with PRIVATE_ENV=value",
+      dashboardBuildOutput: "dashboard build stack tenant_private_123",
+      runtimeReadinessReport: { productionBlocker: "blocker_private_123" },
+      toolchainArtifactPath: "coverage/private-toolchain-artifact.json",
       blockerContact: "+1 (555) 867-5309",
+      neutralWorkspaceLabel: "workspace_toolchain_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralRepositoryLabel: "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralBranchLabel: "branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralPrLabel: "pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerLabel: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCodeownerLabel: "codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiLabel: "ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactLocation: "coverage/workspace-runtime-toolchain/private-output.json",
+      neutralDatabaseLocation: "postgresql://tenant_demo:secret@db.example.com/inkroute",
     };
 
     expect(buildRedactedWorkspaceRuntimeToolchainArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
-      installOutput: "resolved for [REDACTED] using token [REDACTED]",
+      installOutput: "[REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
       },
+      packageScriptAuditOutput: "[REDACTED]",
+      webBuildLog: "[REDACTED]",
+      dashboardBuildOutput: "[REDACTED]",
+      runtimeReadinessReport: "[REDACTED]",
+      toolchainArtifactPath: "[REDACTED]",
       blockerContact: "[REDACTED]",
+      neutralWorkspaceLabel: "[REDACTED]",
+      neutralRepositoryLabel: "[REDACTED]",
+      neutralBranchLabel: "[REDACTED]",
+      neutralPrLabel: "[REDACTED]",
+      neutralReviewerLabel: "[REDACTED]",
+      neutralCodeownerLabel: "[REDACTED]",
+      neutralCiLabel: "[REDACTED]",
+      neutralArtifactLocation: "[REDACTED]",
+      neutralDatabaseLocation: "[REDACTED]",
     });
 
     const review = buildWorkspaceRuntimeToolchainArtifactReview(artifact);
@@ -348,7 +376,21 @@ describe("workspace runtime toolchain contract", () => {
         "installOutput",
         "persistence.tenantId",
         "persistence.databaseUrl",
+        "packageScriptAuditOutput",
+        "webBuildLog",
+        "dashboardBuildOutput",
+        "runtimeReadinessReport",
+        "toolchainArtifactPath",
         "blockerContact",
+        "neutralWorkspaceLabel",
+        "neutralRepositoryLabel",
+        "neutralBranchLabel",
+        "neutralPrLabel",
+        "neutralReviewerLabel",
+        "neutralCodeownerLabel",
+        "neutralCiLabel",
+        "neutralArtifactLocation",
+        "neutralDatabaseLocation",
       ]),
     );
     expect(review.requiredExternalEvidence).toContain(

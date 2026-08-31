@@ -241,6 +241,10 @@ describe("mobile push runtime contract", () => {
         receiptId: "receipt_private",
         publicSummary: "mobile push evidence captured",
       },
+      safeNote:
+        "evidence_mobile_push_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/mobile-push/private-proof.json",
+      safePushPath: "test-results/mobile-push-runtime/private-delivery.json",
+      safeExpoRun: "expo_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedMobilePushArtifact(artifact);
@@ -251,6 +255,9 @@ describe("mobile push runtime contract", () => {
       "fcmCredential",
       "pushToken",
       "nested.receiptId",
+      "safeNote",
+      "safePushPath",
+      "safeExpoRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantId: "[REDACTED]",
@@ -262,7 +269,21 @@ describe("mobile push runtime contract", () => {
         receiptId: "[REDACTED]",
         publicSummary: "mobile push evidence captured",
       },
+      safePushPath: "[REDACTED]",
+      safeExpoRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_push_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/mobile-push/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/mobile-push-runtime/private-delivery.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "expo_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildMobilePushArtifactReview({
       publicSummary: "safe mobile push evidence",

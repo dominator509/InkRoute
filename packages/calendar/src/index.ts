@@ -1,4 +1,5 @@
 import type { Appointment, AvailabilityWindow, ISODateString, TravelStop } from "@inkroute/types";
+import { createHash } from "node:crypto";
 
 export type CalendarProviderKind = "internal" | "google" | "ics" | "caldav";
 export type CalendarBusySource = "appointment" | "availability_hold" | "travel_blackout" | "external_google" | "manual";
@@ -840,11 +841,16 @@ export function buildTimezoneRuntimeReadinessPlan(input: TimezoneRuntimeReadines
     requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[4]);
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === timezoneRuntimeReadinessRequiredEvidence.length
+      ? timezoneRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: timezoneRuntimeReadinessRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1199,6 +1205,28 @@ export const googleCalendarProviderSyncRequiredControls = [
       "Persist redacted CalendarAuditLog for every provider call, retry, failure, and recovery path.",
     ] as const;
 
+function calendarProviderIdentifierHash(value: string | null | undefined): string | null {
+  return value?.trim() ? createHash("sha256").update(value).digest("hex") : null;
+}
+
+function buildGoogleCalendarAuditProviderProof(input: {
+  providerEventId?: string | null;
+  syncToken?: string | null;
+  pushChannelId?: string | null;
+  pushResourceId?: string | null;
+}): Record<string, unknown> {
+  return {
+    providerEventIdHash: calendarProviderIdentifierHash(input.providerEventId),
+    syncTokenHash: calendarProviderIdentifierHash(input.syncToken),
+    pushChannelIdHash: calendarProviderIdentifierHash(input.pushChannelId),
+    pushResourceIdHash: calendarProviderIdentifierHash(input.pushResourceId),
+    rawProviderEventIdStored: false,
+    rawSyncTokenStored: false,
+    rawPushChannelIdStored: false,
+    rawPushResourceIdStored: false,
+  };
+}
+
 export function buildGoogleCalendarProviderSyncPlan(input: GoogleCalendarSyncPlanInput): GoogleCalendarProviderSyncPlan {
   const blockers: string[] = [];
 
@@ -1253,7 +1281,16 @@ export function buildGoogleCalendarProviderSyncPlan(input: GoogleCalendarSyncPla
     tenantId: input.tenantId,
     payload: model === "CalendarAuditLog"
       ? {
-          ...basePayload,
+          artistId: basePayload.artistId,
+          calendarId: basePayload.calendarId,
+          appointmentId: basePayload.appointmentId,
+          syncTokenInvalid: basePayload.syncTokenInvalid,
+          pushChannelExpiresAt: basePayload.pushChannelExpiresAt,
+          retryAttempt: basePayload.retryAttempt,
+          providerCall: basePayload.providerCall,
+          idempotencyKey: basePayload.idempotencyKey,
+          occurredAt: basePayload.occurredAt,
+          ...buildGoogleCalendarAuditProviderProof(basePayload),
           action: input.action,
         }
       : model === "IdempotencyKey"
@@ -1350,11 +1387,16 @@ export function buildGoogleCalendarRuntimeReadinessPlan(input: GoogleCalendarRun
     requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[5]);
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === googleCalendarRuntimeReadinessRequiredEvidence.length
+      ? googleCalendarRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: googleCalendarRuntimeReadinessRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1559,11 +1601,16 @@ export function buildTravelPublishRuntimeReadinessPlan(input: TravelPublishRunti
     requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[5]);
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === travelPublishRuntimeReadinessRequiredEvidence.length
+      ? travelPublishRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: travelPublishRuntimeReadinessRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1667,11 +1714,7 @@ export function buildCalendarLaunchEvidencePlan(input: CalendarLaunchEvidenceInp
 
 export function buildSignedIcsFeedTokenHash(token: string): string {
   const normalized = token.trim();
-  let hash = 0;
-  for (let index = 0; index < normalized.length; index += 1) {
-    hash = (hash * 31 + normalized.charCodeAt(index)) >>> 0;
-  }
-  return `draft_hash_${hash.toString(16).padStart(8, "0")}`;
+  return `ics_token:${createHash("sha256").update(normalized).digest("hex")}`;
 }
 
 export function evaluateSignedIcsFeedAccess(input: {

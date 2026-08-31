@@ -7,12 +7,49 @@ interface MessageThreadDetailRouteContext {
   params: Promise<{ threadId: string }>;
 }
 
-function redactedPreview(value: string | null | undefined): string {
-  if (!value) return "[redacted-message-body]";
-  return value.length > 0 ? "[redacted-message-body]" : "";
+const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function buildMessageThreadDetailResponseProjection() {
+  return {
+    threadIdEchoed: false,
+    tenantIdEchoed: false,
+    clientIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    appointmentIdEchoed: false,
+    messageIdsEchoed: false,
+    senderIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
-const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+function buildSafeLocalMessageThreadDetail(thread: Record<string, unknown>) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    clientId: _clientId,
+    relatedBookingRequestId,
+    relatedAppointmentId,
+    bookingRequestId,
+    appointmentId,
+    messages,
+    ...safeThread
+  } = thread;
+
+  return {
+    ...safeThread,
+    bookingLinked: Boolean(relatedBookingRequestId ?? bookingRequestId),
+    appointmentLinked: Boolean(relatedAppointmentId ?? appointmentId),
+    messages: Array.isArray(messages)
+      ? messages.map((message) => {
+          if (typeof message !== "object" || message === null) return message;
+          const { id: _messageId, senderUserId: _senderUserId, senderClientId: _senderClientId, ...safeMessage } = message as Record<string, unknown>;
+          return safeMessage;
+        })
+      : messages,
+    responseProjection: buildMessageThreadDetailResponseProjection(),
+  };
+}
 
 export async function GET(request: NextRequest, context: MessageThreadDetailRouteContext) {
   const actor = resolveDashboardActor(request);
@@ -35,12 +72,13 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard message reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-010", "GAP-037", "GAP-061", "GAP-064", "GAP-066"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildMessageThreadDetailResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -55,9 +93,10 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        thread,
+        thread: buildSafeLocalMessageThreadDetail(thread as Record<string, unknown>),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildMessageThreadDetailResponseProjection(),
         gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         boundary: "Local fallback returns a redacted demo message thread only; database mode is required for live message reads.",
       },
@@ -79,7 +118,7 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
           isArchived: true,
           lastMessageAt: true,
           updatedAt: true,
-          client: { select: { preferredName: true, email: true, phone: true } },
+          client: { select: { preferredName: true } },
           messages: {
             orderBy: { createdAt: "asc" },
             take: 50,
@@ -90,8 +129,6 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
               channel: true,
               direction: true,
               status: true,
-              body: true,
-              providerMessageId: true,
               sentAt: true,
               readAt: true,
               createdAt: true,
@@ -126,17 +163,17 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
     }
 
     const thread = {
-      id: result.row.id,
-      tenantId: result.row.tenantId,
-      clientId: result.row.clientId,
-      bookingRequestId: result.row.bookingRequestId,
-      appointmentId: result.row.appointmentId,
+      clientLinked: Boolean(result.row.clientId),
+      bookingLinked: Boolean(result.row.bookingRequestId),
+      appointmentLinked: Boolean(result.row.appointmentId),
       subject: result.row.subject,
       isArchived: result.row.isArchived,
       lastMessageAt: result.row.lastMessageAt?.toISOString() ?? result.row.updatedAt.toISOString(),
       clientName: result.row.client.preferredName,
       clientEmail: "[redacted-dashboard-field]",
-      clientPhone: result.row.client.phone ? "[redacted-dashboard-field]" : null,
+      clientPhone: "[redacted-dashboard-field]",
+      clientEmailSelectedFromDatabase: false,
+      clientPhoneSelectedFromDatabase: false,
       messages: result.row.messages.map((message: {
         id: string;
         senderUserId: string | null;
@@ -144,20 +181,18 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
         channel: string;
         direction: string;
         status: string;
-        body: string | null;
-        providerMessageId: string | null;
         sentAt: Date | null;
         readAt: Date | null;
         createdAt: Date;
       }) => ({
-        id: message.id,
-        senderUserId: message.senderUserId,
-        senderClientId: message.senderClientId,
+        senderType: message.senderUserId ? "dashboard-user" : message.senderClientId ? "client" : "system",
         channel: message.channel,
         direction: message.direction,
         status: message.status,
-        bodyPreview: redactedPreview(message.body),
-        providerMessageId: message.providerMessageId ? "[redacted-dashboard-field]" : null,
+        bodyPreview: "[redacted-message-body]",
+        bodySelectedFromDatabase: false,
+        providerMessageId: "[redacted-dashboard-field]",
+        providerMessageIdSelectedFromDatabase: false,
         sentAt: message.sentAt?.toISOString() ?? null,
         readAt: message.readAt?.toISOString() ?? null,
         createdAt: message.createdAt.toISOString(),
@@ -168,10 +203,11 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         thread,
-        auditId: result.audit.id,
+        auditLogged: true,
+        tenantScope: { actorTenantMatched: true, threadTenantMatched: true },
+        responseProjection: buildMessageThreadDetailResponseProjection(),
         gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         boundary: "Dashboard message thread detail reads are tenant-scoped, body/provider redacted, no-store, and audited.",
       },
@@ -183,9 +219,9 @@ export async function GET(request: NextRequest, context: MessageThreadDetailRout
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          threadId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Message thread detail reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildMessageThreadDetailResponseProjection(),
           gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         },
         { status: 503, headers: noStoreHeaders },

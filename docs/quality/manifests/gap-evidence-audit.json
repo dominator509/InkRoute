@@ -1,11 +1,12 @@
 {
-  "generatedAt": "2026-06-08T20:32:29.108Z",
+  "generatedAt": "2026-07-09T14:38:25.365Z",
   "source": "Phase 17 quality gate hardening",
   "status": "warn",
   "totalGaps": 133,
-  "blockingGaps": 126,
+  "blockingGaps": 133,
   "criticalBlockingGapIds": [
-    "GAP-003",
+    "GAP-001",
+    "GAP-002",
     "GAP-004",
     "GAP-005",
     "GAP-013",
@@ -15,137 +16,110 @@
     "GAP-032",
     "GAP-033",
     "GAP-034",
-    "GAP-036",
     "GAP-037",
     "GAP-038",
     "GAP-040",
-    "GAP-042",
     "GAP-043",
     "GAP-045",
     "GAP-049",
     "GAP-050",
     "GAP-051",
     "GAP-053",
-    "GAP-056",
-    "GAP-057",
-    "GAP-062",
     "GAP-064",
-    "GAP-066",
-    "GAP-067",
     "GAP-080",
     "GAP-081",
     "GAP-088",
     "GAP-089",
-    "GAP-095",
     "GAP-096",
     "GAP-097",
     "GAP-098",
     "GAP-100",
+    "GAP-101",
     "GAP-107",
-    "GAP-110",
     "GAP-114",
     "GAP-115",
     "GAP-117",
-    "GAP-118"
+    "GAP-118",
+    "GAP-119",
+    "GAP-120",
+    "GAP-121",
+    "GAP-122",
+    "GAP-123",
+    "GAP-124",
+    "GAP-125",
+    "GAP-126",
+    "GAP-127",
+    "GAP-128",
+    "GAP-129",
+    "GAP-130",
+    "GAP-131",
+    "GAP-132",
+    "GAP-133"
   ],
   "bySeverity": {
-    "High": 67,
-    "Critical": 42,
-    "Medium": 24
+    "Critical": 50,
+    "High": 68,
+    "Medium": 15
   },
   "byPhase": {
-    "Phase 1": 6,
-    "Phase 2": 9,
+    "Gap": 21,
     "Phase 7": 7,
+    "Phase 1": 4,
     "Phase 3": 4,
-    "Phase 5": 7,
-    "Phase 6": 6,
+    "Phase 5": 8,
+    "Phase 6": 5,
     "Phase 8": 7,
-    "Phase 9": 12,
-    "Phase 11": 10,
-    "Phase 14": 9,
-    "Phase 6/15": 1,
-    "Phase 12": 9,
+    "Phase 9": 11,
+    "Phase 11": 11,
+    "Phase 14": 7,
+    "Phase 15": 5,
+    "Phase 12": 11,
+    "Phase 2": 7,
     "Phase 4": 5,
     "Phase 10": 9,
     "Phase 4/7": 1,
-    "Phase 13": 10,
-    "Phase 15": 7,
-    "Phase 15/16": 1,
-    "Phase 16": 5,
-    "Phase 17": 4,
-    "Phase 18": 4
+    "Phase 13": 10
   },
   "findings": [
     {
       "status": "warn",
-      "gapId": "GAP-007",
-      "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-007",
+      "gapId": "GAP-003",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
-      "gapId": "GAP-010",
+      "gapId": "GAP-004",
+      "message": "Suggested prompt lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-005",
+      "message": "Suggested prompt lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-009",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
       "gapId": "GAP-011",
-      "message": "Blocks production uses qualified value: Yes for launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-013",
-      "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-015",
-      "message": "Blocks production uses qualified value: No for MVP demo; Yes for SaaS launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-015",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-015",
-      "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-016",
-      "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-016",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
       "gapId": "GAP-017",
       "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-017",
-      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
       "gapId": "GAP-018",
-      "message": "Blocks production uses qualified value: No for code scaffold; Yes for integrated app."
+      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
       "gapId": "GAP-020",
-      "message": "Blocks production uses qualified value: Yes for validated API launch."
+      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
@@ -154,7 +128,12 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-021",
+      "gapId": "GAP-023",
+      "message": "Remaining work lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-023",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
@@ -174,18 +153,8 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-030",
-      "message": "Blocks production uses qualified value: Yes for launch quality."
-    },
-    {
-      "status": "warn",
       "gapId": "GAP-032",
-      "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-035",
-      "message": "Blocks production uses qualified value: Yes for reliable launch."
+      "message": "Remaining work lacks an action verb and enough detail."
     },
     {
       "status": "warn",
@@ -194,7 +163,12 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-037",
+      "gapId": "GAP-042",
+      "message": "Remaining work lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-042",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
@@ -204,63 +178,33 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-046",
-      "message": "Blocks production uses qualified value: Yes for launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-047",
-      "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-050",
-      "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
       "gapId": "GAP-051",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-053",
-      "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-055",
-      "message": "Blocks production uses qualified value: Yes for production calendar feeds."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-055",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-058",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-063",
-      "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-064",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-065",
       "message": "Remaining work lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-056",
+      "message": "Suggested prompt lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-057",
+      "message": "Suggested prompt lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-059",
+      "message": "Suggested prompt lacks an action verb and enough detail."
+    },
+    {
+      "status": "warn",
+      "gapId": "GAP-066",
+      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
       "gapId": "GAP-067",
-      "message": "Suggested prompt lacks an action verb and enough detail."
+      "message": "Remaining work lacks an action verb and enough detail."
     },
     {
       "status": "warn",
@@ -269,88 +213,8 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-072",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-073",
-      "message": "Blocks production uses qualified value: Yes for launch quality."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-074",
-      "message": "Blocks production uses qualified value: No for MVP demo; yes for SaaS analytics."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-075",
-      "message": "Blocks production uses qualified value: No for local demo; yes for production SEO operations."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-077",
-      "message": "Blocks production uses qualified value: Yes for production media quality."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-077",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-078",
-      "message": "Blocks production uses qualified value: Yes for safe iteration."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-078",
+      "gapId": "GAP-095",
       "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-081",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-083",
-      "message": "Blocks production uses qualified value: Yes for production ops."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-084",
-      "message": "Blocks production uses qualified value: No for MVP demo; yes for production debugging."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-085",
-      "message": "Blocks production uses qualified value: No for MVP demo; yes for agentic ops."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-088",
-      "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-088",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-091",
-      "message": "Blocks production uses qualified value: Yes for mobile launch."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-093",
-      "message": "Blocks production uses qualified value: Yes for production operations."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-093",
-      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
@@ -369,53 +233,38 @@
     },
     {
       "status": "warn",
-      "gapId": "GAP-118",
+      "gapId": "GAP-103",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
-      "gapId": "GAP-123",
+      "gapId": "GAP-106",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
-      "gapId": "GAP-123",
-      "message": "Verification/test field lacks concrete evidence detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-124",
+      "gapId": "GAP-110",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
-      "gapId": "GAP-127",
-      "message": "Remaining work lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-128",
+      "gapId": "GAP-111",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
-      "gapId": "GAP-129",
-      "message": "Verification/test field lacks concrete evidence detail."
+      "gapId": "GAP-112",
+      "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
-      "gapId": "GAP-131",
+      "gapId": "GAP-113",
       "message": "Suggested prompt lacks an action verb and enough detail."
     },
     {
       "status": "warn",
       "gapId": "GAP-132",
-      "message": "Suggested prompt lacks an action verb and enough detail."
-    },
-    {
-      "status": "warn",
-      "gapId": "GAP-133",
-      "message": "Verification/test field lacks concrete evidence detail."
+      "message": "Remaining work lacks an action verb and enough detail."
     }
   ]
 }

@@ -117,7 +117,7 @@ export interface GithubIssueAutomationArtifactReview {
 }
 
 const githubIssueSensitiveKeyPattern =
-  /(?:authorization|body|clientsecret|cookie|credential|email|password|phone|private|raw|secret|stack|token)/i;
+  /(?:auditid|authorization|body|clientsecret|cookie|credential|email|errorreportid|githubissuelinkid|html_url|idempotencykey|installationid|issueid|issuenumber|issueurl|password|phone|private|providerissueurl|providerpayload|raw|repository|secret|stack|tenantid|token|workflowrunid|workflowrunurl)/i;
 const githubIssueEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const githubIssuePhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const githubIssueTokenPattern = /\b(?:bearer|ghp|github_pat|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
@@ -405,6 +405,78 @@ function json(data: unknown, status = 200) {
   return NextResponse.json(data, { status, headers: noStoreHeaders });
 }
 
+function buildSafeGithubIssueAutomationPlanResponse(plan: ReturnType<typeof buildGithubIssueAutomationPlan>) {
+  return {
+    status: plan.status,
+    blockers: plan.blockers,
+    privacyChecklist: plan.privacyChecklist,
+    createIssueRequestPrepared: Boolean(plan.createIssueRequest),
+    responseProjection: {
+      rawCreateIssueRequestEchoed: false,
+      rawIssueTitleEchoed: false,
+      rawIssueBodyEchoed: false,
+      rawRepositoryEchoed: false,
+      rawLabelsEchoed: false,
+      rawAssigneesEchoed: false,
+      rawReportPayloadEchoed: false,
+      rawProviderTokenEchoed: false,
+    },
+  };
+}
+
+function buildSafeGithubIssueRuntimePlanResponse(plan: ReturnType<typeof buildGithubIssueRuntimeDispatchPlan>) {
+  return {
+    status: plan.status,
+    blockers: plan.blockers,
+    requiredEvidence: plan.requiredEvidence,
+    responseProjection: {
+      rawProviderTokenEchoed: false,
+      rawRepositoryEchoed: false,
+      rawIssuePayloadEchoed: false,
+      rawEvidencePayloadEchoed: false,
+    },
+  };
+}
+
+type GithubIssueDispatchResult = {
+  dispatchState: string;
+  issueUrl?: string;
+  issueNumber?: number;
+  issueLinked: boolean;
+};
+
+function buildSafeGithubIssueDispatchResponse(dispatch: GithubIssueDispatchResult) {
+  return {
+    state: dispatch.dispatchState,
+    issueCreated: dispatch.dispatchState === "provider-dispatched" && dispatch.issueLinked,
+    issueLinked: dispatch.issueLinked,
+    responseProjection: {
+      rawIssueUrlEchoed: false,
+      issueNumberEchoed: false,
+      repositoryEchoed: false,
+      rawProviderResponseEchoed: false,
+      rawProviderTokenEchoed: false,
+    },
+  };
+}
+
+function buildGithubIssueAutomationResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    errorReportIdEchoed: false,
+    rawAutomationPlanEchoed: false,
+    rawRuntimePlanEchoed: false,
+    rawCreateIssueRequestEchoed: false,
+    rawDispatchResponseEchoed: false,
+    rawIssueUrlEchoed: false,
+    issueNumberEchoed: false,
+    repositoryEchoed: false,
+    rawProviderTokenEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 function csvEnv(name: string): string[] {
   return (process.env[name] ?? "")
     .split(",")
@@ -493,11 +565,14 @@ async function loadReportDraft(input: { tenantId: string; errorReportId?: string
     statusCode: persistedErrorReport.severity === "critical" ? 500 : 400,
     handled: false,
     metadata: {
-      persistedErrorReportId: persistedErrorReport.id,
+      persistedErrorReportMatched: true,
+      internalPersistenceIdsStored: false,
       stackHash: persistedErrorReport.stackHash,
       status: persistedErrorReport.status,
       createdAt: persistedErrorReport.createdAt.toISOString(),
-      ...(persistedErrorReport.metadata && typeof persistedErrorReport.metadata === "object" ? (persistedErrorReport.metadata as Record<string, unknown>) : {}),
+      ...(persistedErrorReport.metadata && typeof persistedErrorReport.metadata === "object"
+        ? (buildRedactedGithubIssueAutomationArtifact(persistedErrorReport.metadata) as Record<string, unknown>)
+        : {}),
     },
     tags: { phase: "11", automation: "github-issue" },
   });
@@ -523,13 +598,15 @@ async function persistApproval(input: {
         entityId: input.errorReportId ?? input.report.fingerprint,
         metadata: {
           reportFingerprint: input.report.fingerprint,
-          errorReportId: input.errorReportId,
+          errorReportMatched: Boolean(input.errorReportId),
           dispatchState: input.dispatchState,
           humanApproved: true,
-          createIssueRequest: input.plan.createIssueRequest ?? null,
+          createIssueRequest: input.plan.createIssueRequest ? buildRedactedGithubIssueAutomationArtifact(input.plan.createIssueRequest) : null,
+          rawCreateIssueRequestStored: false,
           blockers: input.plan.blockers,
           privacyChecklist: input.plan.privacyChecklist,
           rawPayloadStored: false,
+          internalPersistenceIdsStored: false,
           artifactPaths: githubIssueAutomationArtifactPaths,
         },
       },
@@ -543,8 +620,9 @@ async function persistApproval(input: {
           metadata: {
             githubIssueAutomation: {
               status: input.dispatchState,
-              approvalAuditLogId: auditLog.id,
-              approvedByUserId: input.actorUserId,
+              approvalAuditLogged: true,
+              approvedByUserPresent: Boolean(input.actorUserId),
+              internalPersistenceIdsStored: false,
               reportFingerprint: input.report.fingerprint,
               issueRequestPrepared: Boolean(input.plan.createIssueRequest),
             },
@@ -560,7 +638,7 @@ async function persistApproval(input: {
 async function dispatchGithubIssue(createIssueRequest: NonNullable<ReturnType<typeof buildGithubIssueAutomationPlan>["createIssueRequest"]>) {
   const token = process.env.GITHUB_ISSUE_TOKEN ?? process.env.GITHUB_TOKEN;
   if (!token || !githubDispatchEnabled()) {
-    return { dispatchState: "provider-dispatch-gated", issueUrl: null, issueNumber: null };
+    return { dispatchState: "provider-dispatch-gated", issueLinked: false };
   }
 
   const response = await fetch(`https://api.github.com/repos/${createIssueRequest.repository}/issues`, {
@@ -580,15 +658,21 @@ async function dispatchGithubIssue(createIssueRequest: NonNullable<ReturnType<ty
   });
 
   if (!response.ok) {
-    return { dispatchState: "provider-dispatch-rejected", issueUrl: null, issueNumber: null };
+    return { dispatchState: "provider-dispatch-rejected", issueLinked: false };
   }
 
   const payload = (await response.json()) as { html_url?: string; number?: number };
-  return {
+  if (!payload.html_url) {
+    return { dispatchState: "provider-dispatch-incomplete", issueLinked: false };
+  }
+
+  const dispatchResult: GithubIssueDispatchResult = {
     dispatchState: "provider-dispatched",
-    issueUrl: payload.html_url ?? null,
-    issueNumber: payload.number ?? null,
+    issueUrl: payload.html_url,
+    issueLinked: true,
   };
+  if (typeof payload.number === "number") dispatchResult.issueNumber = payload.number;
+  return dispatchResult;
 }
 
 export async function handleGithubIssueAutomationPOST(request: NextRequest) {
@@ -684,7 +768,18 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
     });
 
     if (!humanApproved) {
-      return json({ ok: false, error: { code: "HUMAN_APPROVAL_REQUIRED", message: "Human approval is required before GitHub issue automation." }, data: { automationPlan, runtimePlan } }, 400);
+      return json(
+        {
+          ok: false,
+          error: { code: "HUMAN_APPROVAL_REQUIRED", message: "Human approval is required before GitHub issue automation." },
+          data: {
+            automationPlan: buildSafeGithubIssueAutomationPlanResponse(automationPlan),
+            runtimePlan: buildSafeGithubIssueRuntimePlanResponse(runtimePlan),
+            responseProjection: buildGithubIssueAutomationResponseProjection(),
+          },
+        },
+        400,
+      );
     }
 
     if (process.env.NODE_ENV === "production" && runtimePlan.status !== "ready") {
@@ -702,8 +797,9 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
             requiredEvidence: runtimePlan.requiredEvidence,
           },
           data: {
-            automationPlan,
-            runtimePlan,
+            automationPlan: buildSafeGithubIssueAutomationPlanResponse(automationPlan),
+            runtimePlan: buildSafeGithubIssueRuntimePlanResponse(runtimePlan),
+            responseProjection: buildGithubIssueAutomationResponseProjection(),
             artifactPaths: githubIssueAutomationArtifactPaths,
           },
         },
@@ -711,7 +807,7 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
       );
     }
 
-    const dispatch = automationPlan.createIssueRequest ? await dispatchGithubIssue(automationPlan.createIssueRequest) : { dispatchState: "blocked", issueUrl: null, issueNumber: null };
+    const dispatch = automationPlan.createIssueRequest ? await dispatchGithubIssue(automationPlan.createIssueRequest) : { dispatchState: "blocked", issueLinked: false };
     const auditLogId = await persistApproval({
       tenantId,
       actorUserId: actor.actorUserId,
@@ -721,7 +817,7 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
       dispatchState: dispatch.dispatchState,
     });
 
-    if (persistedErrorReport?.id && dispatch.issueUrl) {
+    if (persistedErrorReport?.id && dispatch.issueLinked && dispatch.issueUrl) {
       const githubIssueRepository = prisma as unknown as GithubIssueLinkPersistenceRepository;
       await persistGithubIssueLinkToErrorReport(githubIssueRepository, {
         tenantId,
@@ -729,7 +825,7 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
         approvalAuditLogId: auditLogId,
         dispatchState: dispatch.dispatchState,
         issueUrl: dispatch.issueUrl,
-        issueNumber: dispatch.issueNumber,
+        issueNumber: dispatch.issueNumber ?? null,
         repository: process.env.GITHUB_REPOSITORY ?? "repository-not-configured",
         reportFingerprint: report.fingerprint,
         existingMetadata: persistedErrorReport.metadata && typeof persistedErrorReport.metadata === "object" ? (persistedErrorReport.metadata as Record<string, unknown>) : {},
@@ -739,10 +835,11 @@ export async function handleGithubIssueAutomationPOST(request: NextRequest) {
     return json({
       ok: automationPlan.status === "ready" && dispatch.dispatchState !== "blocked",
       data: {
-        automationPlan,
-        runtimePlan,
-        dispatch,
-        auditLogId,
+        automationPlan: buildSafeGithubIssueAutomationPlanResponse(automationPlan),
+        runtimePlan: buildSafeGithubIssueRuntimePlanResponse(runtimePlan),
+        dispatch: buildSafeGithubIssueDispatchResponse(dispatch),
+        auditLogged: Boolean(auditLogId),
+        responseProjection: buildGithubIssueAutomationResponseProjection(),
         artifactPaths: githubIssueAutomationArtifactPaths,
         requiredNextWork: [
           "Configure GitHub token, repository, labels, assignees, and privacy template in secrets/config.",

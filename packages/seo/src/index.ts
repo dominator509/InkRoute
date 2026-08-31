@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { ArtistProfile, PortfolioItem, Review, Role, SeoCityPage, SeoPageStatus, SeoStylePage, TravelStop } from "@inkroute/types";
 
 type JsonLd = Record<string, unknown>;
@@ -1737,6 +1739,18 @@ function canMutateSeo(role: Role): boolean {
   return role === "owner" || role === "studio_manager";
 }
 
+function buildSeoPublicationFallbackIdempotencyKey(input: {
+  tenantId: string;
+  model: SeoPublishableModel;
+  action: SeoPublicationAction;
+  canonicalPath: string;
+}): string {
+  const selectorHash = createHash("sha256")
+    .update(JSON.stringify([input.tenantId, input.model, input.action, input.canonicalPath]))
+    .digest("hex");
+  return `seo:${selectorHash}`;
+}
+
 function resolvePublicationStatus(action: SeoPublicationAction, targetStatus?: SeoPageStatus): SeoPageStatus {
   if (action === "publish") return "published";
   if (action === "archive") return "archived";
@@ -1756,7 +1770,14 @@ export function buildSeoPublicationMutationPlan(input: SeoPublicationMutationInp
   if (input.action === "redirect" && (!input.redirectFromPath || !input.redirectToPath)) blockers.push("Redirect mutations require source and destination paths.");
 
   const routeWithTargetStatus = { ...input.route, status: targetStatus };
-  const idempotencyKey = input.idempotencyKey ?? `seo:${input.tenantId}:${input.model}:${input.action}:${routeWithTargetStatus.canonicalPath}`;
+  const idempotencyKey =
+    input.idempotencyKey ??
+    buildSeoPublicationFallbackIdempotencyKey({
+      tenantId: input.tenantId,
+      model: input.model,
+      action: input.action,
+      canonicalPath: routeWithTargetStatus.canonicalPath,
+    });
   const associationCount = (input.relatedFaqIds?.length ?? 0) + (input.relatedReviewIds?.length ?? 0) + (input.relatedImageIds?.length ?? 0);
   const writes: SeoPublicationWrite[] = [
     {

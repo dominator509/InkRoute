@@ -22,6 +22,14 @@ function buildLocalMetrics() {
   ];
 }
 
+function buildMetricsResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -66,12 +74,13 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_METRICS_NOT_CONFIGURED",
             message: "Production dashboard metrics require DB-backed actor resolution and tenant-scoped aggregate reads; local fallback metrics are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-112"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildMetricsResponseProjection(),
           productionBoundary: { localDashboardMetricsFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -82,9 +91,10 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         metrics: buildLocalMetrics(),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildMetricsResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-112"],
         boundary: "Local fallback returns demo dashboard metrics only; database mode is required for tenant analytics readiness.",
       },
@@ -145,7 +155,6 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         metrics: [
           { label: "Open requests", value: String(result.openRequests), detail: `${result.submittedRequests} newly submitted` },
@@ -155,7 +164,9 @@ export async function GET(request: NextRequest) {
           { label: "Paid volume", value: formatUsd(result.paidPaymentCents), detail: `${result.paidPaymentCount} paid payment records` },
           { label: "Analytics events", value: String(result.analyticsEvents), detail: "Persisted public attribution events" },
         ],
-        auditId: result.audit.id,
+        auditLogged: true,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildMetricsResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-112"],
         boundary: "Dashboard metrics are aggregate-only, tenant-scoped, no-store, and audited; runtime/CI performance evidence remains gated.",
       },
@@ -167,8 +178,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Dashboard metrics require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildMetricsResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-112"],
         },
         { status: 503, headers: noStoreHeaders },

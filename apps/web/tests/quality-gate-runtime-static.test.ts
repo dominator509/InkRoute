@@ -332,6 +332,18 @@ describe("quality gate runtime contract", () => {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
       },
+      qualityAllOutput: "quality failed for user_private_123",
+      gapAuditReport: { gapId: "gap_private_123" },
+      governanceTranscript: "governance owner user_private_456",
+      requiredChecksSummary: "required check run_private_123 failed",
+      productionBlockerNotes: "blocker_private_123",
+      manifestAuditOutput: "manifest leak tenant_private_123",
+      neutralQualityTrace: "quality_gate_01HZYXZYXZYXZYXZYXZYXZYXZ loaded reports/quality/private-summary.json",
+      neutralGovernanceTrace: "governance_check_01HZYXZYXZYXZYXZYXZYXZYXZ blocked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ uploaded artifact_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralDatabaseTrace: "database_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ stored postgresql://tenant_demo:secret@db.example.com/inkroute",
       contacts: ["+1 (555) 867-5309"],
     };
 
@@ -343,6 +355,17 @@ describe("quality gate runtime contract", () => {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
       },
+      qualityAllOutput: "[REDACTED]",
+      gapAuditReport: "[REDACTED]",
+      governanceTranscript: "[REDACTED]",
+      requiredChecksSummary: "[REDACTED]",
+      productionBlockerNotes: "[REDACTED]",
+      manifestAuditOutput: "[REDACTED]",
+      neutralQualityTrace: "[REDACTED] loaded [REDACTED]",
+      neutralGovernanceTrace: "[REDACTED] blocked [REDACTED]",
+      neutralRepositoryTrace: "[REDACTED] [REDACTED] [REDACTED] [REDACTED] [REDACTED]",
+      neutralCiTrace: "workflow [REDACTED] uploaded [REDACTED]",
+      neutralDatabaseTrace: "[REDACTED] stored [REDACTED]",
       contacts: ["[REDACTED]"],
     });
 
@@ -357,9 +380,30 @@ describe("quality gate runtime contract", () => {
         "packageTypecheckOutput",
         "persistence.tenantId",
         "persistence.databaseUrl",
+        "qualityAllOutput",
+        "gapAuditReport",
+        "governanceTranscript",
+        "requiredChecksSummary",
+        "productionBlockerNotes",
+        "manifestAuditOutput",
+        "neutralQualityTrace",
+        "neutralGovernanceTrace",
+        "neutralRepositoryTrace",
+        "neutralCiTrace",
+        "neutralDatabaseTrace",
         "contacts[0]",
-      ]),
+      ]),    
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("quality_gate_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reports/quality/private-summary.json");
+    expect(JSON.stringify(review.artifact)).not.toContain("governance_check_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
     expect(review.requiredExternalEvidence).toContain("pnpm quality:all output captured after all quality gates run together.");
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");
     expect(bundle.artifactPath).toBe("coverage/quality-gate-redacted-evidence-bundle.json");

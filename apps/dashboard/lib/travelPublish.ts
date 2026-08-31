@@ -9,6 +9,7 @@ import {
 } from "@inkroute/calendar";
 import { demoTravelStops } from "@inkroute/config";
 import type { TravelStop } from "@inkroute/types";
+import { createHash } from "node:crypto";
 
 export type TravelPublishMutationInput = TravelPublishMutationPlanInput & {
   requestId: string;
@@ -104,6 +105,10 @@ const previousSampleStop = {
   publicNotes: "Previous travel snapshot for rollback.",
 } satisfies TravelStop;
 
+function buildTravelPublishSelectorKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 function buildSampleTravelPublishPlans(): TravelPublishMutationPlan[] {
   return supportedActions.map((action) =>
     buildTravelPublishMutationPlan({
@@ -113,7 +118,7 @@ function buildSampleTravelPublishPlans(): TravelPublishMutationPlan[] {
       action,
       stop: sampleStop,
       previousStop: action === "publish" ? undefined : previousSampleStop,
-      idempotencyKey: `travel-publish-demo-${action}`,
+      idempotencyKey: buildTravelPublishSelectorKey("travel-publish-demo", [action]),
       consentedWaitlistClientIds: ["client_demo_waitlist"],
       changedFieldNames: action === "publish" ? ["created"] : ["bookingStatus", "startsAt", "endsAt"],
       providerActionsSucceeded: action === "rollback" ? false : true,
@@ -163,19 +168,19 @@ function buildTravelPublishAccessKey(input: {
   readonly actorId: string;
   readonly action: TravelPublishMutationAction;
 }): string {
-  return `${input.tenantId}:${input.artistId}:${input.actorId}:${input.action}`;
+  return buildTravelPublishSelectorKey("travel-publish-access", [input.tenantId, input.artistId, input.actorId, input.action]);
 }
 
 function buildTravelStopKey(input: { readonly tenantId: string; readonly artistId: string; readonly stopId: string }): string {
-  return `${input.tenantId}:${input.artistId}:${input.stopId}`;
+  return buildTravelPublishSelectorKey("travel-publish-stop", [input.tenantId, input.artistId, input.stopId]);
 }
 
 function buildTravelWaitlistKey(input: { readonly tenantId: string; readonly city: string; readonly region: string; readonly country: string }): string {
-  return `${input.tenantId}:${input.city}:${input.region}:${input.country}`;
+  return buildTravelPublishSelectorKey("travel-publish-waitlist", [input.tenantId, input.city, input.region, input.country]);
 }
 
 function buildTravelIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return buildTravelPublishSelectorKey("travel-publish-idempotency", [input.tenantId, input.key]);
 }
 
 export function createInMemoryTravelPublishRepository(

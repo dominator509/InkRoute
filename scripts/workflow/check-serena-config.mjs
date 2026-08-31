@@ -81,9 +81,10 @@ check(
   "Quote ignored_paths entries that start with **/ so YAML parsers do not treat them as aliases.",
 );
 check(
-  "Serena is read-only",
-  /read_only:\s*true/i.test(projectConfig ?? ""),
-  "Use Serena for navigation/references only; make edits through Codex patching tools or RTK-scoped repo commands.",
+  "Serena can write memories without enabling source-edit workflow",
+  /read_only:\s*false/i.test(projectConfig ?? "") &&
+    /do not use Serena source-editing tools/i.test(projectConfig ?? ""),
+  "Keep write_memory active for onboarding while preserving the repo policy that source edits go through Codex patching tools or RTK-scoped commands.",
 );
 check(
   "Serena response budget is bounded",

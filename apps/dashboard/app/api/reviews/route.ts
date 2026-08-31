@@ -13,7 +13,6 @@ type ReviewQueueItem = {
   status: string;
   rating: number;
   title: string | null;
-  body: string | null;
   publicDisplayName: string | null;
   source: string;
   publishedAt: Date | null;
@@ -21,14 +20,21 @@ type ReviewQueueItem = {
   updatedAt: Date;
 };
 
-function redactReviewBody(value: string | null | undefined): string {
-  if (!value) return "";
-  return value.length > 0 ? "[redacted-review-body]" : "";
-}
-
 function publicDisplayName(value: string | null | undefined): string {
   if (!value || value.trim().length === 0) return "Private client";
   return value;
+}
+
+function buildReviewReadResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    reviewIdsEchoed: false,
+    artistIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    bodyEchoed: false,
+    privateClientReferencesEchoed: false,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -56,12 +62,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard review reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-026", "GAP-037", "GAP-071"],
           },
+          responseProjection: buildReviewReadResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -72,22 +78,22 @@ export async function GET(request: NextRequest) {
       .filter((review) => !statusFilter || review.status === statusFilter)
       .slice(0, limit)
       .map((review) => ({
-        id: review.id,
         displayName: review.displayName,
         rating: review.rating,
         status: review.status,
         bodyPreview: "[redacted-review-body]",
         source: "local-fallback",
+        responseProjection: buildReviewReadResponseProjection(),
       }));
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         count: reviews.length,
         reviews,
+        responseProjection: buildReviewReadResponseProjection(),
         gapIds: ["GAP-026", "GAP-037", "GAP-071"],
         boundary: "Local fallback returns redacted demo review metadata only; database mode is required for live moderation and publication reads.",
       },
@@ -97,8 +103,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const reviewModel = tx.review as { findMany: (args: unknown) => Promise<ReviewQueueItem[]> };
-      const rows = await reviewModel.findMany({
+      const rows = await tx.review.findMany({
         where: {
           tenantId,
           ...(statusFilter ? { status: statusFilter } : {}),
@@ -112,7 +117,6 @@ export async function GET(request: NextRequest) {
           status: true,
           rating: true,
           title: true,
-          body: true,
           publicDisplayName: true,
           source: true,
           publishedAt: true,
@@ -144,24 +148,24 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: result.rows.length,
         reviews: result.rows.map((review: ReviewQueueItem) => ({
-          id: review.id,
-          tenantId: review.tenantId,
-          artistId: review.artistId,
           status: review.status,
           rating: review.rating,
           title: review.title,
-          bodyPreview: redactReviewBody(review.body),
+          bodyPreview: "[redacted-review-body]",
+          bodySelectedFromDatabase: false,
+          artistLinked: Boolean(review.artistId),
           publicDisplayName: publicDisplayName(review.publicDisplayName),
           source: review.source,
           publishedAt: review.publishedAt?.toISOString() ?? null,
           createdAt: review.createdAt.toISOString(),
           updatedAt: review.updatedAt.toISOString(),
+          responseProjection: buildReviewReadResponseProjection(),
         })),
-        auditId: result.audit.id,
+        auditLogged: true,
+        responseProjection: buildReviewReadResponseProjection(),
         gapIds: ["GAP-026", "GAP-037", "GAP-071"],
         boundary: "Dashboard review reads are tenant-scoped, no-store, audit-logged, and redact raw review body plus private client/booking references; publication workflows remain gated.",
       },
@@ -173,8 +177,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Review reads require the dashboard database connection." },
+          responseProjection: buildReviewReadResponseProjection(),
           gapIds: ["GAP-026", "GAP-037", "GAP-071"],
         },
         { status: 503, headers: noStoreHeaders },

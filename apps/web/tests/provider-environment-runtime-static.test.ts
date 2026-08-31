@@ -136,6 +136,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
     expect(gapTracker).toContain("providerEnvironmentRuntimeLocalArtifacts");
     expect(gapTracker).toContain("providerEnvironmentRuntimeExternalArtifacts");
     expect(gapTracker).toContain("buildProviderEnvironmentRuntimeRedactedHandoffPacket");
+    expect(gapTracker).toContain("GAP-114 provider environment artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current provider environment runtime proof files for GAP-114", () => {
@@ -391,6 +392,23 @@ describe("GAP-114 provider environment runtime wiring", () => {
       githubEnvironment: { url: "https://github.com/dominator509/InkRoute/settings/environments/production" },
       contactEmail: "owner@example.com",
       phone: "+1 555 111 9999",
+      verifierOutput: "provider verifier emitted project_private_123",
+      strictEnvLog: "DATABASE_URL=postgres://tenant_demo:secret@db.example.com/inkroute",
+      providerSmokeTranscript: "dashboard smoke used tenant_private_123",
+      migrationDryRunOutput: "migration touched row_private_123",
+      storageAclProof: "bucket_private_123 denied public read",
+      sourceMapProof: "sentry sourcemap release_private_123",
+      githubProtectionNotes: "environment reviewer user_private_123",
+      neutralProviderTrace: "vercel_project_01HZYXZYXZYXZYXZYXZYXZYXZ uses neon_resource_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralSecretTrace: "secret_destination_01HZYXZYXZYXZYXZYXZYXZYXZ mapped to production_env_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ deployed commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "handoff packet coverage/provider-environment/private-handoff.json",
+      repositoryEvidence: "repo:dominator509/InkRoute",
+      branchEvidence: "branch:production/provider-environment",
+      pullRequestEvidence: "pr_provider_environment",
+      reviewerEvidence: "reviewer_provider_owner",
+      codeownerEvidence: "CODEOWNER:provider-platform-team",
+      rawHandoffPayload: { projectId: "project_private_123" },
       nested: {
         authorization: "Bearer provider-secret-token",
         tenantId: "tenant_demo",
@@ -410,15 +428,48 @@ describe("GAP-114 provider environment runtime wiring", () => {
     expect(serialized).not.toContain("+1 555 111 9999");
     expect(serialized).not.toContain("Bearer provider-secret-token");
     expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("project_private_123");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("row_private_123");
+    expect(serialized).not.toContain("bucket_private_123");
+    expect(serialized).not.toContain("release_private_123");
+    expect(serialized).not.toContain("user_private_123");
+    expect(serialized).not.toContain("vercel_project_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("neon_resource_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("secret_destination_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("coverage/provider-environment/private-handoff.json");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/provider-environment");
+    expect(serialized).not.toContain("pr_provider_environment");
+    expect(serialized).not.toContain("reviewer_provider_owner");
+    expect(serialized).not.toContain("CODEOWNER:provider-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
+        "[REDACTED_BRANCH_SELECTOR]",
+        "[REDACTED_CODEOWNER_SELECTOR]",
+        "[REDACTED_PR_SELECTOR]",
+        "[REDACTED_REPOSITORY_SELECTOR]",
+        "[REDACTED_REVIEWER_SELECTOR]",
         "authorization",
         "databaseUrl",
         "easBuildUrl",
         "githubEnvironment",
+        "githubProtectionNotes",
+        "migrationDryRunOutput",
+        "neutralArtifactTrace",
+        "neutralCiTrace",
+        "neutralProviderTrace",
+        "neutralSecretTrace",
         "phone",
         "productionUrl",
+        "providerSmokeTranscript",
+        "rawHandoffPayload",
+        "sourceMapProof",
+        "storageAclProof",
+        "strictEnvLog",
+        "verifierOutput",
         "projectId",
         "providerResourceId",
         "secretStoreDestination",

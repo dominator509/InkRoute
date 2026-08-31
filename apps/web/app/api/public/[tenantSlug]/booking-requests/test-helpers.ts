@@ -1,5 +1,5 @@
 import { type BookingRequestInput } from "@inkroute/validators";
-import { getClientIp } from "../../../../../lib/localRuntimeState";
+import { getClientIpFromHeaders } from "../../../../../lib/localRuntimeState";
 import type { LocalBookingWorkflowRecord } from "../../../../../lib/localRuntimeState";
 
 export type BotProofStatus = "passed" | "missing" | "expired" | "invalid" | "disabled";
@@ -197,7 +197,7 @@ export async function evaluateBotProof(
     };
   }
 
-  const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
+  const clientIp = getClientIpFromHeaders(request.headers);
   const message = `${tenantSlug}|${clientIp}|${parsed.issuedAt}|${parsed.nonce}|${parsed.bodyHash}`;
   const expectedSignature = await computeHmacSha256Hex(secret, message);
   if (!safeEquals(expectedSignature, parsed.signature)) {
@@ -257,7 +257,7 @@ export function buildReferenceUploadContract(tenantSlug: string, bookingRequestI
       "Production should require authenticated user OR protected upload token and provider signature on intent creation.",
       isDbScope
         ? "Production should persist signed intent contract + queue message before upload is accepted."
-        : "Local runtime should persist intent contract and return signedUploadUrl/intent contract fields from local runtime state.",
+        : "Local runtime should persist intent contract but public booking responses must return only ID-free handoff proof, not signedUploadUrl fields.",
     ],
     gapIds: ["GAP-005", "GAP-021", "GAP-033", "GAP-096", "GAP-097"],
   };

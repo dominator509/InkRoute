@@ -1,5 +1,7 @@
 ﻿import { buildNotificationLaunchEvidencePlan, buildNotificationPreferenceSuppressionPlan, buildNotificationProviderHandoffWorkerPlan } from "@inkroute/notifications";
 import { buildNotificationRedactionPrivacyDecision } from "./notificationRedactionPrivacyContract";
+import { notificationLaunchEvidenceRequiredCommands } from "@inkroute/notifications";
+import { notificationLaunchEvidenceRequiredControls } from "@inkroute/notifications";
 import { buildNotificationTenantIsolationDecision } from "./notificationTenantIsolationContract";
 import { buildNotificationWebhookReplayDecision } from "./notificationWebhookReplayContract";
 
@@ -126,24 +128,9 @@ export const notificationLaunchRunPersistenceContract: NotificationLaunchRunPers
   ],
 };
 
-export const notificationLaunchRuntimeCommands = [
-  "pnpm --filter @inkroute/notifications typecheck",
-  "pnpm --filter @inkroute/notifications test",
-  "notification provider sandbox tests",
-  "notification queue worker source contract tests",
-  "provider webhook signature/replay tests",
-  "preference suppression source contract tests",
-  "Expo push device smoke",
-  "GitHub Actions notification launch evidence job",
-] as const;
+export const notificationLaunchRuntimeCommands = notificationLaunchEvidenceRequiredCommands;
 
-export const notificationLaunchRuntimeControls = [
-  "pre-send-consent-preference-suppression-quiet-hours-rate-limit-resolution",
-  "tenant-scoped-delivery-provider-thread-message-audit-idempotency-persistence",
-  "raw-body-provider-webhook-signature-and-replay-rejection",
-  "unsubscribe-stop-help-bounce-complaint-invalid-push-retry-dead-letter-processing",
-  "redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts",
-] as const;
+export const notificationLaunchRuntimeControls = notificationLaunchEvidenceRequiredControls;
 
 export const notificationLaunchArtifactPaths = [
   "coverage/notification-launch-runtime.json",
@@ -452,9 +439,9 @@ export interface NotificationLaunchArtifactReview {
 }
 
 const sensitiveNotificationLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|destination|body|payload|provider|tenant|user|client|thread|message|delivery|event|account|database|url|uri|dsn|key|id)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|destination|body|payload|provider|tenant|user|client|thread|message|delivery|event|account|database|url|uri|dsn|repository|repo|branch|pull|pr|reviewer|codeowner|key|id)/iu;
 const sensitiveNotificationLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 export const notificationLaunchExecutionPolicy = {
   codexMayClassifyStaticNotificationLaunchReadiness: true,
@@ -478,8 +465,8 @@ export const notificationLaunchRequiredExternalEvidence = [
 export const notificationLaunchLocalCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
-  "notification queue worker source contract tests",
-  "preference suppression source contract tests",
+  "notification queue worker integration tests",
+  "message thread/preference suppression integration tests",
 ] as const;
 
 export const notificationLaunchExternalCommands = [
@@ -676,7 +663,7 @@ export const notificationLaunchRuntimeMatrix = [
   },
   {
     id: "queue-worker-retry-dead-letter",
-    command: "notification queue worker source contract tests",
+    command: "notification queue worker integration tests",
     artifact: "coverage/notification-queue-worker.json",
     status: "wired",
   },
@@ -688,7 +675,7 @@ export const notificationLaunchRuntimeMatrix = [
   },
   {
     id: "preference-suppression-quiet-hours",
-    command: "preference suppression source contract tests",
+    command: "message thread/preference suppression integration tests",
     artifact: "coverage/notification-preference-suppression.json",
     status: "wired",
   },
@@ -712,7 +699,7 @@ export const notificationLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly NotificationLaunchRuntimeMatrixEntry[];
 
-export const notificationLaunchRuntimeReadiness = buildNotificationLaunchEvidencePlan({
+const notificationLaunchPackageReadiness = buildNotificationLaunchEvidencePlan({
   packageScripts: ["typecheck", "test"],
   notificationsTypecheckPassed: false,
   notificationsTestsPassed: false,
@@ -736,24 +723,32 @@ export const notificationLaunchRuntimeReadiness = buildNotificationLaunchEvidenc
 });
 
 export function buildNotificationLaunchDecisionRequiredEvidence(
-  readinessEvidence: typeof notificationLaunchRuntimeReadiness.requiredEvidence,
+  readinessEvidence: readonly string[],
 ): NotificationLaunchRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "NotificationLaunchRun row with command, control, artifact, provider send, suppression, and webhook replay matrices.",
-    "Artifact bundle proving notification package checks, provider sandbox/device sends, queue worker, delivery/provider/thread/message persistence, preference suppression, webhook signatures, retry/dead-letter, tenant isolation, privacy redaction, CI evidence, and secret-safe artifacts.",
-  ];
+  const launchRunEvidence = "NotificationLaunchRun row with command, control, artifact, provider send, suppression, and webhook replay matrices.";
+  const artifactBundleEvidence = "Artifact bundle proving notification package checks, provider sandbox/device sends, queue worker, delivery/provider/thread/message persistence, preference suppression, webhook signatures, retry/dead-letter, tenant isolation, privacy redaction, CI evidence, and secret-safe artifacts.";
+  if (readinessEvidence.includes(launchRunEvidence) && readinessEvidence.includes(artifactBundleEvidence)) {
+    return readinessEvidence as NotificationLaunchRequiredEvidence;
+  }
+  return [...readinessEvidence, launchRunEvidence, artifactBundleEvidence] as NotificationLaunchRequiredEvidence;
 }
 
 export type NotificationLaunchRequiredEvidence = readonly [
-  ...typeof notificationLaunchRuntimeReadiness.requiredEvidence,
+  ...typeof notificationLaunchPackageReadiness.requiredEvidence,
   "NotificationLaunchRun row with command, control, artifact, provider send, suppression, and webhook replay matrices.",
   "Artifact bundle proving notification package checks, provider sandbox/device sends, queue worker, delivery/provider/thread/message persistence, preference suppression, webhook signatures, retry/dead-letter, tenant isolation, privacy redaction, CI evidence, and secret-safe artifacts.",
 ];
 
 export const notificationLaunchRequiredEvidence = buildNotificationLaunchDecisionRequiredEvidence(
-  notificationLaunchRuntimeReadiness.requiredEvidence,
+  notificationLaunchPackageReadiness.requiredEvidence,
 );
+
+export const notificationLaunchRuntimeReadiness = {
+  ...notificationLaunchPackageReadiness,
+  requiredCommands: notificationLaunchRuntimeCommands,
+  requiredControls: notificationLaunchRuntimeControls,
+  requiredEvidence: notificationLaunchRequiredEvidence,
+};
 
 export function buildNotificationLaunchEvidenceDecision(
   input: NotificationLaunchEvidenceInput,

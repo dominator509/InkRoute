@@ -173,6 +173,8 @@ export default function TrustPage() {
         </div>
       </section>
 
+      <p className="boundary-note">Guarded GET /api/security/trust-status and POST /api/security/privacy-requests enforce tenant and role gates. Production durable privacy workers and audit persistence remain evidence-gated.</p>
+
       <PrivacyRequestActionPanel />
     </main>
   );

@@ -7,6 +7,7 @@ import {
   type PaymentLifecycleWrite,
   type PaymentPersistenceRuntimeReadinessPlan,
 } from "@inkroute/payments";
+import { createHash } from "node:crypto";
 
 export interface PaymentLifecycleMutationInput {
   tenantId: string;
@@ -90,6 +91,10 @@ function toJsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function buildPaymentPersistenceSelectorKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 function paymentLifecycleEventType(action: PaymentLifecycleAction) {
   return action === "mark_paid" ? "deposit_paid" : "note_added";
 }
@@ -151,7 +156,12 @@ async function applyPrismaPaymentLifecycleWrite(
             providerSessionId: payload.providerSessionId ?? null,
             ...(plan.action === "mark_paid" ? { paidAt: occurredAt } : {}),
             ...(plan.action === "mark_failed" ? { failedAt: occurredAt } : {}),
-            metadata: toJsonValue({ lifecycleAction: plan.action, idempotencyKey: plan.idempotencyKey }),
+            metadata: toJsonValue({
+              lifecycleAction: plan.action,
+              idempotencyPersisted: true,
+              rawIdempotencyKeyStored: false,
+              internalPersistenceIdsStored: false,
+            }),
           },
         });
         if (updated.count > 0) return;
@@ -169,7 +179,12 @@ async function applyPrismaPaymentLifecycleWrite(
           status: paymentLifecycleStatus(plan),
           amountCents: payload.amountCents,
           currency: payload.currency,
-          metadata: toJsonValue({ lifecycleAction: plan.action, idempotencyKey: plan.idempotencyKey }),
+          metadata: toJsonValue({
+            lifecycleAction: plan.action,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
+          }),
         },
       });
       return;
@@ -203,7 +218,9 @@ async function applyPrismaPaymentLifecycleWrite(
           metadata: toJsonValue({
             lifecycleAction: plan.action,
             targetStatus: plan.targetStatus,
-            idempotencyKey: plan.idempotencyKey,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             providerPaymentIntentId: payload.providerPaymentIntentId ?? null,
             providerChargeId: payload.providerChargeId ?? null,
             occurredAt: payload.occurredAt,
@@ -225,7 +242,9 @@ async function applyPrismaPaymentLifecycleWrite(
           metadata: toJsonValue({
             lifecycleAction: plan.action,
             targetStatus: plan.targetStatus,
-            idempotencyKey: plan.idempotencyKey,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             rawProviderPayloadStored: false,
           }),
         },
@@ -240,13 +259,24 @@ async function applyPrismaPaymentLifecycleWrite(
           scope: "payment-lifecycle",
           key: plan.idempotencyKey,
           status: "completed",
-          result: toJsonValue({ action: plan.action, targetStatus: plan.targetStatus }),
-          metadata: toJsonValue({ bookingRequestId, action: plan.action }),
+          result: toJsonValue({ action: plan.action, targetStatus: plan.targetStatus, internalPersistenceIdsStored: false }),
+          metadata: toJsonValue({
+            bookingRequestMatched: Boolean(bookingRequestId),
+            action: plan.action,
+            rawBookingRequestIdStored: false,
+            internalPersistenceIdsStored: false,
+          }),
         },
         update: {
           status: "completed",
-          result: toJsonValue({ action: plan.action, targetStatus: plan.targetStatus, replayObserved: true }),
-          metadata: toJsonValue({ bookingRequestId, action: plan.action, replayObserved: true }),
+          result: toJsonValue({ action: plan.action, targetStatus: plan.targetStatus, replayObserved: true, internalPersistenceIdsStored: false }),
+          metadata: toJsonValue({
+            bookingRequestMatched: Boolean(bookingRequestId),
+            action: plan.action,
+            replayObserved: true,
+            rawBookingRequestIdStored: false,
+            internalPersistenceIdsStored: false,
+          }),
         },
       });
       return;
@@ -272,14 +302,15 @@ export function createInMemoryTenantPaymentRepository(
       if (!input.tenantId.trim()) throw new Error("Tenant scope is required before payment persistence.");
     },
     async claimIdempotencyKey(key, tenantId, action) {
-      const existing = state.idempotencyKeys.get(key);
+      const localKey = buildPaymentPersistenceSelectorKey("payment-lifecycle-local-idempotency", [tenantId, key]);
+      const existing = state.idempotencyKeys.get(localKey);
       if (existing) {
         if (existing.tenantId !== tenantId || existing.action !== action) {
           throw new Error("Idempotency key replay crossed tenant or action scope.");
         }
         return "replayed";
       }
-      state.idempotencyKeys.set(key, { tenantId, action });
+      state.idempotencyKeys.set(localKey, { tenantId, action });
       return "claimed";
     },
     async runLifecycleTransaction(plan) {
@@ -430,32 +461,32 @@ export function buildPaymentPersistenceContract(): PaymentPersistenceContract {
     buildPaymentLifecyclePersistencePlan({
       ...common,
       action: "create_deposit",
-      idempotencyKey: "payment:create_deposit:demo",
+      idempotencyKey: buildPaymentPersistenceSelectorKey("payment-lifecycle-demo", ["create_deposit"]),
     }),
     buildPaymentLifecyclePersistencePlan({
       ...common,
       action: "record_checkout_session",
-      idempotencyKey: "payment:record_checkout_session:demo",
+      idempotencyKey: buildPaymentPersistenceSelectorKey("payment-lifecycle-demo", ["record_checkout_session"]),
     }),
     buildPaymentLifecyclePersistencePlan({
       ...common,
       action: "mark_paid",
-      idempotencyKey: "payment:mark_paid:demo",
+      idempotencyKey: buildPaymentPersistenceSelectorKey("payment-lifecycle-demo", ["mark_paid"]),
     }),
     buildPaymentLifecyclePersistencePlan({
       ...common,
       action: "mark_failed",
-      idempotencyKey: "payment:mark_failed:demo",
+      idempotencyKey: buildPaymentPersistenceSelectorKey("payment-lifecycle-demo", ["mark_failed"]),
     }),
     buildPaymentLifecyclePersistencePlan({
       ...common,
       action: "mark_refunded",
-      idempotencyKey: "payment:mark_refunded:demo",
+      idempotencyKey: buildPaymentPersistenceSelectorKey("payment-lifecycle-demo", ["mark_refunded"]),
     }),
     buildPaymentLifecyclePersistencePlan({
       ...common,
       action: "mark_disputed",
-      idempotencyKey: "payment:mark_disputed:demo",
+      idempotencyKey: buildPaymentPersistenceSelectorKey("payment-lifecycle-demo", ["mark_disputed"]),
     }),
   ];
 

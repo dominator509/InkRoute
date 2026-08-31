@@ -112,6 +112,8 @@ describe("payment persistence runtime contract", () => {
     expect(refundRoute).toContain("rawReasonStoredInResult: false");
     expect(refundRoute).toContain("stripeRefundCreated: false");
     expect(refundRoute).toContain("webhookReconciled: false");
+    expect(refundRoute).toContain("refundResponseAllowlisted: true");
+    expect(refundRoute).not.toContain("...result.refund");
     expect(refundRoute).toContain("idempotencyKeyId");
     expect(refundRoute).toContain("idempotencyReplay");
     expect(depositDraftRoute).toContain('export const runtime = "nodejs"');
@@ -124,6 +126,8 @@ describe("payment persistence runtime contract", () => {
     expect(depositDraftRoute).toContain("tx.idempotencyKey.update");
     expect(depositDraftRoute).toContain("stripeCheckoutCreated: false");
     expect(depositDraftRoute).toContain("webhookReconciled: false");
+    expect(depositDraftRoute).toContain("depositResponseAllowlisted: true");
+    expect(depositDraftRoute).not.toContain("...result.deposit");
     expect(depositDraftRoute).toContain("idempotencyKeyId");
     expect(depositDraftRoute).toContain("idempotencyReplay");
     expect(prismaSchema).toContain("model PaymentAuditLog");
@@ -213,6 +217,10 @@ describe("payment persistence runtime contract", () => {
         bookingAuditPayload: "audit_private",
         publicSummary: "payment persistence evidence captured",
       },
+      safeNote:
+        "evidence_payment_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/payment-persistence/private-proof.json",
+      safeTransactionPath: "test-results/payment-persistence-runtime/private-transaction.json",
+      safePostgresRun: "payment_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedPaymentPersistenceArtifact(artifact);
@@ -222,6 +230,9 @@ describe("payment persistence runtime contract", () => {
       "paymentCustomerEmail",
       "idempotencyKey",
       "nested.bookingAuditPayload",
+      "safeNote",
+      "safeTransactionPath",
+      "safePostgresRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantId: "[REDACTED]",
@@ -232,7 +243,21 @@ describe("payment persistence runtime contract", () => {
         bookingAuditPayload: "[REDACTED]",
         publicSummary: "payment persistence evidence captured",
       },
+      safeTransactionPath: "[REDACTED]",
+      safePostgresRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_payment_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/payment-persistence/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/payment-persistence-runtime/private-transaction.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "payment_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildPaymentPersistenceArtifactReview({
       publicSummary: "safe payment persistence evidence",

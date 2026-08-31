@@ -1,6 +1,7 @@
 import { prisma } from "@inkroute/db";
 import { inkrouteDemoTenant } from "@inkroute/config";
 import type { AnalyticsEventName } from "@inkroute/analytics";
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
   buildPublicSeoAnalyticsEvent,
@@ -18,6 +19,10 @@ const allowedEvents = new Set<AnalyticsEventName>([
 ]);
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function analyticsIdempotencyFingerprint(event: ReturnType<typeof buildPublicSeoAnalyticsEvent>) {
+  return createHash("sha256").update(JSON.stringify(redactAnalyticsPayload(event.payload))).digest("hex");
+}
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -44,6 +49,29 @@ async function resolveAnalyticsTenant(tenantSlug: string): Promise<
     if (process.env.NODE_ENV !== "production" && tenantSlug === inkrouteDemoTenant.slug) return { status: "local-fallback", tenantId: inkrouteDemoTenant.id };
     return { status: "unavailable", error };
   }
+}
+
+function buildSafePublicAnalyticsEventResponse(event: ReturnType<typeof buildPublicSeoAnalyticsEvent>) {
+  const payload = redactAnalyticsPayload(event.payload);
+  return {
+    name: event.name,
+    payload: {
+      name: payload.name,
+      url: payload.url,
+      createdAt: payload.createdAt,
+      ...(payload.utmSource ? { utmSource: payload.utmSource } : {}),
+      ...(payload.utmMedium ? { utmMedium: payload.utmMedium } : {}),
+      ...(payload.utmCampaign ? { utmCampaign: payload.utmCampaign } : {}),
+      ...(payload.city ? { city: payload.city } : {}),
+      ...(payload.style ? { style: payload.style } : {}),
+    },
+    responseProjection: {
+      tenantIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      portfolioItemIdEchoed: false,
+      rawAttributionIdsEchoed: false,
+    },
+  };
 }
 
 export async function POST(request: Request, context: { params: Promise<{ tenantSlug: string }> }) {
@@ -91,7 +119,7 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
     ...(style ? { style } : {}),
     ...(bookingRequestId ? { bookingRequestId } : {}),
   });
-  const idempotencyKey = request.headers.get("idempotency-key") ?? `seo-analytics:${tenant.tenantId}:${name}:${event.payload.createdAt}`;
+  const idempotencyKey = request.headers.get("idempotency-key") ?? `seo-analytics:${analyticsIdempotencyFingerprint(event)}`;
 
   if (tenant.status === "database") {
     try {
@@ -100,12 +128,23 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
         {
           ok: true,
           status: "database_persisted",
-          event: { name: event.name, payload: redactAnalyticsPayload(event.payload) },
-          idempotencyKey,
+          event: buildSafePublicAnalyticsEventResponse(event),
+          idempotency: {
+            recorded: true,
+            keyEchoed: false,
+            generatedFallbackUsed: !request.headers.get("idempotency-key"),
+          },
           persistence: {
             analyticsEvent: true,
             campaign: Boolean(event.payload.campaign),
             providerSearchConsoleImported: false,
+          },
+          responseProjection: {
+            tenantIdEchoed: false,
+            bookingRequestIdEchoed: false,
+            portfolioItemIdEchoed: false,
+            rawAttributionIdsEchoed: false,
+            rawIdempotencyKeyEchoed: false,
           },
           gapIds: ["GAP-074"],
           boundary: "SEO analytics ingestion stores redacted tenant-scoped AnalyticsEvent/Campaign rows; Search Console import, click-through proof, booking attribution integration, and CI evidence remain gated.",
@@ -130,8 +169,19 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
     {
       ok: true,
       status: "accepted_without_provider_persistence",
-      event: { name: event.name, payload: redactAnalyticsPayload(event.payload) },
-      idempotencyKey,
+      event: buildSafePublicAnalyticsEventResponse(event),
+      idempotency: {
+        recorded: false,
+        keyEchoed: false,
+        generatedFallbackUsed: !request.headers.get("idempotency-key"),
+      },
+      responseProjection: {
+        tenantIdEchoed: false,
+        bookingRequestIdEchoed: false,
+        portfolioItemIdEchoed: false,
+        rawAttributionIdsEchoed: false,
+        rawIdempotencyKeyEchoed: false,
+      },
       gapIds: ["GAP-074"],
       boundary: "SEO analytics ingestion normalizes and redacts public attribution events; durable database persistence was unavailable, so this non-production response is local-preview only.",
     },

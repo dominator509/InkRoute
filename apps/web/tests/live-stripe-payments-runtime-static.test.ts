@@ -189,9 +189,9 @@ describe("live Stripe payments runtime contract", () => {
     expect(paymentsSource).toContain("buildLiveStripePaymentsReadinessPlan");
     expect(paymentsSource).toContain("verifyStripeWebhookSignature");
     expect(paymentsTests).toContain("buildLiveStripePaymentsReadinessPlan");
-    expect(paymentRoutesTest).toContain("Stripe-Signature");
+    expect(paymentRoutesTest).toContain("stripe-signature");
     expect(stripeWebhookRoute).toContain("verifyStripeWebhookSignature");
-    expect(dashboardPaymentReadTest).toContain("PaymentAuditLog");
+    expect(dashboardPaymentReadTest).toContain("tx.paymentAuditLog.create");
   });
 
   it("keeps live provider blockers explicit until real Stripe evidence exists", () => {
@@ -436,6 +436,16 @@ describe("live Stripe payments runtime contract", () => {
       clientEmail: "artist@example.com",
       clientPhone: "+1 (555) 867-5309",
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      providerTranscript: "Stripe response included evt_1234567890ABCDEFGHIJKLMNOP and pi_1234567890ABCDEFGHIJKLMNOP",
+      reconciliationTrace: "Matched payment_01HZYXZYXZYXZYXZYXZYXZYXZ via idempotency_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      webhookHeader: "stripe-signature:t=1710000000,v1=abcdef1234567890abcdef1234567890",
+      refundDisputeTrace: "refund_01HZYXZYXZYXZYXZYXZYXZYXZ disputed by customer_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      commandOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed payments:test",
+      repository: "repo:dominator509/InkRoute",
+      branch: "branch:production/live-stripe",
+      pullRequest: "pr_live_stripe",
+      reviewer: "reviewer_payments_owner",
+      codeowner: "CODEOWNER:payments-platform-team",
       persistence: {
         tenantId: "tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
         databaseUrl: "postgres://inkroute:secret@example.neon.tech/inkroute",
@@ -451,6 +461,16 @@ describe("live Stripe payments runtime contract", () => {
       clientEmail: "[REDACTED]",
       clientPhone: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
+      providerTranscript: "Stripe response included [REDACTED] and [REDACTED]",
+      reconciliationTrace: "Matched [REDACTED] via [REDACTED]",
+      webhookHeader: "[REDACTED]",
+      refundDisputeTrace: "[REDACTED] disputed by [REDACTED]",
+      commandOutput: "[REDACTED]",
+      repository: "[REDACTED]",
+      branch: "[REDACTED]",
+      pullRequest: "[REDACTED]",
+      reviewer: "[REDACTED]",
+      codeowner: "[REDACTED]",
       persistence: {
         tenantId: "[REDACTED]",
         databaseUrl: "[REDACTED]",
@@ -470,10 +490,27 @@ describe("live Stripe payments runtime contract", () => {
         "clientEmail",
         "clientPhone",
         "ciRunUrl",
+        "providerTranscript",
+        "reconciliationTrace",
+        "webhookHeader",
+        "refundDisputeTrace",
+        "commandOutput",
+        "repository",
+        "branch",
+        "pullRequest",
+        "reviewer",
+        "codeowner",
         "persistence.tenantId",
         "persistence.databaseUrl",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("evt_1234567890ABCDEFGHIJKLMNOP");
+    expect(JSON.stringify(review.artifact)).not.toContain("payment_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("stripe-signature");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(review.artifact)).not.toContain("pr_live_stripe");
+    expect(JSON.stringify(review.artifact)).not.toContain("CODEOWNER:payments-platform-team");
     expect(review.requiredExternalEvidence).toContain(
       "Provider-backed LiveStripePaymentsRun persistence row captured from the target database.",
     );

@@ -70,7 +70,7 @@ Phase 3 now includes static demo style pages from `demoSeoStylePages`. Productio
 ## Image SEO workflow
 
 For each portfolio image:
-- Artist-approved alt text.
+- Artist-approved alt text (pending legal review).
 - Style tags.
 - Placement.
 - Fresh/healed label.
@@ -115,7 +115,7 @@ The public site now renders static city/style pages, homepage JSON-LD, FAQ schem
 
 ## Phase 4 note
 
-The booking flow now exposes a richer `/booking` experience and `/booking/confirmation` preview. Production SEO should treat `/booking` as an indexable conversion page only after form UX, accessibility, and performance are verified. `/booking/confirmation` should likely become `noindex` or only render after a real request token once persistence is implemented, because production confirmation pages may contain client-specific information. The current static confirmation preview contains no private data.
+The booking flow now exposes a richer `/booking` experience and `/booking/confirmation` preview. Production SEO should treat `/booking` as an indexable conversion page only after form UX, accessibility, and performance are verified. `/booking/confirmation` should likely become `noindex` or only render after a real request token once persistence is implemented (provider integration blocked), because production confirmation pages may contain client-specific information. The current static confirmation preview contains no private data.
 
 
 ## Phase 5 dashboard SEO note

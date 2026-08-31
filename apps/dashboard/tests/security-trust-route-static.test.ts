@@ -30,6 +30,16 @@ describe("dashboard trust status route static contract", () => {
     expect(routeSource).toContain("DASHBOARD_TRUST_STATUS_PROVIDER_AUTH_NOT_CONFIGURED");
     expect(routeSource).toContain("headerOnlyTrustPreviewDisabled");
     expect(routeSource).toContain("requiresProviderBackedSession");
+    expect(routeSource).toContain("buildTrustStatusResponseProjection");
+    expect(routeSource).toContain("hashTrustStatusSelector");
+    expect(routeSource).toContain("tenantIdHash: hashTrustStatusSelector(actor.tenantId)");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("actorUserIdHash: hashTrustStatusSelector(actor.actorUserId)");
+    expect(routeSource).toContain("actorUserIdEchoed: false");
+    expect(routeSource).toContain("buildTrustStatusResponseProjection(actor)");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("tenantId: actor.tenantId");
+    expect(routeSource).not.toContain("userId: actor.actorUserId");
     expect(routeSource).toContain("Production requires auth");
   });
 

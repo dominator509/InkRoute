@@ -139,6 +139,9 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(envExample).toContain("S3_BUCKET=");
     expect(envDocs).toContain("SUPABASE_SERVICE_ROLE_KEY");
     expect(uploadPolicyRoute).toContain("privateStorageAccessPreview");
+    expect(uploadPolicyRoute).toContain("buildSafeUploadScanPipelinePreview");
+    expect(uploadPolicyRoute).toContain("rawScanPlanObjectEchoed: false");
+    expect(uploadPolicyRoute).toContain("fileSignatureEchoed: false");
     expect(uploadPolicyRoute).toContain('status: "local-preview"');
     expect(uploadPolicyRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(uploadPolicyRoute).toContain("{ headers: noStoreHeaders }");
@@ -373,16 +376,32 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(serialized).toContain('"action":"private_storage.signed_url.created"');
     expect(serialized).not.toContain("private/tenant_demo/reference/fileasset_demo.jpg");
     expect(serialized).not.toContain("https://");
+    expect(serialized).toContain("signedUrlHash");
+    expect(serialized).toContain("tenantIdHash");
+    expect(serialized).toContain("fileAssetIdHash");
+    expect(serialized).toContain("issuedByUserIdHash");
+    expect(serialized).toContain("recipientUserIdHash");
+    expect(serialized).toContain("objectKeyHash");
+    expect(serialized).toContain("rawObjectKeyStored");
+    expect(serialized).toContain("rawRecipientUserIdStored");
   });
 
   it("redacts GAP-097 signed URL and provider artifacts before review", () => {
     const rawArtifact = {
       s3_secret_key: "s3-secret-key",
       supabase_service_role_key: "supabase-secret",
+      tenantId: "tenant_signed_url_private",
+      fileAssetId: "file_asset_signed_url_private",
+      signedUrlGrantId: "signed_url_grant_private",
+      referenceImageId: "reference_image_signed_url_private",
+      auditId: "audit_signed_url_private",
+      revocationId: "revocation_signed_url_private",
+      revokedByUserId: "revoked_user_signed_url_private",
       signedUrl: "https://storage.example/private/file.jpg?signature=abc123",
       signedUrlHash: "sha256:private-hash",
       bucket: "inkroute-private",
       objectKey: "private/tenant_demo/reference/fileasset_demo.jpg",
+      sourceObjectKey: "source/private/tenant_demo/reference/fileasset_demo.jpg",
       providerPayload: { rawBody: "{\"email\":\"client@example.com\",\"phone\":\"+1 555 777 8888\"}" },
       headers: ["Authorization: Bearer signed-url-token"],
       stack: "Error: provider failed",
@@ -394,10 +413,18 @@ describe("GAP-097 private storage signed URL contract", () => {
 
     expect(serialized).not.toContain("s3-secret-key");
     expect(serialized).not.toContain("supabase-secret");
+    expect(serialized).not.toContain("tenant_signed_url_private");
+    expect(serialized).not.toContain("file_asset_signed_url_private");
+    expect(serialized).not.toContain("signed_url_grant_private");
+    expect(serialized).not.toContain("reference_image_signed_url_private");
+    expect(serialized).not.toContain("audit_signed_url_private");
+    expect(serialized).not.toContain("revocation_signed_url_private");
+    expect(serialized).not.toContain("revoked_user_signed_url_private");
     expect(serialized).not.toContain("signature=abc123");
     expect(serialized).not.toContain("sha256:private-hash");
     expect(serialized).not.toContain("inkroute-private");
     expect(serialized).not.toContain("private/tenant_demo/reference/fileasset_demo.jpg");
+    expect(serialized).not.toContain("source/private/tenant_demo/reference/fileasset_demo.jpg");
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 777 8888");
     expect(serialized).not.toContain("signed-url-token");

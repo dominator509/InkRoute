@@ -228,6 +228,10 @@ describe("timezone recurrence QA runtime contract", () => {
         timezoneProviderPayload: "provider_private",
         publicSummary: "timezone recurrence evidence captured",
       },
+      safeNote:
+        "evidence_timezone_recurrence_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/timezone-recurrence/private-proof.json",
+      safeRenderPath: "test-results/timezone-recurrence-runtime/private-provider-render.json",
+      safeRecurrenceRun: "recurrence_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedTimezoneRecurrenceArtifact(artifact);
@@ -237,6 +241,9 @@ describe("timezone recurrence QA runtime contract", () => {
       "icsImportUrl",
       "appointmentCustomerEmail",
       "nested.timezoneProviderPayload",
+      "safeNote",
+      "safeRenderPath",
+      "safeRecurrenceRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantDomain: "[REDACTED]",
@@ -247,7 +254,21 @@ describe("timezone recurrence QA runtime contract", () => {
         timezoneProviderPayload: "[REDACTED]",
         publicSummary: "timezone recurrence evidence captured",
       },
+      safeRenderPath: "[REDACTED]",
+      safeRecurrenceRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_timezone_recurrence_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/timezone-recurrence/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/timezone-recurrence-runtime/private-provider-render.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "recurrence_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildTimezoneRecurrenceArtifactReview({
       publicSummary: "safe timezone recurrence evidence",

@@ -370,6 +370,14 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
       rollbackIncidentOwner: "owner@example.com",
       launchBundleUrl: "https://inkroute.example.com/launch/bundle_abc",
+      verifierOutput: "verify-launch-evidence output includes production_url_123",
+      checklistBlockerReport: "unchecked legal approval blocker for reviewer legal@example.com",
+      buildTestArtifactPath: "coverage/production-launch/raw-build-output.json",
+      securityPrivacyBundle: { customerDataSample: "client@example.com", reportUrl: "https://provider.example.com/security/report" },
+      explicitApprovalTranscript: "approved by owner@example.com for production launch",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      stackTrace: "Error: production launch evidence leaked provider payload",
       nested: {
         authorization: "Bearer launch-approval-token",
         tenantId: "tenant_demo",
@@ -389,6 +397,17 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
     expect(serialized).not.toContain("+1 555 121 9999");
     expect(serialized).not.toContain("Bearer launch-approval-token");
     expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("verify-launch-evidence output");
+    expect(serialized).not.toContain("production_url_123");
+    expect(serialized).not.toContain("raw-build-output.json");
+    expect(serialized).not.toContain("client@example.com");
+    expect(serialized).not.toContain("provider.example.com/security");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("production launch evidence leaked");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
@@ -396,6 +415,7 @@ describe("GAP-118 production launch evidence runtime wiring", () => {
         "authorization",
         "ciRunUrl",
         "databaseUrl",
+        "neutralRepositoryTrace",
         "providerProjectId",
         "rollbackIncidentOwner",
         "tenantId",

@@ -251,6 +251,10 @@ describe("privacy retention dry-run runtime contract", () => {
       clientEmail: "client@example.com",
       medicalNote: "private medical note",
       providerToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_privacy_retention",
+      reviewerHandle: "reviewer_privacy_owner",
+      codeownerSelector: "CODEOWNER:privacy-platform-team",
       nested: {
         objectStorageUrl: "s3://inkroute-private/client-file.png",
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
@@ -269,11 +273,19 @@ describe("privacy retention dry-run runtime contract", () => {
     expect(serialized).not.toContain("s3://inkroute-private/client-file.png");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("tombstone_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("pr_privacy_retention");
+    expect(serialized).not.toContain("reviewer_privacy_owner");
+    expect(serialized).not.toContain("CODEOWNER:privacy-platform-team");
     expect(review.redactions).toEqual([
       "attorneyEmail",
       "clientEmail",
       "medicalNote",
       "providerToken",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.objectStorageUrl",
       "nested.databaseUrl",
       "nested.tombstoneId",

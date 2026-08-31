@@ -346,7 +346,7 @@ export const buildWebBuildRuntimeVerificationExecutionPlan =
   });
 
 const webBuildRuntimeVerificationSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|cookie|session|email|phone|medical|payment|card|prisma|connection|string|env|dsn)/i;
+  /(browser|buildlog|card|client|commandoutput|connection|cookie|database|db|domain|dsn|email|env|html|medical|output|password|payment|phone|prisma|private|route|secret|session|stack|string|tenant|token|uri|url)/i;
 
 export const buildRedactedWebBuildRuntimeVerificationArtifact = (
   artifact: unknown,

@@ -48,6 +48,7 @@ import {
   type NoShowDecision,
 } from "@inkroute/payments";
 import { redactRecord } from "@inkroute/security";
+import { createHash } from "node:crypto";
 import type {
   AppointmentStatus,
   AvailabilityWindow,
@@ -701,9 +702,13 @@ export const dashboardRedactedProviderSendDrafts = dashboardProviderSendDrafts.m
   } as Partial<Record<keyof typeof draft, unknown>>),
 );
 
+function buildDashboardDemoDeliveryLogKey(index: number): string {
+  return `delivery-log-preview:${createHash("sha256").update(String(index + 1)).digest("hex")}`;
+}
+
 export const dashboardRedactedDeliveryLogDrafts = dashboardDeliveryLogDrafts.map((log, index) =>
   redactDashboardRecord(log, {
-    idempotencyKey: `delivery-log-preview-${index + 1}`,
+    idempotencyKey: buildDashboardDemoDeliveryLogKey(index),
   } as Partial<Record<keyof typeof log, unknown>>),
 );
 

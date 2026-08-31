@@ -87,15 +87,65 @@ export function buildLocalPublicContentResponse<TCollection extends "portfolioIt
 
   return {
     tenantSlug: normalizeTenantSlug(tenantSlug),
-    tenantId: tenant.tenantId,
     source: tenant.source,
     persistence: "local-fallback",
     collection,
     data,
     redactedFields: bundle.redactedFields,
+    responseProjection: {
+      tenantIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+      rawPrivateFieldsEchoed: false,
+    },
     cachePolicy: bundle.cachePolicy,
     boundary: "Local fallback serves demo-safe public content only; production disables this path until tenant-scoped database reads are available.",
     gapIds: ["GAP-027", "GAP-028", "GAP-029", "GAP-076"],
+  };
+}
+
+export function buildSafeLocalPublicContentRouteResponse<TCollection extends "portfolioItems" | "travelStops" | "testimonials" | "faqs" | "cityPages" | "stylePages">(
+  local: NonNullable<ReturnType<typeof buildLocalPublicContentResponse<TCollection>>>,
+  collection: TCollection,
+  limit: number,
+) {
+  const limitedData = local.data.slice(0, limit);
+
+  return {
+    tenantSlug: local.tenantSlug,
+    source: local.source,
+    persistence: local.persistence,
+    collection: local.collection,
+    data: limitedData,
+    [collection]: limitedData,
+    query: { limit },
+    redactedFields: local.redactedFields,
+    responseProjection: {
+      ...local.responseProjection,
+      rawLocalRuntimeRecordEchoed: false,
+    },
+    cachePolicy: local.cachePolicy,
+    boundary: local.boundary,
+    gapIds: local.gapIds,
+  };
+}
+
+export function buildSafeLocalPublicContentPageResponse<TCollection extends "cityPages" | "stylePages">(
+  local: NonNullable<ReturnType<typeof buildLocalPublicContentResponse<TCollection>>>,
+) {
+  return {
+    tenantSlug: local.tenantSlug,
+    source: local.source,
+    persistence: local.persistence,
+    collection: local.collection,
+    data: local.data[0],
+    redactedFields: local.redactedFields,
+    responseProjection: {
+      ...local.responseProjection,
+      rawLocalRuntimeRecordEchoed: false,
+    },
+    cachePolicy: local.cachePolicy,
+    boundary: local.boundary,
+    gapIds: local.gapIds,
   };
 }
 
@@ -159,9 +209,11 @@ export async function readPublicPortfolioItems(tenantId: string): Promise<Public
     },
   });
 
-  return rows.map((row) => {
+  return rows.flatMap((row) => {
     const image = row.images[0];
-    const imageUrl = image?.imageUrl ?? "/demo/portfolio/placeholder.svg";
+    if (!image?.imageUrl) return [];
+
+    const imageUrl = image.imageUrl;
     const altText = image?.altText ?? row.title;
     const derivative = getPortfolioImageDerivative({ slug: row.slug, title: row.title, imageUrl, altText });
     const width = image?.width ?? derivative.width;

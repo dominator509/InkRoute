@@ -1,4 +1,5 @@
 import type { Permission, Role } from "@inkroute/types";
+import { createHash } from "node:crypto";
 
 export const allPermissions: Permission[] = [
   "tenant:read",
@@ -376,7 +377,8 @@ export interface DashboardRouteGuardDecision {
 }
 
 export function evaluateDashboardRouteGuard(input: DashboardRouteGuardInput): DashboardRouteGuardDecision {
-  const auditAction = `dashboard:${input.permission}:${input.routePath}`;
+  const routePathHash = createHash("sha256").update(input.routePath).digest("hex");
+  const auditAction = `dashboard:${input.permission}:${routePathHash}`;
   const decision = evaluateTenantAuthorization({
     ...(input.context !== undefined ? { context: input.context } : {}),
     tenantId: input.tenantId,
@@ -509,7 +511,7 @@ export const mobileAuthRuntimeReadinessRequiredEvidence = [
 export type MobileAuthRuntimeReadinessRequiredEvidence = (typeof mobileAuthRuntimeReadinessRequiredEvidence)[number];
 
 export function evaluateMobileSessionGate(input: MobileSessionGateInput): MobileSessionGateDecision {
-  const auditAction = `mobile:${input.permission}:${input.tenantId}`;
+  const auditAction = `mobile:${input.permission}:${createHash("sha256").update(input.tenantId).digest("hex")}`;
   const base = {
     tenantId: input.tenantId,
     permission: input.permission,
@@ -708,9 +710,11 @@ function mutatesState(method: ApiRouteGuardInput["method"]): boolean {
 
 export function evaluateApiRouteGuard(input: ApiRouteGuardInput): ApiRouteGuardDecision {
   const auditAction = `api:${input.method}:${input.permission}:${input.routePath}`;
+  const auditActionHash = createHash("sha256").update(auditAction).digest("hex");
   const responseHeaders = {
     "cache-control": "no-store",
-    "x-authz-audit-action": auditAction,
+    "x-authz-audit-action-hash": auditActionHash,
+    "x-authz-audit-action-echoed": "false",
   };
 
   if ((input.csrfRequired ?? mutatesState(input.method)) && mutatesState(input.method) && !input.csrfValid) {
@@ -986,6 +990,10 @@ export interface ProviderSessionCallbackContractEntry {
   readonly auditAction: string;
   readonly failClosedStatus: ProviderSessionCallbackFailClosedStatus;
   readonly rawProviderTokenLoggingAllowed: false;
+  readonly rawProviderSubjectLoggingAllowed: false;
+  readonly rawProviderSessionLoggingAllowed: false;
+  readonly rawUserSelectorLoggingAllowed: false;
+  readonly rawTenantSelectorLoggingAllowed: false;
 }
 
 export const providerSessionCallbackContract = [
@@ -997,6 +1005,10 @@ export const providerSessionCallbackContract = [
     auditAction: "auth.provider.login",
     failClosedStatus: "provider_identity_missing",
     rawProviderTokenLoggingAllowed: false,
+    rawProviderSubjectLoggingAllowed: false,
+    rawProviderSessionLoggingAllowed: false,
+    rawUserSelectorLoggingAllowed: false,
+    rawTenantSelectorLoggingAllowed: false,
   },
   {
     kind: "logout",
@@ -1006,6 +1018,10 @@ export const providerSessionCallbackContract = [
     auditAction: "auth.provider.logout",
     failClosedStatus: "session_revocation_required",
     rawProviderTokenLoggingAllowed: false,
+    rawProviderSubjectLoggingAllowed: false,
+    rawProviderSessionLoggingAllowed: false,
+    rawUserSelectorLoggingAllowed: false,
+    rawTenantSelectorLoggingAllowed: false,
   },
   {
     kind: "session",
@@ -1015,6 +1031,10 @@ export const providerSessionCallbackContract = [
     auditAction: "auth.provider.session",
     failClosedStatus: "tenant_membership_missing",
     rawProviderTokenLoggingAllowed: false,
+    rawProviderSubjectLoggingAllowed: false,
+    rawProviderSessionLoggingAllowed: false,
+    rawUserSelectorLoggingAllowed: false,
+    rawTenantSelectorLoggingAllowed: false,
   },
 ] as const satisfies readonly ProviderSessionCallbackContractEntry[];
 
@@ -1254,6 +1274,7 @@ export interface DomainAuthorizationRouteEvidenceInput {
   crossTenantDenialTestsPassed: boolean;
   fieldRedactionRouteTestsPassed: boolean;
   authorizationAuditRowsPersisted: boolean;
+  authorizationAuditRowsSigned?: boolean;
   csrfSessionBindingTestsPassed: boolean;
   sessionRevocationTestsPassed: boolean;
   providerBackedSessionTestsPassed: boolean;
@@ -1323,6 +1344,7 @@ export function buildDomainAuthorizationRouteEvidencePlan(
   if (!input.crossTenantDenialTestsPassed) blockers.push("Cross-tenant dashboard/API/server-action denial tests must pass.");
   if (!input.fieldRedactionRouteTestsPassed) blockers.push("Field authorization/redaction route tests must pass before serialization.");
   if (!input.authorizationAuditRowsPersisted) blockers.push("Authorization allow/deny route decisions must persist redacted AuditLog rows.");
+  if (!input.authorizationAuditRowsSigned) blockers.push("Authorization AuditLog allow/deny rows must include signed redacted audit payload evidence.");
   if (!input.csrfSessionBindingTestsPassed) blockers.push("Cookie-authenticated mutating route tests must prove CSRF tokens bind to the active session.");
   if (!input.sessionRevocationTestsPassed) blockers.push("Guarded route tests must prove revoked sessions are denied.");
   if (!input.providerBackedSessionTestsPassed) blockers.push("Provider-backed session tests must pass for guarded route context.");
@@ -1338,7 +1360,7 @@ export function buildDomainAuthorizationRouteEvidencePlan(
   if (!input.routeRoleMatrixTestsPassed || !input.customRoleRouteTestsPassed || !input.crossTenantDenialTestsPassed) {
     requiredEvidence.push(domainAuthorizationRouteRequiredEvidence[2]);
   }
-  if (!input.fieldRedactionRouteTestsPassed || !input.authorizationAuditRowsPersisted) {
+  if (!input.fieldRedactionRouteTestsPassed || !input.authorizationAuditRowsPersisted || !input.authorizationAuditRowsSigned) {
     requiredEvidence.push(domainAuthorizationRouteRequiredEvidence[3]);
   }
   if (!input.csrfSessionBindingTestsPassed || !input.sessionRevocationTestsPassed) {
@@ -1517,13 +1539,13 @@ export const providerSessionStoreRequiredControls = [
   "Resolve TenantMember and CustomRole rows server-side for every guarded request.",
   "Persist active sessions and revocations before route authorization.",
   "Use secure dashboard cookies and secure mobile token storage with logout/revocation clearing.",
-  "Write redacted AuditLog rows for auth lifecycle and authorization decisions.",
+  "Write redacted AuditLog rows for auth lifecycle and authorization decisions using hashed provider/user/session/tenant selectors only.",
   "Deny cross-tenant provider sessions in dashboard, API, and mobile surfaces.",
 ] as const;
 
 export const providerSessionStoreRequiredEvidence = [
-  "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence",
-  "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence",
+  "provider selection, redacted environment/callback configuration, and login/logout/session callback evidence with raw provider subject/session selectors suppressed",
+  "provider identity mapping plus persisted user, TenantMember, CustomRole, and session lookup evidence with hashed user/tenant/session selectors",
   "revocation, secure dashboard cookie, and mobile secure-token storage evidence",
   "audit-log, provider-backed auth test, cross-tenant smoke, and command-output evidence",
 ] as const;

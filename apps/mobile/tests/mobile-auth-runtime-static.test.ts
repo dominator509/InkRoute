@@ -234,6 +234,10 @@ describe("mobile auth runtime contract", () => {
         biometricDeviceId: "device-private-id",
         publicSummary: "mobile auth evidence captured",
       },
+      safeNote:
+        "evidence_mobile_auth_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/mobile-auth/private-proof.json",
+      safeDevicePath: "test-results/mobile-auth-runtime/private-device-session.json",
+      safeProviderRun: "provider_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedMobileAuthArtifact(artifact);
@@ -243,6 +247,9 @@ describe("mobile auth runtime contract", () => {
       "refreshToken",
       "secureStoreSnapshot",
       "nested.biometricDeviceId",
+      "safeNote",
+      "safeDevicePath",
+      "safeProviderRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantDomain: "[REDACTED]",
@@ -253,7 +260,21 @@ describe("mobile auth runtime contract", () => {
         biometricDeviceId: "[REDACTED]",
         publicSummary: "mobile auth evidence captured",
       },
+      safeDevicePath: "[REDACTED]",
+      safeProviderRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_auth_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/mobile-auth/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/mobile-auth-runtime/private-device-session.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "provider_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildMobileAuthArtifactReview({
       publicSummary: "safe mobile auth evidence",

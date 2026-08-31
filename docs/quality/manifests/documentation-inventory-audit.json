@@ -1,12 +1,1140 @@
 {
-  "generatedAt": null,
+  "generatedAt": "2026-07-09T14:31:30.882Z",
   "source": "GAP-128 semantic documentation audit",
-  "status": "not-run",
+  "status": "pass",
   "findings": [],
-  "contractApps": [],
-  "actualApps": [],
-  "contractPackages": [],
-  "actualPackages": [],
-  "documentedWorkspaceRootsChecked": [],
-  "note": "Placeholder manifest committed so documentation inventory references are concrete; scripts/quality/verify-documentation-inventory.mjs overwrites this file during pnpm quality:docs."
+  "contractApps": [
+    "apps/dashboard",
+    "apps/mobile",
+    "apps/web"
+  ],
+  "actualApps": [
+    "apps/dashboard",
+    "apps/mobile",
+    "apps/web"
+  ],
+  "contractPackages": [
+    "packages/analytics",
+    "packages/auth",
+    "packages/booking",
+    "packages/calendar",
+    "packages/config",
+    "packages/db",
+    "packages/deployment",
+    "packages/handoff",
+    "packages/mobile",
+    "packages/notifications",
+    "packages/observability",
+    "packages/payments",
+    "packages/quality",
+    "packages/releases",
+    "packages/security",
+    "packages/seo",
+    "packages/testing",
+    "packages/types",
+    "packages/ui",
+    "packages/validators",
+    "packages/workspace"
+  ],
+  "actualPackages": [
+    "packages/analytics",
+    "packages/auth",
+    "packages/booking",
+    "packages/calendar",
+    "packages/config",
+    "packages/db",
+    "packages/deployment",
+    "packages/handoff",
+    "packages/mobile",
+    "packages/notifications",
+    "packages/observability",
+    "packages/payments",
+    "packages/quality",
+    "packages/releases",
+    "packages/security",
+    "packages/seo",
+    "packages/testing",
+    "packages/types",
+    "packages/ui",
+    "packages/validators",
+    "packages/workspace"
+  ],
+  "documentedWorkspaceRootsChecked": [
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "API_CONTRACTS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ARCHITECTURE.md",
+      "reference": "packages/testing"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "BUG_CRASH_REPORTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "DATABASE_SCHEMA.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "deployment/DATABASE_MIGRATION_GUIDE.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "deployment/MOBILE_BUILD_GUIDE.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "DEPLOYMENT.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/ai/API_CONTRACTS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/ai/ARCHITECTURE_MAP.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/ai/REPO_BRIEF.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/db/SEED_READINESS.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/legal/LEGAL_REVIEW_PACKET.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_10_SEO_ENGINE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_11_BUG_CRASH_REPORTING.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_12_RELEASE_AUTO_UPDATE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_13_SECURITY_PRIVACY_TRUST.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "packages/testing"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_14_TESTING_QA.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_15_DEPLOYMENT_HANDOFF.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_17_QUALITY_GATES.md",
+      "reference": "packages/quality"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_18_WORKSPACE_RUNTIME_READINESS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/analytics"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_1_VERIFICATION_NOTES.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_2_DATABASE_DOMAIN_MODEL.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_3_PUBLIC_WEBSITE.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_4_BOOKING_FLOW.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_5_DASHBOARD.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_6_MOBILE_APP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_7_PAYMENTS_DEPOSITS.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_8_CALENDAR_TRAVEL.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "docs/phases/PHASE_9_NOTIFICATIONS_MESSAGING.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ENVIRONMENT_VARIABLES.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "packages/deployment"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "packages/handoff"
+    },
+    {
+      "sourcePath": "FILE_TREE.md",
+      "reference": "packages/workspace"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "HANDOFF_TO_JULES.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "RELEASE_AND_AUTO_UPDATE_PLAN.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "ROADMAP.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "SECURITY.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "SEO_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/analytics"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/auth"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/config"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/db"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/deployment"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/handoff"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/mobile"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/quality"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/testing"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/types"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/validators"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/workspace"
+    },
+    {
+      "sourcePath": "spec/REPO_INVENTORY.md",
+      "reference": "packages/quality"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/ui"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/booking"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/payments"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/calendar"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/notifications"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/seo"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/observability"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/releases"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/security"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/testing"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/web"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/dashboard"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "apps/mobile"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/deployment"
+    },
+    {
+      "sourcePath": "TESTING_PLAN.md",
+      "reference": "packages/deployment"
+    }
+  ]
 }

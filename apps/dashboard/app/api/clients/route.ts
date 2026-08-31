@@ -27,13 +27,84 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultClientId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("clientId" in result)) {
-    return null;
-  }
+function buildClientReadResponseProjection() {
+  return {
+    clientReadResponseAllowlisted: true,
+    clientIdEchoed: false,
+    clientIdsEchoed: false,
+    tenantIdEchoed: false,
+    relatedBookingIdsEchoed: false,
+    auditIdEchoed: false,
+    encryptedMedicalNotesEchoed: false,
+    privateNotesEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { clientId?: unknown }).clientId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeClientListRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    clientId: _clientId,
+    tenantId: _tenantId,
+    bookingId: _bookingId,
+    bookingIds: _bookingIds,
+    relatedBookingId: _relatedBookingId,
+    relatedBookingIds: _relatedBookingIds,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    relatedBookingLinked: Boolean(_bookingId ?? _relatedBookingId ?? (Array.isArray(_bookingIds) && _bookingIds.length > 0) ?? (Array.isArray(_relatedBookingIds) && _relatedBookingIds.length > 0)),
+    responseProjection: {
+      clientIdEchoed: false,
+      tenantIdEchoed: false,
+      relatedBookingIdsEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
+function buildClientCreateResponseProjection() {
+  return {
+    clientCreateResponseAllowlisted: true,
+    clientIdEchoed: false,
+    tenantRecordIdEchoed: false,
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    duplicateClientIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeClientCreateResponse(client: {
+  email: string;
+  preferredName: string | null;
+  phone: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  timezone: string | null;
+  marketingOptIn: boolean;
+  smsOptIn: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    email: client.email,
+    preferredName: client.preferredName,
+    phone: client.phone,
+    city: client.city,
+    region: client.region,
+    country: client.country,
+    timezone: client.timezone,
+    marketingOptIn: client.marketingOptIn,
+    smsOptIn: client.smsOptIn,
+    createdAt: client.createdAt.toISOString(),
+    updatedAt: client.updatedAt.toISOString(),
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -58,7 +129,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientReadResponseProjection(),
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard client reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
@@ -74,10 +146,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantIdEchoed: false,
         persistence: "local-fallback",
         count: dashboardProjectedClients.length,
-        clients: dashboardProjectedClients.slice(0, limit),
+        clients: dashboardProjectedClients.slice(0, limit).map((client) => buildSafeClientListRecord(client as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildClientReadResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns tenant-projected demo clients only; database mode is required for live CRM reads.",
       },
@@ -167,8 +241,6 @@ export async function GET(request: NextRequest) {
           0,
         );
         return {
-          id: row.id,
-          tenantId: row.tenantId,
           preferredName: row.preferredName,
           email: row.email,
           phone: row.phone,
@@ -184,8 +256,10 @@ export async function GET(request: NextRequest) {
             ...(row.profile?.medicalNotesEncrypted ? ["medical-notes-present"] : []),
             ...(row.profile?.internalNotes ? ["private-notes-present"] : []),
           ],
-          medicalNotes: row.profile?.medicalNotesEncrypted ?? null,
-          privateNotes: row.profile?.internalNotes ?? null,
+          medicalNotes: row.profile?.medicalNotesEncrypted ? "[redacted-dashboard-field]" : null,
+          privateNotes: row.profile?.internalNotes ? "[redacted-dashboard-field]" : null,
+          hasMedicalNotes: Boolean(row.profile?.medicalNotesEncrypted),
+          hasPrivateNotes: Boolean(row.profile?.internalNotes),
         };
       }),
       redactedFields: ["email", "phone", "medicalNotes", "privateNotes", "internalNotes"],
@@ -195,11 +269,11 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: view.records.length,
-        clients: view.records,
-        auditId: result.audit.id,
+        clients: view.records.map((record) => buildSafeClientListRecord(record as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildClientReadResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard client list reads are tenant-scoped, redacted, no-store, and audited.",
       },
@@ -211,8 +285,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Client list reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientReadResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -282,12 +357,13 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_CLIENT_PERSISTENCE_NOT_CONFIGURED",
             message: "Production client creation requires DB-backed dashboard auth, tenant-scoped Client persistence, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientCreateResponseProjection(),
           productionBoundary: { localClientMutationFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -298,7 +374,8 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildClientCreateResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Client creation requires database-backed dashboard auth so Client and AuditLog rows can be persisted.",
@@ -336,10 +413,9 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayClientId = idempotency.status === "completed" ? resultClientId(idempotency.result) : null;
-      if (replayClientId) {
+      if (idempotency.status === "completed") {
         const client = await tx.client.findFirst({
-          where: { id: replayClientId, tenantId },
+          where: { tenantId, email },
           select: {
             id: true,
             tenantId: true,
@@ -414,7 +490,9 @@ export async function POST(request: NextRequest) {
             source: "dashboard-api",
             marketingOptIn: client.marketingOptIn,
             smsOptIn: client.smsOptIn,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             redaction: "email/phone are returned only to authenticated dashboard actors with client:write",
           },
         },
@@ -426,10 +504,11 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            clientId: client.id,
-            auditId: audit.id,
+            clientPersisted: true,
+            auditLogged: true,
             created: true,
             rawContactStoredInResult: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -439,7 +518,11 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "exists") {
       return NextResponse.json(
-        { ok: false, error: { code: "CLIENT_ALREADY_EXISTS", message: "A client with this email already exists for this tenant.", clientId: result.clientId } },
+        {
+          ok: false,
+          error: { code: "CLIENT_ALREADY_EXISTS", message: "A client with this email already exists for this tenant." },
+          responseProjection: buildClientCreateResponseProjection(),
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -448,14 +531,13 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        client: result.client,
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
+        client: buildSafeClientCreateResponse(result.client),
         idempotencyReplay: result.status === "replayed",
+        responseProjection: buildClientCreateResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
-        boundary: "Dashboard client creation is tenant-scoped, no-store, idempotency-backed, and audited; tenant-isolated mutation tests remain evidence-gated.",
+        boundary: "Dashboard client creation is tenant-scoped, no-store, idempotency-backed, and audited; response receipts do not echo audit IDs, idempotency-key IDs, raw idempotency keys, or duplicate-client IDs, while tenant-isolated mutation tests remain evidence-gated.",
       },
       { status: result.status === "created" ? 201 : 200, headers: noStoreHeaders },
     );
@@ -465,7 +547,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientCreateResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Client creation requires the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-037", "GAP-038", "GAP-040"],
         },
@@ -475,7 +558,11 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof Error && /Unique constraint/i.test(error.message)) {
       return NextResponse.json(
-        { ok: false, error: { code: "CLIENT_ALREADY_EXISTS", message: "A client with this email already exists for this tenant." } },
+        {
+          ok: false,
+          error: { code: "CLIENT_ALREADY_EXISTS", message: "A client with this email already exists for this tenant." },
+          responseProjection: buildClientCreateResponseProjection(),
+        },
         { status: 409, headers: noStoreHeaders },
       );
     }

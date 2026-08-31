@@ -147,7 +147,9 @@ export const buildNotificationSchedulerExecutionPlan = (): NotificationScheduler
 });
 
 const notificationSchedulerPrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|notification|scheduler|job|message|destination|body|payload|worker|audit|idempotency|queue|dead.?letter|retry|handoff|email|phone|medical|payment|customer)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|notification|scheduler|job|message|destination|body|payload|worker|audit|idempotency|queue|dead.?letter|retry|handoff|email|phone|medical|payment|customer|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const notificationSchedulerPrivateArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|notification|scheduler|job|message|destination|payload|worker|audit|idempotency|queue|dead.?letter|retry|handoff|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactNotificationSchedulerArtifactValue = (
   value: unknown,
@@ -174,6 +176,13 @@ const redactNotificationSchedulerArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && notificationSchedulerPrivateArtifactValuePattern.test(value)) {
+    notificationSchedulerPrivateArtifactValuePattern.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(notificationSchedulerPrivateArtifactValuePattern, "[redacted]");
+  }
+
+  notificationSchedulerPrivateArtifactValuePattern.lastIndex = 0;
   return value;
 };
 

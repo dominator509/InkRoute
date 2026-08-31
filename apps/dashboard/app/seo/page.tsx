@@ -14,7 +14,7 @@ export default function SeoManagerPage() {
       <DashboardPageHeader
         eyebrow="SEO engine"
         title="City, style, schema, sitemap, and attribution control center"
-        description="Preview the Phase 10 SEO engine for city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries. Tenant-scoped SEO read APIs now exist; publishing/provider actions remain gated."
+        description="Preview the Phase 10 SEO engine for city pages, tattoo style pages, canonical metadata, structured data, internal links, sitemap entries, image SEO, Search Console setup, and publish revalidation boundaries. Tenant-scoped SEO read APIs now exist. SEO reads now have authenticated tenant-scoped dashboard APIs; publishing/provider actions and Search Console credentials remain gated."
       />
 
       <section className="metric-grid">
@@ -50,7 +50,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.primaryKeyword} Â· {brief.schemaTypes.join(", ")}</span>
+                  <span>{brief.primaryKeyword} - {brief.schemaTypes.join(", ")}</span>
                 </div>
                 <StatusPill label={`${brief.recommendedSections.length} sections`} tone="info" />
               </div>
@@ -64,7 +64,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={brief.slug}>
                 <div>
                   <strong>{brief.h1}</strong>
-                  <span>{brief.secondaryKeywords.slice(0, 2).join(" Â· ")}</span>
+                  <span>{brief.secondaryKeywords.slice(0, 2).join(" - ")}</span>
                 </div>
                 <StatusPill label={`${brief.analyticsEvents.length} events`} tone="success" />
               </div>
@@ -81,7 +81,7 @@ export default function SeoManagerPage() {
               <div className="list-row" key={`${link.fromPath}-${link.toPath}-${link.anchorText}`}>
                 <div>
                   <strong>{link.anchorText}</strong>
-                  <span>{link.fromPath} â†’ {link.toPath}</span>
+                  <span>{link.fromPath} -&gt; {link.toPath}</span>
                 </div>
                 <StatusPill label={link.priority} tone={link.priority === "high" ? "success" : "info"} />
               </div>

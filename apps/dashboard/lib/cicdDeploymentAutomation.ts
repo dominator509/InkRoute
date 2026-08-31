@@ -1,5 +1,7 @@
 ﻿import { buildCicdDeploymentAutomationReadinessPlan } from "@inkroute/releases";
 
+import { createHash } from "node:crypto";
+
 export const cicdDeploymentAutomationArtifactPaths = [
   "coverage/cicd-deployment-automation.json",
   "coverage/cicd-protected-environments-redacted.json",
@@ -31,6 +33,10 @@ export const cicdDeploymentAutomationProofFiles = [
   ".env.example",
   "testing/manifests/unit-test-manifest.json",
 ] as const;
+
+function buildReleaseCiResultIdempotencyKey(workflowRunId: string): string {
+  return `release-ci-result:${createHash("sha256").update(workflowRunId).digest("hex")}`;
+}
 
 export type CicdDeploymentAutomationEvidenceArtifact = (typeof cicdDeploymentAutomationArtifactPaths)[number];
 
@@ -77,7 +83,7 @@ export interface CicdDeploymentAutomationArtifactReview {
 }
 
 const cicdSensitiveKeyPattern =
-  /(?:authorization|clientemail|clientsecret|cookie|credential|databaseurl|email|password|privatekey|secret|token)/i;
+  /(?:artifactid|auditid|authorization|clientemail|clientsecret|commitsha|cookie|credential|databaseurl|deploymentid|deploymenturl|email|environmentid|githubrunid|githubrunurl|idempotencykey|jobid|password|privatekey|providerpayload|releasecandidateid|releaserecordid|repository|secret|tenantid|token|workflowdispatchid|workflowrunid|workflowrunurl)/i;
 const cicdEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const cicdTokenPattern = /\b(?:bearer|eas|ghp|github_pat|sentry|sk|vercel|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
 
@@ -282,7 +288,7 @@ export function buildReleaseRecordCiResultWritePlan(input: {
       ciCompletedAt: input.status === "succeeded" || input.status === "failed" ? "workflow-completion-timestamp" : null,
     },
     auditAction: "release_record:ci_result:update" as const,
-    idempotencyKey: input.workflowRunId ? `release-ci-result:${input.workflowRunId}` : null,
+    idempotencyKey: input.workflowRunId ? buildReleaseCiResultIdempotencyKey(input.workflowRunId) : null,
     rawSecretsStored: false,
     artifact: "coverage/cicd-release-record-result-write.json",
   };

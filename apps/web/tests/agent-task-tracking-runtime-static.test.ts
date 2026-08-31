@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -37,6 +37,7 @@ describe("agent task tracking runtime contract", () => {
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
   const gapTracker = readRepoFile("GAP_TRACKER.md");
+  const runtimeSource = readRepoFile("apps/web/lib/agentTaskTrackingRuntime.ts");
   const prismaSchema = readRepoFile("packages/db/prisma/schema.prisma");
   const prismaMigration = readRepoFile("packages/db/prisma/migrations/20260609025000_add_agent_task_tracking_runs/migration.sql");
 
@@ -98,9 +99,9 @@ describe("agent task tracking runtime contract", () => {
     expect(trackingManifest).toContain("agent-task");
     expect(trackingManifest).toContain("gap-tracked");
     expect(trackingManifest).toContain("verification-required");
-    expect(trackingVerifier).toContain("buildAgentTaskTrackingReadinessPlan");
-    expect(trackingVerifier).toContain("githubIssuesCreated");
-    expect(trackingVerifier).toContain("statusUpdatesTraceable");
+    expect(trackingVerifier).toContain("allowedStatuses");
+    expect(trackingVerifier).toContain("issueUrl");
+    expect(trackingVerifier).toContain("projectItemUrl");
     expect(handoffPackageTests).toContain("buildAgentTaskTrackingReadinessPlan");
   });
 
@@ -120,6 +121,10 @@ describe("agent task tracking runtime contract", () => {
       "GAP_TRACKER.md must reference the task tracking evidence where relevant.",
       "Task status updates must be traceable between queue, issues/projects, ledger, and gap tracker.",
     ]);
+  });
+
+  it("keeps the runtime decision helper free of duplicate local command declarations", () => {
+    expect(runtimeSource.match(/const completedCommands = new Set\(input\.completedCommands\);/g)?.length).toBe(1);
   });
 
   it("blocks agent task tracking closure until issue, project, artifact, command, persistence, and traceability proof exist", () => {
@@ -211,7 +216,7 @@ describe("agent task tracking runtime contract", () => {
     expect(unitManifest).toContain("unit-web-agent-task-tracking-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentTaskTrackingRuntime.ts");
     expect(gapTracker).toContain("live GitHub issue/project creation and traceable status-update proof remain open");
-    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with split task-sync");
     expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeExecutionPlan");
     expect(gapTracker).toContain("agentTaskTrackingRuntimeExecutionPolicy");
     expect(gapTracker).toContain("agentTaskTrackingReadinessRequiredEvidence");
@@ -330,6 +335,19 @@ describe("agent task tracking runtime contract", () => {
       trackingUrl: "https://github.com/dominator509/InkRoute/issues/123#status",
       githubPayload: { actorEmail: "owner@example.com", token: "ghp_secret" },
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/123456",
+      queueEntry: { taskId: "task_sync_123", assignee: "owner@example.com" },
+      handoffDocLink: "docs/handoff/AGENT_EXECUTION_QUEUE.md#task_sync_123",
+      gapTrackerLink: "GAP_TRACKER.md#GAP-123 task_sync_123",
+      statusTrace: "issue_123 moved from queued to done by user_admin_123",
+      ledgerVerificationLog: "verify-agent-task-sync output includes project_issue_123",
+      neutralTrackingTrace: "queue_task_01HZYXZYXZYXZYXZYXZYXZYXZ linked issue_item_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralStatusTrace: "status_trace_01HZYXZYXZYXZYXZYXZYXZYXZ updated tracking_link_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "docs/handoff/private-agent-task-tracking.md and coverage/agent-task-tracking/private.json",
+      neutralDatabaseTrace: "AgentTaskTrackingRun persisted to postgresql://tenant_demo:secret@db.example.com/inkroute",
+      stackTrace: "Error: agent task tracking sync leaked private metadata",
       nested: {
         authorization: "Bearer task-tracking-token",
         tenantId: "tenant_demo",
@@ -348,15 +366,45 @@ describe("agent task tracking runtime contract", () => {
     expect(serialized).not.toContain("tenant_demo");
     expect(serialized).not.toContain("+1 555 232 1111");
     expect(serialized).not.toContain("project_issue_123");
+    expect(serialized).not.toContain("task_sync_123");
+    expect(serialized).not.toContain("AGENT_EXECUTION_QUEUE.md");
+    expect(serialized).not.toContain("GAP_TRACKER.md");
+    expect(serialized).not.toContain("user_admin_123");
+    expect(serialized).not.toContain("verify-agent-task-sync output");
+    expect(JSON.stringify(bundle.review.redactedArtifact)).not.toContain("private metadata");
+    expect(serialized).not.toContain("queue_task_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("issue_item_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("status_trace_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("tracking_link_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("docs/handoff/private-agent-task-tracking.md");
+    expect(serialized).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "authorization",
         "ciRunUrl",
+        "gapTrackerLink",
         "githubPayload",
+        "handoffDocLink",
         "issueUrl",
+        "ledgerVerificationLog",
+        "neutralArtifactTrace",
+        "neutralCiTrace",
+        "neutralDatabaseTrace",
+        "neutralRepositoryTrace",
+        "neutralStatusTrace",
+        "neutralTrackingTrace",
         "phone",
         "projectItemUrl",
+        "queueEntry",
+        "stackTrace",
+        "statusTrace",
         "trackingUrl",
       ]),
     );

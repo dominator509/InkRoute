@@ -1,4 +1,8 @@
-﻿import { buildDashboardPrivacyWorkflowEvidencePlan } from "@inkroute/security";
+﻿import {
+  buildDashboardPrivacyWorkflowEvidencePlan,
+  dashboardPrivacyWorkflowEvidenceRequiredCommands,
+  dashboardPrivacyWorkflowEvidenceRequiredEvidence,
+} from "@inkroute/security";
 
 export type DashboardPrivacyRuntimeStatus =
   | "wired"
@@ -24,20 +28,7 @@ export const dashboardPrivacySurfaces = [
   "file_asset",
 ] as const;
 
-export const dashboardPrivacyRuntimeCommands = [
-  "pnpm --filter @inkroute/security typecheck",
-  "pnpm --filter @inkroute/security test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "dashboard privacy route/API tests",
-  "persisted dashboard export workflow tests",
-  "persisted dashboard delete/anonymize workflow tests",
-  "private file deletion integration tests",
-  "dashboard privacy AuditLog persistence tests",
-  "dashboard sanitized log/error evidence sweep",
-  "legal/product dashboard privacy approval review",
-  "GitHub Actions dashboard privacy evidence job",
-] as const;
+export const dashboardPrivacyRuntimeCommands = dashboardPrivacyWorkflowEvidenceRequiredCommands;
 
 export const dashboardPrivacyArtifactPaths = [
   "coverage/dashboard-privacy-runtime.json",
@@ -151,7 +142,7 @@ export const dashboardPrivacyRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardPrivacyRuntimeMatrixEntry[];
 
-export const dashboardPrivacyRuntimeReadiness = buildDashboardPrivacyWorkflowEvidencePlan({
+const dashboardPrivacyRuntimePlan = buildDashboardPrivacyWorkflowEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   securityTestsPassed: false,
   securityTypecheckPassed: false,
@@ -171,6 +162,11 @@ export const dashboardPrivacyRuntimeReadiness = buildDashboardPrivacyWorkflowEvi
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const dashboardPrivacyRuntimeReadiness = {
+  ...dashboardPrivacyRuntimePlan,
+  requiredEvidence: dashboardPrivacyWorkflowEvidenceRequiredEvidence,
+};
 
 export const dashboardPrivacyEvidenceFlags = [
   "securityTestsPassed",
@@ -355,7 +351,9 @@ export const buildDashboardPrivacyExecutionPlan = (): DashboardPrivacyExecutionP
 });
 
 const dashboardPrivacySensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|deposit|sms|message|consent|signature|file|document|reference|audit|legal|approval|delete|anonymize|export|error|log|pii)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|deposit|sms|message|consent|signature|file|document|reference|audit|legal|approval|delete|anonymize|export|error|log|pii|workflow|artifact|path|ci|run|evidence|id|key)/i;
+const dashboardPrivacySensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|booking|payment|deposit|portfolio|travel|message|consent|signature|file|document|reference|audit|legal|approval|delete|anonymize|export|privacy|workflow|artifact|ci|run|evidence)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|medical:[^"'\n\r]+|sms:[^"'\n\r]+|private-file|consent-signature|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedDashboardPrivacyArtifact = (
   artifact: unknown,
@@ -382,6 +380,19 @@ export const buildRedactedDashboardPrivacyArtifact = (
       );
     }
 
+    if (
+      typeof value === "string" &&
+      dashboardPrivacySensitiveArtifactValuePattern.test(value)
+    ) {
+      dashboardPrivacySensitiveArtifactValuePattern.lastIndex = 0;
+      redactions.push(path);
+      return value.replace(
+        dashboardPrivacySensitiveArtifactValuePattern,
+        "[REDACTED_DASHBOARD_PRIVACY_PRIVATE_VALUE]",
+      );
+    }
+
+    dashboardPrivacySensitiveArtifactValuePattern.lastIndex = 0;
     return value;
   };
 

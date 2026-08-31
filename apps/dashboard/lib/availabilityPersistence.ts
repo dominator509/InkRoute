@@ -7,6 +7,7 @@ import {
   type AvailabilityPersistenceWrite,
   type AvailabilityRuntimeReadinessPlan,
 } from "@inkroute/calendar";
+import { createHash } from "node:crypto";
 
 export type AvailabilityMutationInput = AvailabilityPersistencePlanInput & {
   requestId: string;
@@ -89,12 +90,16 @@ const sampleAvailabilityInput = {
   existingHoldIds: [],
 } satisfies Omit<AvailabilityPersistencePlanInput, "action">;
 
+function buildAvailabilitySelectorKey(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 function buildSampleAvailabilityPlans(): AvailabilityPersistencePlan[] {
   return supportedActions.map((action) =>
     buildAvailabilityPersistencePlan({
       ...sampleAvailabilityInput,
       action,
-      idempotencyKey: `availability-demo-${action}`,
+      idempotencyKey: buildAvailabilitySelectorKey("availability-demo", [action]),
     }),
   );
 }
@@ -139,7 +144,7 @@ function buildAvailabilityAccessKey(input: {
   readonly actorId: string;
   readonly action: AvailabilityPersistenceAction;
 }): string {
-  return `${input.tenantId}:${input.artistId}:${input.actorId}:${input.action}`;
+  return buildAvailabilitySelectorKey("availability-access", [input.tenantId, input.artistId, input.actorId, input.action]);
 }
 
 function buildAvailabilityLookupKey(input: {
@@ -148,11 +153,11 @@ function buildAvailabilityLookupKey(input: {
   readonly startsAt: string;
   readonly endsAt: string;
 }): string {
-  return `${input.tenantId}:${input.artistId}:${input.startsAt}:${input.endsAt}`;
+  return buildAvailabilitySelectorKey("availability-lookup", [input.tenantId, input.artistId, input.startsAt, input.endsAt]);
 }
 
 function buildAvailabilityIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return buildAvailabilitySelectorKey("availability-idempotency", [input.tenantId, input.key]);
 }
 
 export function createInMemoryAvailabilityRepository(

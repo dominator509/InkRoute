@@ -26,7 +26,12 @@ describe("dashboard release route contract", () => {
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "release:read:list"');
     expect(routeSource).toContain('entityType: "ReleaseRecord"');
-    expect(routeSource).toContain("auditId: result.audit.id");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
   });
 
   it("keeps write and provider automation boundaries explicit", () => {
@@ -35,7 +40,30 @@ describe("dashboard release route contract", () => {
     expect(routeSource).toContain("releaseRollbackInputSchema.safeParse");
     expect(routeSource).toContain("tx.idempotencyKey.upsert");
     expect(routeSource).toContain("tx.idempotencyKey.update");
-    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("releasePersisted: true");
+    expect(routeSource).toContain("recordIdEchoed: false");
+    expect(routeSource).toContain("releaseRecordIdEchoed: false");
+    expect(routeSource).toContain("releaseCandidateIdEchoed: false");
+    expect(routeSource).toContain("commitShaEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(routeSource).toContain("idempotencyRecorded: true");
+    expect(routeSource).toContain("idempotencyKeyIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("buildSafeReleaseCandidate");
+    expect(routeSource).not.toContain("release: releaseCandidate");
+    expect(routeSource).not.toContain("release: {\n        ...releaseCandidate");
+    expect(routeSource).not.toContain("tenantId,\n      actorRole");
+    expect(routeSource).not.toContain("tenantId,\n      persistence: \"database\"");
+    expect(routeSource).not.toContain("source: actor.source,\n          tenantId,");
+    expect(routeSource).not.toContain("source: actor.source,\n        tenantId,");
+    expect(routeSource).not.toContain("source: actor.source,\n      tenantId,");
+    expect(routeSource).not.toContain("tenantId, persistence: \"local-fallback\", release: releaseCandidate");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).not.toContain("releaseRecordId: created.id");
+    expect(routeSource).not.toContain("auditId: audit.id");
+    expect(routeSource).not.toContain("idempotencyKeyId: persisted.idempotency.id");
+    expect(routeSource).not.toContain("auditId: persisted.status");
     expect(routeSource).toContain('dashboardMutationAction: "rollback_release"');
     expect(routeSource).toContain("dashboard-release-rollback");
     expect(routeSource).toContain('action: "release:rollback:intent"');

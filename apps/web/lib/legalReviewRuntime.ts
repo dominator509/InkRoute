@@ -286,9 +286,9 @@ export interface LegalReviewArtifactReview {
 }
 
 const sensitiveLegalReviewKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|client|patient|medical|payment|card|attorney|counsel|privileged|advice|signature|approval|provider|tenant|user|database|url|uri|dsn|key|id|payload|evidence)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|client|patient|medical|payment|card|attorney|counsel|privileged|advice|signature|approval|reviewer|jurisdiction|bar|legal|terms|privacy|consent|copy|body|text|sms|notification|aftercare|refund|policy|placeholder|audit|quality|ci|command|output|log|stack|error|artifact|path|route|html|dom|document|acceptance|version|noindex|rollback|workflow|run|commit|branch|repository|repo|pull|pr|codeowner|raw|request|response|report|transcript|screenshot|trace|video|provider|tenant|user|database|url|uri|dsn|key|id|payload|evidence)/iu;
 const sensitiveLegalReviewValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:legal|review|approval|attorney|counsel|privileged|consent|privacy|terms|aftercare|refund|policy|document|version|route|report|audit|quality|artifact|workflow|ci|run|commit|tenant|client|user|provider|database|persistence)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:docs|coverage|test-results|reports|artifacts)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 export const legalReviewExecutionPolicy = {
   codexMayClassifyStaticLegalReadiness: true,

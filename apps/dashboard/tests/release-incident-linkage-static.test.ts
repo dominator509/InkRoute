@@ -57,8 +57,48 @@ describe("release incident linkage runtime contract", () => {
     expect(route).toContain("tx.releaseRecord.findFirst");
     expect(route).toContain("tx.releaseIncidentLink.upsert");
     expect(route).toContain("releaseIncidentLinkIds");
+    expect(route).toContain("releaseIncidentLinksPersisted: releaseIncidentLinkIds.length");
+    expect(route).toContain("auditIdEchoed: false");
+    expect(route).toContain("releaseRecordIdEchoed: false");
+    expect(route).toContain("releaseIncidentLinkIdsEchoed: false");
+    expect(route).toContain("internalPersistenceIdsEchoed: false");
+    expect(route).not.toContain("auditId: result.auditId");
+    expect(route).not.toContain("releaseRecordId: result.releaseRecordId");
+    expect(route).not.toContain("releaseIncidentLinkIds: result.releaseIncidentLinkIds");
+    expect(route).not.toContain("return { linkage, auditId: audit.id");
     expect(route).toContain("tx.errorReport.update");
+    expect(route).toContain("auditLogged: true");
+    expect(route).toContain("releaseIncidentLinkPersisted: true");
+    expect(route).toContain("releaseRecordMatched: Boolean(releaseRecord)");
+    expect(route).toContain("internalPersistenceIdsStored: false");
+    expect(route).not.toContain(
+      "releaseIncidentLinkage: {\n                releaseId,\n                releaseVersion,\n                incidentStatus: linkage.plan.incidentStatus,\n                auditLogId: audit.id",
+    );
+    expect(route).not.toContain(
+      "releaseIncidentLinkage: {\n                releaseId,\n                releaseVersion,\n                incidentStatus: linkage.plan.incidentStatus,\n                auditLogId: audit.id,\n                releaseIncidentLinkId: releaseIncidentLink.id",
+    );
+    expect(route).not.toContain(
+      "releaseIncidentLinkage: {\n                releaseId,\n                releaseVersion,\n                incidentStatus: linkage.plan.incidentStatus,\n                auditLogId: audit.id,\n                releaseIncidentLinkId: releaseIncidentLink.id,\n                releaseRecordId: releaseRecord?.id ?? null",
+    );
+    expect(route).toContain("function redactReleaseIncidentMetadata");
+    expect(route).toContain("redactReleaseIncidentMetadata(row.metadata)");
+    expect(route).toContain("[redacted-dashboard-field]");
     expect(route).toContain("...report.redactedMetadata");
+    expect(route).toContain("buildReleaseIncidentLinkageResponse");
+    expect(route).toContain("releaseIncidentLinkageResponseAllowlisted: true");
+    expect(route).toContain("function buildTenantScopedNoEchoRecord");
+    expect(route).toContain("tenantIdEchoed: false");
+    expect(route).toContain("releaseIncidentReportIdsEchoed: false");
+    expect(route).toContain("linkedReportIdsEchoed: false");
+    expect(route).toContain("reportIdEchoed: false");
+    expect(route).toContain("redactedReportMetadataOnly: true");
+    expect(route).toContain("rawReportMetadataEchoed: false");
+    expect(route).toContain("internalPersistenceIdsEchoed: false");
+    expect(route).not.toContain("...result.linkage");
+    expect(route).not.toContain("...fallback, persistence");
+    expect(route).not.toContain("plan: linkage.plan");
+    expect(route).not.toContain("filters: linkage.filters");
+    expect(route).not.toContain("persistence: linkage.persistence");
     expect(route).toContain("releaseIncidentLinkage");
     expect(route).toContain("tenantCommunicationOwner");
     expect(route).toContain("rollbackCommunicationHandoffPersisted: true");
@@ -68,7 +108,7 @@ describe("release incident linkage runtime contract", () => {
     expect(route).toContain("localReleaseIncidentFallbackDisabled");
     expect(route).toContain('linkage.readiness.status !== "ready"');
     expect(route).toContain("providerEvidenceBlocked: true");
-    expect(route).toContain("releaseIncidentLinkIds: []");
+    expect(route).toContain("releaseIncidentLinksPersisted: 0");
     expect(route).toContain("noWritesCommitted: true");
     expect(route.indexOf('linkage.readiness.status !== "ready"')).toBeLessThan(route.indexOf("tx.auditLog.create"));
     expect(route).toContain("RELEASE_INCIDENT_PROVIDER_EVIDENCE_NOT_CONFIGURED");
@@ -158,6 +198,13 @@ describe("release incident linkage runtime contract", () => {
       },
       payload: {
         releaseId: "rel_1",
+        releaseRecordId: "release_record_private",
+        errorReportId: "error_report_private",
+        releaseIncidentLinkId: "release_incident_link_private",
+        auditId: "audit_private",
+        fingerprint: "fingerprint_private",
+        route: "/private/error/route",
+        providerIssueUrl: "https://incident.example/issues/private",
         rollbackRequested: true,
       },
     };
@@ -170,6 +217,14 @@ describe("release incident linkage runtime contract", () => {
     expect(serialized).not.toContain("ops@example.com");
     expect(serialized).not.toContain("+1 555 010 6666");
     expect(serialized).not.toContain("incident.example/hooks/secret");
+    expect(serialized).not.toContain("rel_1");
+    expect(serialized).not.toContain("release_record_private");
+    expect(serialized).not.toContain("error_report_private");
+    expect(serialized).not.toContain("release_incident_link_private");
+    expect(serialized).not.toContain("audit_private");
+    expect(serialized).not.toContain("fingerprint_private");
+    expect(serialized).not.toContain("/private/error/route");
+    expect(serialized).not.toContain("incident.example/issues/private");
     expect(serialized).toContain("rollbackRequested");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);

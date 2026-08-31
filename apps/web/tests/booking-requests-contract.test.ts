@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   buildBookingFlowRuntimeEvidencePlan,
   buildPostPersistWorkflowPlans,
@@ -9,9 +11,64 @@ import {
   evaluateBotProof,
   shouldCollectReferenceUpload,
 } from "../app/api/public/[tenantSlug]/booking-requests/test-helpers";
+import { buildRedactedBookingFlowRuntimeArtifact } from "../lib/bookingFlowRuntime";
 import { persistBookingPostPersistWorkflow, persistBookingRequest, executeBookingPostPersistWorkflowConsumers } from "../lib/localRuntimeState";
 
+const bookingRouteSource = readFileSync(join(process.cwd(), "apps/web/app/api/public/[tenantSlug]/booking-requests/route.ts"), "utf8");
+
 describe("booking request queue/consumer contracts", () => {
+  it("keeps public booking persistence responses contact-minimized", () => {
+    expect(bookingRouteSource).toContain("function buildSafeBookingReceipt");
+    expect(bookingRouteSource).toContain("bookingResponseAllowlisted: true");
+    expect(bookingRouteSource).toContain("bookingRequestIdEchoed: false");
+    expect(bookingRouteSource).toContain("tenantIdEchoed: false");
+    expect(bookingRouteSource).toContain("tenantScope: {");
+    expect(bookingRouteSource).toContain("source: resolvedTenant.source");
+    expect(bookingRouteSource).toContain("bodyHashEchoed: false");
+    expect(bookingRouteSource).toContain("bodyHashComputed: Boolean(antiBot.bodyHash)");
+    expect(bookingRouteSource).toContain("buildPublicProviderFailureHandlingContract");
+    expect(bookingRouteSource).toContain("sanitizeBookingPostSubmitPlanForResponse");
+    expect(bookingRouteSource).toContain("sanitizeReferenceUploadContractForResponse");
+    expect(bookingRouteSource).toContain("sanitizeWorkflowExecutionForResponse");
+    expect(bookingRouteSource).toContain("workflowRecordIdEchoed: false");
+    expect(bookingRouteSource).toContain("requiredBookingRequestId: _requiredBookingRequestId");
+    expect(bookingRouteSource).toContain("tenantId: _tenantId");
+    expect(bookingRouteSource).toContain("bookingRequestIdEchoed: false");
+    expect(bookingRouteSource).toContain("auditPayloadProjection");
+    expect(bookingRouteSource).toContain("artistIdEchoed: false");
+    expect(bookingRouteSource).toContain("clientIdEchoed: false");
+    expect(bookingRouteSource).toContain("travelCityIdEchoed: false");
+    expect(bookingRouteSource).toContain("portfolioAttributionIdEchoed: false");
+    expect(bookingRouteSource).toContain("clientNameEchoed: false");
+    expect(bookingRouteSource).toContain("clientEmailEchoed: false");
+    expect(bookingRouteSource).toContain("rawContactFieldsEchoed: false");
+    expect(bookingRouteSource).toContain("rawIdeaSummaryEchoed: false");
+    expect(bookingRouteSource).toContain("medicalNotesEchoed: false");
+    expect(bookingRouteSource).toContain("auditIdEchoed: false");
+    expect(bookingRouteSource).toContain("stateEventIdEchoed: false");
+    expect(bookingRouteSource).toContain("actorUserIdEchoed: false");
+    expect(bookingRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(bookingRouteSource).toContain("auditLogged: Boolean(audit.id)");
+    expect(bookingRouteSource).not.toContain("auditId: audit.id");
+    expect(bookingRouteSource).toContain("booking: buildSafeBookingReceipt(persisted.request, persisted.readinessScore)");
+    expect(bookingRouteSource).toContain("...buildSafeBookingReceipt(persisted.booking, persisted.readinessScore)");
+    expect(bookingRouteSource).not.toContain("clientEmail: persisted.booking.clientEmailSnapshot");
+    expect(bookingRouteSource).not.toContain("clientName: persisted.booking.clientNameSnapshot");
+    expect(bookingRouteSource).not.toContain("ideaSummary: persisted.booking.ideaSummary");
+    expect(bookingRouteSource).not.toContain("auditId: persisted.auditId");
+    expect(bookingRouteSource).not.toContain("id: persisted.event.id");
+    expect(bookingRouteSource).not.toContain("id: booking.id");
+    expect(bookingRouteSource).not.toContain("...(booking.tenantId ? { tenantId: booking.tenantId } : {})");
+    expect(bookingRouteSource).not.toContain("tenantId: resolvedTenant.tenantId,\n    antiBot");
+    expect(bookingRouteSource).not.toContain("bodyHash: antiBot.bodyHash");
+    expect(bookingRouteSource).not.toContain("bodyHash: check.bodyHash");
+    expect(bookingRouteSource).not.toContain("...(booking.artistId ? { artistId: booking.artistId } : {})");
+    expect(bookingRouteSource).not.toContain("...(booking.clientId ? { clientId: booking.clientId } : {})");
+    expect(bookingRouteSource).not.toContain("...(booking.travelCityId ? { travelCityId: booking.travelCityId } : {})");
+    expect(bookingRouteSource).not.toContain("...(booking.portfolioAttributionId ? { portfolioAttributionId: booking.portfolioAttributionId } : {})");
+    expect(bookingRouteSource).not.toContain("booking: persisted.request");
+  });
+
   it("requires anti-bot proof only for database-scoped persistence", async () => {
     const previous = process.env.BOOKING_SUBMISSION_BOT_SECRET;
     process.env.BOOKING_SUBMISSION_BOT_SECRET = "test-bot-secret";
@@ -130,6 +187,11 @@ describe("booking request queue/consumer contracts", () => {
     expect(consumerRuns.some((run) => run.type === "reference-upload")).toBe(true);
     expect(consumerRuns.some((run) => run.type === "reference-upload" && run.status === "succeeded")).toBe(true);
     expect(consumerRuns.every((run) => run.tenantId === tenantSlug)).toBe(true);
+    expect(consumerRuns.some((run) => run.type === "notification" && run.result.messagePersisted === true)).toBe(true);
+    expect(consumerRuns.some((run) => run.type === "reference-upload" && run.result.uploadIntentPersisted === true)).toBe(true);
+    expect(consumerRuns.every((run) => !("messageId" in run.result))).toBe(true);
+    expect(consumerRuns.every((run) => !("uploadIntentId" in run.result))).toBe(true);
+    expect(consumerRuns.every((run) => !("signedUploadUrl" in run.result))).toBe(true);
 
     const otherTenant = executeBookingPostPersistWorkflowConsumers(`other-${tenantSlug}`, booking.request.id, "local-fallback");
     expect(otherTenant).toHaveLength(0);
@@ -199,9 +261,25 @@ describe("booking request queue/consumer contracts", () => {
       ? "testing/manifests/unit-test-manifest.json"
       : "../testing/manifests/unit-test-manifest.json";
     const manifestText = readFileSync(manifestPath, "utf8");
+    const gapTrackerText = readFileSync("GAP_TRACKER.md", "utf8");
+    const redacted = buildRedactedBookingFlowRuntimeArtifact({
+      workflowTrace: "booking_workflow_private_trace_123456789",
+      medicalNote: "medical: private condition",
+      providerToken: "sk_private_provider_token",
+      artifactPath: "coverage/private-booking-flow.json",
+      safeStatus: "booking runtime evidence captured",
+    });
+    const serialized = JSON.stringify(redacted.artifact);
 
     expect(manifestText).toContain("unit-web-booking-requests-contract");
     expect(manifestText).toContain("GAP-017");
+    expect(gapTrackerText).toContain("buildRedactedBookingFlowRuntimeArtifact");
+    expect(serialized).not.toContain("booking_workflow_private_trace_123456789");
+    expect(serialized).not.toContain("medical: private condition");
+    expect(serialized).not.toContain("sk_private_provider_token");
+    expect(serialized).not.toContain("coverage/private-booking-flow.json");
+    expect(serialized).toContain("booking runtime evidence captured");
+    expect(redacted.redactions.length).toBeGreaterThan(0);
   });
 
   it("marks booking flow runtime evidence ready when Next runtime, DB smoke, browser smoke, and artifacts align", () => {

@@ -434,6 +434,48 @@ export interface EncryptionPolicyResult {
   };
 }
 
+const ENCRYPTION_EVIDENCE_SENSITIVE_KEY_PATTERN =
+  /(key|secret|token|authorization|cookie|password|credential|env|dsn|database|provider|cipher|encrypted|plaintext|medical|patient|client|tenant|user|cache|rotation|run|artifact|path|url|uri|raw|payload|body|log|output|stack|error|commit|workflow|ci)/i;
+const ENCRYPTION_EVIDENCE_SENSITIVE_VALUE_PATTERNS = [
+  /SECURITY_ENCRYPTION_[A-Z0-9_]+/g,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /\b(?:coverage|test-results|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi,
+  /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
+  /\b(?:gh[psuor]_|github_pat_|sk_|ya29|sentry_|provider_|token_)[A-Za-z0-9_./:-]{6,}\b/gi,
+  /\b(?:primary|secondary|provider|token|cache|rotation|tenant|client|medical|cipher|workflow|commit|run|artifact)[-_:/A-Za-z0-9.]{8,}\b/gi,
+  /\b[A-Fa-f0-9]{32,}\b/g,
+  /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
+  /\+?\d[\d\s().-]{7,}\d/g,
+] as const;
+
+function redactEncryptionKeyEvidenceValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactEncryptionKeyEvidenceValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        ENCRYPTION_EVIDENCE_SENSITIVE_KEY_PATTERN.test(key) ? "[redacted-encryption-evidence]" : redactEncryptionKeyEvidenceValue(entry),
+      ]),
+    );
+  }
+
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return ENCRYPTION_EVIDENCE_SENSITIVE_VALUE_PATTERNS.reduce(
+    (redacted, pattern) => redacted.replace(pattern, "[redacted-encryption-evidence]"),
+    value,
+  );
+}
+
+export function buildRedactedEncryptionKeyEvidenceArtifact(artifact: unknown): unknown {
+  return redactEncryptionKeyEvidenceValue(artifact);
+}
+
 function normalizeBase64(input: string): string {
   return input.replace(/[\n\r\s]/g, "").replace(/-/g, "+").replace(/_/g, "/");
 }

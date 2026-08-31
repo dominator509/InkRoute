@@ -171,6 +171,11 @@ describe("web build/runtime verification contract", () => {
       clientEmail: "client@example.com",
       nested: {
         sessionToken: "session_private",
+        buildLog: "tenant.example.com rendered private booking route",
+        browserSmokeOutput: "visited /booking/private-client",
+        routePath: "/booking/private-client",
+        renderedHtml: "<main>private client booking</main>",
+        stackTrace: "Error: private route failed",
         publicSummary: "web build runtime evidence captured",
       },
     });

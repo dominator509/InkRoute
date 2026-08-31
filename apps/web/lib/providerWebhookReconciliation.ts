@@ -6,6 +6,7 @@ import {
 } from "@inkroute/notifications";
 import { emailProviderContract } from "./emailProvider";
 import { smsProviderContract } from "./smsProvider";
+import { createHash } from "node:crypto";
 
 export type ProviderWebhookErrorStatus = "open" | "triaged" | "in_progress" | "resolved" | "ignored";
 
@@ -114,6 +115,23 @@ export interface ProviderWebhookReconciliationArtifactReview {
 
 const PROVIDER_WEBHOOK_ARTIFACT_EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const PROVIDER_WEBHOOK_ARTIFACT_TOKEN_PATTERN = /\b(?:bearer|sentry|sk|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
+const PROVIDER_WEBHOOK_ARTIFACT_KEY_PATTERN =
+  /(authorization|cookie|password|secret|token|api[-_]?key|sentry[-_]?secret|dsn|url|uri|path|artifact|trace|screenshot|video|raw|payload|body|stack|error|output|log|env|database|tenant|user|client|booking|message|destination|fingerprint|issue|event|run|commit|workflow|ci)/i;
+const PROVIDER_WEBHOOK_ARTIFACT_VALUE_PATTERNS = [
+  PROVIDER_WEBHOOK_ARTIFACT_EMAIL_PATTERN,
+  PROVIDER_WEBHOOK_ARTIFACT_TOKEN_PATTERN,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /\b(?:coverage|test-results|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi,
+  /\b(?:gh[psuor]_|github_pat_|sentry_|sk_|ya29)[A-Za-z0-9_./:-]{6,}\b/gi,
+  /\b(?:workflow|ci|run|commit|artifact|trace|screenshot|video|tenant|issue|event|provider)[-_:/A-Za-z0-9.]{8,}\b/gi,
+  /\b[a-f0-9]{32,}\b/gi,
+] as const;
+const PROVIDER_WEBHOOK_ARTIFACT_UNSAFE_PATTERNS = [
+  PROVIDER_WEBHOOK_ARTIFACT_EMAIL_PATTERN,
+  PROVIDER_WEBHOOK_ARTIFACT_TOKEN_PATTERN,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /\b(?:coverage|test-results|artifacts|reports)\/[A-Za-z0-9_./-]{6,}\b/gi,
+] as const;
 
 export const providerWebhookReconciliationExecutionPolicy: ProviderWebhookReconciliationExecutionPolicy = {
   executeLiveProviderReplay: false,
@@ -154,16 +172,49 @@ export function buildProviderWebhookReconciliationExecutionPlan(): ProviderWebho
   };
 }
 
+function redactProviderWebhookReconciliationArtifactValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactProviderWebhookReconciliationArtifactValue(entry));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        PROVIDER_WEBHOOK_ARTIFACT_KEY_PATTERN.test(key)
+          ? "[redacted-artifact]"
+          : redactProviderWebhookReconciliationArtifactValue(entry),
+      ]),
+    );
+  }
+
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  return PROVIDER_WEBHOOK_ARTIFACT_VALUE_PATTERNS.reduce(
+    (redacted, pattern) => redacted.replace(pattern, "[redacted-artifact]"),
+    value,
+  );
+}
+
+export function buildRedactedProviderWebhookReconciliationArtifact(
+  artifact: Record<string, unknown>,
+): Record<string, unknown> {
+  return redactProviderWebhookReconciliationArtifactValue(artifact) as Record<string, unknown>;
+}
+
 export function buildProviderWebhookReconciliationArtifactReview(
   artifactName: string,
   artifact: Record<string, unknown>,
   requiredArtifactPath: ProviderWebhookReconciliationEvidenceArtifact = "coverage/provider-webhook-secret-safe-artifacts.json",
 ): ProviderWebhookReconciliationArtifactReview {
-  const redactedArtifact = buildRedactedProviderWebhookPayload(artifact);
+  const redactedArtifact = buildRedactedProviderWebhookReconciliationArtifact(artifact);
   const serialized = JSON.stringify(redactedArtifact);
   const unsafeFindings = [
     serialized.match(PROVIDER_WEBHOOK_ARTIFACT_EMAIL_PATTERN) ? "email" : null,
     serialized.match(PROVIDER_WEBHOOK_ARTIFACT_TOKEN_PATTERN) ? "provider-token" : null,
+    PROVIDER_WEBHOOK_ARTIFACT_UNSAFE_PATTERNS.some((pattern) => serialized.match(pattern)) ? "provider-artifact-selector" : null,
   ].filter((finding): finding is string => finding !== null);
 
   return {
@@ -290,8 +341,13 @@ function sanitizeProviderObject(value: Record<string, unknown>): Record<string, 
 export function buildProviderDeliveryId(event: Record<string, unknown>, data: Record<string, unknown>): string {
   const providerId = data.id ?? data.issueId ?? event.id ?? event.installationId ?? event.action ?? "unknown";
   const action = typeof event.action === "string" ? event.action : "unknown";
+  const providerIdHash = createHash("sha256").update(String(providerId)).digest("hex").slice(0, 24);
 
-  return `sentry:${action}:${String(providerId)}`;
+  return `sentry:${action}:sha256:${providerIdHash}`;
+}
+
+function buildProviderWebhookReplayIdempotencyKey(providerDeliveryId: string): string {
+  return `sentry-replay:${createHash("sha256").update(providerDeliveryId).digest("hex")}`;
 }
 
 export function mapSentryActionToErrorStatus(action: string): ProviderWebhookErrorStatus {
@@ -371,7 +427,7 @@ export function buildSentryReconciliationPlan(input: {
     provider: "sentry" as const,
     action,
     providerDeliveryId,
-    idempotencyKey: providerDeliveryId,
+    idempotencyKey: buildProviderWebhookReplayIdempotencyKey(providerDeliveryId),
     targetErrorStatus: mapSentryActionToErrorStatus(action),
     providerFingerprint: resolveProviderFingerprint(input.data),
     sanitizedPayload: sanitizeProviderWebhookPayload(input.event, input.data),
@@ -430,10 +486,15 @@ const providerWebhookPrivatePayloadKeys = new Set([
   "cookie",
   "destination",
   "email",
+  "eventId",
+  "headers",
+  "idempotencyKey",
   "messageBody",
   "phone",
+  "providerMessageId",
   "providerPayload",
   "rawBody",
+  "rawHeaders",
   "signature",
   "token",
 ]);
@@ -460,11 +521,11 @@ export function buildRedactedProviderWebhookPayload(payload: Record<string, unkn
 }
 
 function buildProviderEventClaimKey(input: { readonly tenantId: string; readonly provider: string; readonly idempotencyKey: string }): string {
-  return `${input.tenantId}:${input.provider}:${input.idempotencyKey}`;
+  return `provider-event-claim:${createHash("sha256").update(JSON.stringify([input.tenantId, input.provider, input.idempotencyKey])).digest("hex")}`;
 }
 
 function buildDeliveryUpdateKey(input: { readonly tenantId: string; readonly reconciliation: ProviderEventReconciliationPlan }): string {
-  return `${input.tenantId}:${input.reconciliation.provider}:${input.reconciliation.eventId}`;
+  return `provider-delivery-update:${createHash("sha256").update(JSON.stringify([input.tenantId, input.reconciliation.provider, input.reconciliation.eventId])).digest("hex")}`;
 }
 
 export function createInMemoryProviderWebhookPersistenceRepository(
@@ -551,12 +612,33 @@ export interface ProviderWebhookRouteBoundaryInput {
 export function redactedWebhookPayloadSummary(input: ProviderWebhookRouteBoundaryInput): Record<string, unknown> {
   return {
     source: input.source,
-    tenantId: input.tenantId ?? "[tenant-unresolved]",
-    eventId: input.eventId,
+    tenantResolved: Boolean(input.tenantId),
+    providerEventIdPresent: Boolean(input.eventId),
     eventType: input.eventType,
     rawBodyBytes: input.rawBodyBytes,
     signatureHeaderPresent: input.signatureHeaderPresent,
+    tenantIdEchoed: false,
+    rawProviderEventIdEchoed: false,
     omittedFields: ["rawBody", "destination", "messageBody", "providerPayload", "signature", "token"],
+  };
+}
+
+export function redactedProviderWebhookReconciliationSummary(
+  reconciliation: ProviderEventReconciliationPlan,
+): Omit<ProviderEventReconciliationPlan, "inboundBody" | "eventId" | "providerMessageId"> & {
+  rawProviderEventIdEchoed: false;
+  rawProviderMessageIdEchoed: false;
+} {
+  const {
+    inboundBody: _inboundBody,
+    eventId: _eventId,
+    providerMessageId: _providerMessageId,
+    ...safeReconciliation
+  } = reconciliation as ProviderEventReconciliationPlan & { inboundBody?: unknown; providerMessageId?: unknown };
+  return {
+    ...safeReconciliation,
+    rawProviderEventIdEchoed: false,
+    rawProviderMessageIdEchoed: false,
   };
 }
 
@@ -572,9 +654,15 @@ export function buildProviderWebhookRouteBoundary(input: ProviderWebhookRouteBou
   return {
     source: input.source,
     status: input.tenantId ? "planned" as const : "blocked" as const,
-    tenantId: input.tenantId ?? null,
-    reconciliation: input.reconciliation,
+    tenantResolved: Boolean(input.tenantId),
+    reconciliation: redactedProviderWebhookReconciliationSummary(input.reconciliation),
     redactedWebhookPayloadSummary: redactedWebhookPayloadSummary(input),
+    responseProjection: {
+      tenantIdEchoed: false,
+      rawProviderEventIdEchoed: false,
+      rawProviderMessageIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
     requiredWrites: [
       "ProviderEvent",
       "NotificationDelivery",

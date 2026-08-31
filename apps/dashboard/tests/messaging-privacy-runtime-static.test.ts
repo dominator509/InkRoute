@@ -169,6 +169,10 @@ describe("messaging privacy runtime contract", () => {
         medicalNote: "private medical note",
         publicStatus: "redacted",
       },
+      safeNote:
+        "evidence_messaging_privacy_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/messaging-privacy/private-proof.json",
+      safeExportPath: "test-results/messaging-privacy-runtime/private-export.json",
+      safeRetentionRun: "retention_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     });
 
     expect(redacted.secretSafe).toBe(true);
@@ -178,6 +182,9 @@ describe("messaging privacy runtime contract", () => {
       "signedAttachmentUrl",
       "providerPayload",
       "nested.medicalNote",
+      "safeNote",
+      "safeExportPath",
+      "safeRetentionRun",
     ]);
     expect(redacted.artifact).toEqual({
       tenantId: "[redacted]",
@@ -189,7 +196,21 @@ describe("messaging privacy runtime contract", () => {
         medicalNote: "[redacted]",
         publicStatus: "redacted",
       },
+      safeExportPath: "[redacted]",
+      safeRetentionRun: "[redacted]",
     });
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "evidence_messaging_privacy_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "artifacts/messaging-privacy/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "test-results/messaging-privacy-runtime/private-export.json",
+    );
+    expect(JSON.stringify(redacted.artifact)).not.toContain(
+      "retention_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildMessagingPrivacyArtifactReview({
       publicSummary: "safe messaging privacy artifact",

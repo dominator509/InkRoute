@@ -15,7 +15,7 @@ normative_language: RFC 2119 (MUST / SHOULD / MAY)
 ## 2. Immutability Contract
 ## 3. Architecture Snapshot
 ## 4. Roadmap Pointer
-## 5. Last 10 Approved Decisions
+## 5. Last 10 Approved (Pending Legal Review) Decisions
 ## 6. Open HALT Items
 ## 7. Active Task Cursor
 ## 8. Active GAP Entries

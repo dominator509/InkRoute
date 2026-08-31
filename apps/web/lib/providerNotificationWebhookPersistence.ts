@@ -21,17 +21,18 @@ type ProviderNotificationWebhookPersistenceInput = {
 
 type ProviderNotificationWebhookPersistenceResult = {
   persistence: "database-provider-event-transaction" | "duplicate-provider-event" | "tenant-unresolved" | "database-unavailable" | "database-write-rejected";
-  providerEventId: string | null;
-  idempotencyKey: string;
-  auditLogId: string | null;
-  deliveryId: string | null;
-  deliveryStatusTransitionId: string | null;
+  providerEventPersisted: boolean;
+  idempotencyKeyEchoed: false;
+  auditLogged: boolean;
+  deliveryMatched: boolean;
+  deliveryStatusTransitionPersisted: boolean;
   deliveryStatusMutated: boolean;
-  suppressionId: string | null;
+  suppressionPersisted: boolean;
   suppressionWritten: boolean;
   inboundThreadCreated: boolean;
   inboundThreadBoundary: string | null;
   replayDetected: boolean;
+  internalPersistenceIdsEchoed: false;
 };
 
 const notificationStatuses = new Set<NotificationStatus>(["pending", "queued", "sent", "delivered", "failed", "cancelled"]);
@@ -48,6 +49,10 @@ function normalizeStatus(status?: string): NotificationStatus | null {
 
 function hashValue(value: string): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function storageFingerprint(value: string): string {
+  return `sha256:${hashValue(value)}`;
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -68,23 +73,26 @@ export async function persistProviderNotificationWebhookEvent(
 ): Promise<ProviderNotificationWebhookPersistenceResult> {
   const tenantId = resolveTenantId(input.tenantSlug);
   const normalizedStatus = normalizeStatus(input.normalizedStatus);
-  const eventId = input.eventId.trim() || "missing-event-id";
-  const idempotencyKey = `notification-webhook:${tenantId ?? input.tenantSlug}:${input.provider}:${eventId}`;
+  const rawEventId = input.eventId.trim() || "missing-event-id";
+  const eventId = storageFingerprint(rawEventId);
+  const providerMessageId = input.providerMessageId ? storageFingerprint(input.providerMessageId) : null;
+  const idempotencyKey = `notification-webhook:${hashValue(JSON.stringify([tenantId ?? input.tenantSlug, input.provider, eventId]))}`;
 
   if (!tenantId) {
     return {
       persistence: "tenant-unresolved",
-      providerEventId: null,
-      idempotencyKey,
-      auditLogId: null,
-      deliveryId: null,
-      deliveryStatusTransitionId: null,
+      providerEventPersisted: false,
+      idempotencyKeyEchoed: false,
+      auditLogged: false,
+      deliveryMatched: false,
+      deliveryStatusTransitionPersisted: false,
       deliveryStatusMutated: false,
-      suppressionId: null,
+      suppressionPersisted: false,
       suppressionWritten: false,
       inboundThreadCreated: false,
       inboundThreadBoundary: null,
       replayDetected: false,
+      internalPersistenceIdsEchoed: false,
     };
   }
 
@@ -101,16 +109,18 @@ export async function persistProviderNotificationWebhookEvent(
             channel: input.channel,
             eventType: input.eventType,
             eventId,
-            providerMessageId: input.providerMessageId ?? null,
+            providerMessageId,
             signatureHeaderPresent: input.signatureHeaderPresent,
             rawPayloadStored: input.rawPayloadStored,
+            rawProviderEventIdStored: false,
+            rawProviderMessageIdStored: false,
           },
         },
       });
 
       const delivery = input.providerMessageId
         ? await tx.notificationDelivery.findFirst({
-            where: { tenantId, providerMessageId: input.providerMessageId },
+            where: { tenantId, providerMessageId: { in: [input.providerMessageId, providerMessageId].filter((value): value is string => Boolean(value)) } },
             select: { id: true, status: true },
           })
         : null;
@@ -122,15 +132,17 @@ export async function persistProviderNotificationWebhookEvent(
           provider: input.provider,
           eventId,
           eventType: input.eventType,
-          providerMessageId: input.providerMessageId ?? null,
+          providerMessageId,
           normalizedStatus,
           idempotencyKey,
           payloadSummary: {
             provider: input.provider,
             channel: input.channel,
             eventType: input.eventType,
-            eventIdHash: hashValue(eventId),
+            eventIdHash: hashValue(rawEventId),
             providerMessageIdHash: input.providerMessageId ? hashValue(input.providerMessageId) : null,
+            rawProviderEventIdStored: false,
+            rawProviderMessageIdStored: false,
             rawPayloadStored: input.rawPayloadStored,
             signatureHeaderPresent: input.signatureHeaderPresent,
             summary: input.payloadSummary,
@@ -149,7 +161,7 @@ export async function persistProviderNotificationWebhookEvent(
             data: {
               status: normalizedStatus!,
               provider: input.provider,
-              providerMessageId: input.providerMessageId ?? null,
+              providerMessageId,
               ...(normalizedStatus === "delivered" ? { deliveredAt: new Date() } : {}),
               ...(normalizedStatus === "failed" ? { errorMessage: "Provider webhook reported delivery failure." } : {}),
             },
@@ -166,8 +178,10 @@ export async function persistProviderNotificationWebhookEvent(
               toStatus: normalizedStatus!,
               reason: `${input.provider}.webhook.${input.eventType}`,
               metadata: {
-                providerEventId: providerEvent.id,
-                idempotencyKey,
+                providerEventPersisted: true,
+                idempotencyPersisted: true,
+                rawIdempotencyKeyStored: false,
+                internalPersistenceIdsStored: false,
                 providerMessageIdHash: input.providerMessageId ? hashValue(input.providerMessageId) : null,
               },
             },
@@ -232,13 +246,16 @@ export async function persistProviderNotificationWebhookEvent(
             provider: input.provider,
             channel: input.channel,
             eventType: input.eventType,
-            idempotencyKey,
-            deliveryId: delivery?.id ?? null,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            providerEventPersisted: true,
+            deliveryMatched: Boolean(delivery),
             deliveryStatusMutated: shouldMutateDelivery,
-            suppressionId: suppression?.id ?? null,
+            suppressionPersisted: Boolean(suppression),
             suppressionWritten: Boolean(suppression),
             inboundThreadCreated: false,
             inboundThreadBoundary,
+            internalPersistenceIdsStored: false,
             rawPayloadStored: input.rawPayloadStored,
             signatureHeaderPresent: input.signatureHeaderPresent,
             providerMessageIdHash: input.providerMessageId ? hashValue(input.providerMessageId) : null,
@@ -254,64 +271,68 @@ export async function persistProviderNotificationWebhookEvent(
         data: {
           status: "completed",
           result: {
-            providerEventId: providerEvent.id,
-            deliveryId: delivery?.id ?? null,
-            deliveryStatusTransitionId: transition?.id ?? null,
+            providerEventPersisted: true,
+            deliveryMatched: Boolean(delivery),
+            deliveryStatusTransitionPersisted: Boolean(transition),
             deliveryStatusMutated: shouldMutateDelivery,
-            suppressionId: suppression?.id ?? null,
+            suppressionPersisted: Boolean(suppression),
             suppressionWritten: Boolean(suppression),
             inboundThreadCreated: false,
             inboundThreadBoundary,
+            internalPersistenceIdsStored: false,
           },
         },
       });
 
       return {
         persistence: "database-provider-event-transaction",
-        providerEventId: providerEvent.id,
-        idempotencyKey,
-        auditLogId: auditLog.id,
-        deliveryId: delivery?.id ?? null,
-        deliveryStatusTransitionId: transition?.id ?? null,
+        providerEventPersisted: true,
+        idempotencyKeyEchoed: false,
+        auditLogged: true,
+        deliveryMatched: Boolean(delivery),
+        deliveryStatusTransitionPersisted: Boolean(transition),
         deliveryStatusMutated: shouldMutateDelivery,
-        suppressionId: suppression?.id ?? null,
+        suppressionPersisted: Boolean(suppression),
         suppressionWritten: Boolean(suppression),
         inboundThreadCreated: false,
         inboundThreadBoundary,
         replayDetected: false,
+        internalPersistenceIdsEchoed: false,
       };
     });
   } catch (error) {
     if (isUniqueConstraintViolation(error)) {
       return {
         persistence: "duplicate-provider-event",
-        providerEventId: null,
-        idempotencyKey,
-        auditLogId: null,
-        deliveryId: null,
-        deliveryStatusTransitionId: null,
+        providerEventPersisted: false,
+        idempotencyKeyEchoed: false,
+        auditLogged: false,
+        deliveryMatched: false,
+        deliveryStatusTransitionPersisted: false,
         deliveryStatusMutated: false,
-        suppressionId: null,
+        suppressionPersisted: false,
         suppressionWritten: false,
         inboundThreadCreated: false,
         inboundThreadBoundary: null,
         replayDetected: true,
+        internalPersistenceIdsEchoed: false,
       };
     }
 
     return {
       persistence: isDatabaseUnavailable(error) ? "database-unavailable" : "database-write-rejected",
-      providerEventId: null,
-      idempotencyKey,
-      auditLogId: null,
-      deliveryId: null,
-      deliveryStatusTransitionId: null,
+      providerEventPersisted: false,
+      idempotencyKeyEchoed: false,
+      auditLogged: false,
+      deliveryMatched: false,
+      deliveryStatusTransitionPersisted: false,
       deliveryStatusMutated: false,
-      suppressionId: null,
+      suppressionPersisted: false,
       suppressionWritten: false,
       inboundThreadCreated: false,
       inboundThreadBoundary: null,
       replayDetected: false,
+      internalPersistenceIdsEchoed: false,
     };
   }
 }

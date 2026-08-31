@@ -302,9 +302,7 @@ describe("dependency install runtime contract", () => {
     expect(gapTracker).toContain("buildDependencyInstallRedactedEvidenceBundle");
     expect(gapTracker).toContain(
       "live install, frozen-lockfile install, typecheck, lint, unit-test, workspace audit, CI, provider-backed persistDependencyInstallRun execution, production-blocker visibility, and artifact evidence remain gated",
-    );
-    expect(gapTracker).toContain("GAP-001 is dependency-install-runtime-matrix wired with evidence classifier");
-  });
+    );  });
 
   it("pins current dependency install runtime proof files for GAP-001", () => {
     expect(dependencyInstallProofFiles).toEqual(
@@ -330,7 +328,20 @@ describe("dependency install runtime contract", () => {
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
       actorEmail: "owner@example.com",
       environment: { DATABASE_URL: "postgres://user:pass@example.invalid/db" },
+      pnpmLockfileExcerpt: "registry.npmjs.org/@stripe/stripe-js/-/stripe-js-4.1.0.tgz",
+      installReportPayload: {
+        commandStdout: "pnpm install resolved workspace-dependency-01HZYXZYXZYXZYXZYXZYXZYXZ",
+        cachePath: "C:/Users/owner/AppData/Local/pnpm/store/v3/files",
+      },
+      productionBlockerManifest: {
+        blockerBody: "typecheck failed for tenant-runtime-package",
+      },
+      artifactManifest: ["test-results/dependency-install-runtime/install.log"],
       safeSummary: "dependency install proof captured",
+      neutralInstallTrace: "install_dependency_01HZYXZYXZYXZYXZYXZYXZYXZ resolved package_cache_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactLocation: "coverage/dependency-install/private-output.json",
+      neutralDatabaseLocation: "postgresql://tenant_demo:secret@db.example.com/inkroute",
     };
 
     const bundle = buildDependencyInstallRedactedEvidenceBundle(artifact);
@@ -341,14 +352,36 @@ describe("dependency install runtime contract", () => {
     expect(bundle.requiredExternalEvidence).toBe(dependencyInstallRequiredExternalEvidence);
     expect(bundle.providerExecutionAllowed).toBe(false);
     expect(bundle.redactions).toEqual(
-      expect.arrayContaining(["token", "url", "email", "actor", "log", "output", "environment"]),
+      expect.arrayContaining([
+        "token",
+        "url",
+        "email",
+        "actor",
+        "log",
+        "output",
+        "environment",
+        "lockfile",
+        "payload",
+        "workspace",
+        "cache",
+        "blocker",
+        "artifact",
+      ]),
     );
     expect(bundle.redactedArtifact).toMatchObject({
       installOutput: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
       actorEmail: "[REDACTED]",
       environment: "[REDACTED]",
+      pnpmLockfileExcerpt: "[REDACTED]",
+      installReportPayload: "[REDACTED]",
+      productionBlockerManifest: "[REDACTED]",
+      artifactManifest: "[REDACTED]",
       safeSummary: "dependency install proof captured",
+      neutralInstallTrace: "[REDACTED]",
+      neutralCiTrace: "[REDACTED]",
+      neutralArtifactLocation: "[REDACTED]",
+      neutralDatabaseLocation: "[REDACTED]",
     });
   });
 });

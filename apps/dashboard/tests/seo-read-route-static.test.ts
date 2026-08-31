@@ -14,6 +14,18 @@ describe("dashboard SEO read route contract", () => {
     expect(routeSource).toContain('"Cache-Control": "no-store"');
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("seoPageIdsEchoed: false");
+    expect(routeSource).toContain("redirectIdsEchoed: false");
+    expect(routeSource).toContain("portfolioItemIdsEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toContain("auditId: result.audit.id");
+    expect(routeSource).not.toContain("id: page.id");
+    expect(routeSource).not.toContain("tenantId: page.tenantId");
+    expect(routeSource).not.toContain("id: item.id");
+    expect(routeSource).not.toContain("id: redirect.id");
+    expect(routeSource).not.toContain("tenantId: redirect.tenantId");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
     expect(routeSource).not.toContain('}, { status: 403 });');
     expect(routeSource).not.toContain('}, { status: 500 });');
@@ -30,6 +42,9 @@ describe("dashboard SEO read route contract", () => {
 
   it("keeps public SEO output safe and avoids leaking private portfolio records", () => {
     expect(routeSource).toContain("featuredPortfolio.filter((item) => item.isPublic)");
+    expect(routeSource).toContain("featuredPortfolioLinked");
+    expect(routeSource).toContain("buildSafeDashboardSeoRouteRecord");
+    expect(routeSource).toContain("relatedPortfolioLinked");
     expect(routeSource).toContain('indexMode: page.status === "published" ? "index" : "noindex"');
     expect(routeSource).toContain("jsonObject(page.faq)");
     expect(routeSource).toContain("jsonObject(page.internalLinks)");

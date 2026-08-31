@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@inkroute/db";
+import { createHash } from "node:crypto";
 import { dashboardListQuerySchema } from "@inkroute/validators";
 import { dashboardRedactedMessageThreadDrafts } from "../../../lib/demo";
-import { buildDashboardMessagePersistencePlan, dashboardNotificationPersistenceContract } from "../../../lib/notificationPersistence";
+import {
+  buildDashboardMessagePersistencePlan,
+  dashboardNotificationPersistenceContract,
+  type DashboardMessagePersistencePlan,
+} from "../../../lib/notificationPersistence";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
-function redactedPreview(value: string | null | undefined): string {
-  if (!value) return "[redacted-message-body]";
-  return value.length > 0 ? "[redacted-message-body]" : "";
-}
-
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
 
 function isUniqueConstraintError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "P2002";
@@ -28,21 +32,115 @@ type MessageListQueryRow = {
   updatedAt: Date;
   client: {
     preferredName: string;
-    email: string | null;
-    phone: string | null;
   };
   messages: Array<{
     id: string;
     channel: string;
     direction: string;
     status: string;
-    body: string | null;
-    providerMessageId: string | null;
     sentAt: Date | null;
     readAt: Date | null;
     createdAt: Date;
   }>;
 };
+
+function buildSafeDashboardMessagePlanResponse(plan: DashboardMessagePersistencePlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    tenantIdEchoed: false,
+    threadIdEchoed: false,
+    threadDraft: {
+      rawBodyEchoed: false,
+      bodyPreview: plan.redactedBodyPreview,
+      bodySelectedFromRequest: false,
+    },
+    redactedBodyPreview: plan.redactedBodyPreview,
+    destinationHash: "[redacted-destination-hash]",
+    destinationHashEchoed: false,
+    idempotencyKeyRecorded: true,
+    idempotencyKeyEchoed: false,
+    requiredWrites: plan.requiredWrites,
+    requiredControls: plan.requiredControls,
+    blockers: plan.blockers,
+  };
+}
+
+function buildDashboardMessageWriteResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    threadIdEchoed: false,
+    messageIdEchoed: false,
+    notificationIdEchoed: false,
+    deliveryIdEchoed: false,
+    readStateIdEchoed: false,
+    deliveryStatusTransitionIdEchoed: false,
+    providerHandoffIdEchoed: false,
+    auditIdEchoed: false,
+    rawMessageBodyEchoed: false,
+    rawDestinationHashEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeMessageThreadListRecord(record: Record<string, unknown>) {
+  const {
+    id: _threadId,
+    threadId: _threadIdAlias,
+    tenantId: _tenantId,
+    clientId: _clientId,
+    bookingRequestId: _bookingRequestId,
+    appointmentId: _appointmentId,
+    latestMessage,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    clientLinked: Boolean(_clientId),
+    bookingLinked: Boolean(_bookingRequestId),
+    appointmentLinked: Boolean(_appointmentId),
+    latestMessage:
+      typeof latestMessage === "object" && latestMessage !== null
+        ? (() => {
+            const { id: _messageId, senderUserId: _senderUserId, senderClientId: _senderClientId, ...safeMessage } = latestMessage as Record<string, unknown>;
+            return {
+              ...safeMessage,
+              senderType: _senderUserId ? "dashboard-user" : _senderClientId ? "client" : "system",
+              responseProjection: {
+                messageIdEchoed: false,
+                senderIdsEchoed: false,
+              },
+            };
+          })()
+        : latestMessage,
+    responseProjection: {
+      threadIdEchoed: false,
+      tenantIdEchoed: false,
+      clientIdEchoed: false,
+      bookingRequestIdEchoed: false,
+      appointmentIdEchoed: false,
+      messageIdsEchoed: false,
+      senderIdsEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
+
+function buildMessageThreadListResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    threadIdsEchoed: false,
+    clientIdsEchoed: false,
+    bookingRequestIdsEchoed: false,
+    appointmentIdsEchoed: false,
+    messageIdsEchoed: false,
+    senderIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
@@ -73,12 +171,13 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard message reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-010", "GAP-037", "GAP-061", "GAP-064", "GAP-066"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildMessageThreadListResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -89,10 +188,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantIdEchoed: false,
         persistence: "local-fallback",
         count: dashboardRedactedMessageThreadDrafts.length,
-        threads: dashboardRedactedMessageThreadDrafts.slice(0, limit),
+        threads: dashboardRedactedMessageThreadDrafts.slice(0, limit).map((thread) => buildSafeMessageThreadListRecord(thread as Record<string, unknown>)),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildMessageThreadListResponseProjection(),
         gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         boundary: "Local fallback returns redacted demo message threads only; database mode is required for live message reads.",
       },
@@ -116,7 +217,7 @@ export async function GET(request: NextRequest) {
           isArchived: true,
           lastMessageAt: true,
           updatedAt: true,
-          client: { select: { preferredName: true, email: true, phone: true } },
+          client: { select: { preferredName: true } },
           messages: {
             orderBy: { createdAt: "desc" },
             take: 1,
@@ -125,8 +226,6 @@ export async function GET(request: NextRequest) {
               channel: true,
               direction: true,
               status: true,
-              body: true,
-              providerMessageId: true,
               sentAt: true,
               readAt: true,
               createdAt: true,
@@ -157,25 +256,23 @@ export async function GET(request: NextRequest) {
     const threads = result.rows.map((row: MessageListQueryRow) => {
       const latest = row.messages[0];
       return {
-        id: row.id,
-        tenantId: row.tenantId,
-        clientId: row.clientId,
-        bookingRequestId: row.bookingRequestId,
-        appointmentId: row.appointmentId,
         subject: row.subject,
         isArchived: row.isArchived,
         lastMessageAt: row.lastMessageAt?.toISOString() ?? row.updatedAt.toISOString(),
         clientName: row.client.preferredName,
         clientEmail: "[redacted-dashboard-field]",
-        clientPhone: row.client.phone ? "[redacted-dashboard-field]" : null,
+        clientPhone: "[redacted-dashboard-field]",
+        clientEmailSelectedFromDatabase: false,
+        clientPhoneSelectedFromDatabase: false,
         latestMessage: latest
           ? {
-              id: latest.id,
               channel: latest.channel,
               direction: latest.direction,
               status: latest.status,
-              bodyPreview: redactedPreview(latest.body),
-              providerMessageId: latest.providerMessageId ? "[redacted-dashboard-field]" : null,
+              bodyPreview: "[redacted-message-body]",
+              bodySelectedFromDatabase: false,
+              providerMessageId: "[redacted-dashboard-field]",
+              providerMessageIdSelectedFromDatabase: false,
               sentAt: latest.sentAt?.toISOString() ?? null,
               readAt: latest.readAt?.toISOString() ?? null,
               createdAt: latest.createdAt.toISOString(),
@@ -188,11 +285,14 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: threads.length,
-        threads,
-        auditId: result.audit.id,
+        threads: threads.map((thread) => buildSafeMessageThreadListRecord(thread as Record<string, unknown>)),
+        auditLogged: true,
+        auditIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildMessageThreadListResponseProjection(),
         gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         boundary: "Dashboard message thread list reads are tenant-scoped, body/provider redacted, no-store, and audited.",
       },
@@ -204,8 +304,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Message thread reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildMessageThreadListResponseProjection(),
           gapIds: ["GAP-010", "GAP-064", "GAP-068"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -257,7 +358,18 @@ export async function POST(request: NextRequest) {
   });
 
   if (plan.status === "blocked") {
-    return NextResponse.json({ ok: false, error: { code: "MESSAGE_WRITE_BLOCKED", message: "Message persistence plan is blocked.", blockers: plan.blockers }, plan }, { status: 400, headers: noStoreHeaders });
+    return NextResponse.json(
+      {
+        ok: false,
+        error: { code: "MESSAGE_WRITE_BLOCKED", message: "Message persistence plan is blocked.", blockers: plan.blockers },
+        plan: buildSafeDashboardMessagePlanResponse(plan),
+        responseProjection: buildDashboardMessageWriteResponseProjection(),
+        rawMessageBodyEchoed: false,
+        rawDestinationHashEchoed: false,
+        rawIdempotencyKeyEchoed: false,
+      },
+      { status: 400, headers: noStoreHeaders },
+    );
   }
 
   if (actor.source === "local-fallback") {
@@ -266,12 +378,13 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_WRITES_NOT_CONFIGURED",
             message: "Production dashboard message writes require DB-backed actor resolution and tenant-scoped persistence; local fallback write plans are disabled.",
             gapIds: ["GAP-064", "GAP-066"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildDashboardMessageWriteResponseProjection(),
           productionBoundary: { localDashboardWriteFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -282,9 +395,13 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        plan,
+        plan: buildSafeDashboardMessagePlanResponse(plan),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildDashboardMessageWriteResponseProjection(),
+        rawMessageBodyEchoed: false,
+        rawDestinationHashEchoed: false,
+        rawIdempotencyKeyEchoed: false,
         providerBoundary: dashboardNotificationPersistenceContract.runtimeReadiness,
         gapIds: ["GAP-064", "GAP-066"],
         boundary: "Local fallback builds the tenant-scoped message write contract with redacted provider handoff planning; database mode is required for live message, notification, delivery, and audit writes.",
@@ -402,7 +519,8 @@ export async function POST(request: NextRequest) {
           metadata: {
             action: "message:write:create_thread_message",
             source: "dashboard-api",
-            notificationId: notification.id,
+            notificationPersisted: true,
+            internalPersistenceIdsStored: false,
             redactedFields: ["message.body", "Notification.body", "destinationHash"],
           },
         },
@@ -419,15 +537,17 @@ export async function POST(request: NextRequest) {
           channel: "in_app",
           provider: "in_app",
           state: "queued",
-          idempotencyKey: plan.idempotencyKey,
+          idempotencyKey: idempotencyStorageFingerprint(plan.idempotencyKey),
           destinationHash: plan.destinationHash,
           sanitizedPayload: {
             action: "message:write:create_thread_message",
             source: "dashboard-api",
-            threadId: thread.id,
-            messageId: message.id,
-            notificationId: notification.id,
-            deliveryId: delivery.id,
+            threadPersisted: true,
+            messagePersisted: true,
+            notificationPersisted: true,
+            deliveryPersisted: true,
+            internalPersistenceIdsStored: false,
+            rawIdempotencyKeyStored: false,
             redactedBodyPreview: plan.redactedBodyPreview,
             redactedFields: ["message.body", "Notification.body", "destinationHash"],
           },
@@ -443,13 +563,16 @@ export async function POST(request: NextRequest) {
           entityType: "MessageThread",
           entityId: thread.id,
           metadata: {
-            messageId: message.id,
-            notificationId: notification.id,
-            deliveryId: delivery.id,
-            readStateId: readState.id,
-            deliveryStatusTransitionId: deliveryStatusTransition.id,
-            providerHandoffId: providerHandoff.id,
-            idempotencyKey: plan.idempotencyKey,
+            threadPersisted: true,
+            messagePersisted: true,
+            notificationPersisted: true,
+            deliveryPersisted: true,
+            readStatePersisted: true,
+            deliveryStatusTransitionPersisted: true,
+            providerHandoffPersisted: true,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             redactedFields: ["message.body", "Notification.body", "destinationHash"],
           },
         },
@@ -467,14 +590,18 @@ export async function POST(request: NextRequest) {
         data: {
           status: "committed",
           result: {
-            threadId: thread.id,
-            messageId: message.id,
-            notificationId: notification.id,
-            deliveryId: delivery.id,
-            readStateId: readState.id,
-            deliveryStatusTransitionId: deliveryStatusTransition.id,
-            providerHandoffId: providerHandoff.id,
-            auditId: audit.id,
+            writesPersisted: true,
+            auditLogged: true,
+            threadIdEchoed: false,
+            messageIdEchoed: false,
+            notificationIdEchoed: false,
+            deliveryIdEchoed: false,
+            readStateIdEchoed: false,
+            deliveryStatusTransitionIdEchoed: false,
+            providerHandoffIdEchoed: false,
+            auditIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
+            internalPersistenceIdsStored: false,
           },
         },
       });
@@ -486,19 +613,24 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
-        ids: {
-          threadId: result.thread.id,
-          messageId: result.message.id,
-          notificationId: result.notification.id,
-          deliveryId: result.delivery.id,
-          readStateId: result.readState.id,
-          deliveryStatusTransitionId: result.deliveryStatusTransition.id,
-          providerHandoffId: result.providerHandoff.id,
-          auditId: result.audit.id,
-        },
-        plan,
+        writesPersisted: true,
+        auditLogged: true,
+        threadIdEchoed: false,
+        messageIdEchoed: false,
+        notificationIdEchoed: false,
+        deliveryIdEchoed: false,
+        readStateIdEchoed: false,
+        deliveryStatusTransitionIdEchoed: false,
+        providerHandoffIdEchoed: false,
+        auditIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+        plan: buildSafeDashboardMessagePlanResponse(plan),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildDashboardMessageWriteResponseProjection(),
+        rawMessageBodyEchoed: false,
+        rawDestinationHashEchoed: false,
+        rawIdempotencyKeyEchoed: false,
         gapIds: ["GAP-064", "GAP-066"],
         boundary: "Dashboard message writes claim IdempotencyKey before side effects, create tenant-scoped MessageThread, Message, Notification, NotificationDelivery, NotificationReadState, NotificationDeliveryStatusTransition, NotificationProviderHandoff, and AuditLog rows transactionally, and store redacted idempotency results.",
       },
@@ -510,8 +642,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DUPLICATE_MESSAGE_WRITE", message: "Message write idempotency key has already been claimed." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildDashboardMessageWriteResponseProjection(),
           gapIds: ["GAP-064", "GAP-066"],
         },
         { status: 409, headers: noStoreHeaders },
@@ -523,8 +656,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Message writes require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildDashboardMessageWriteResponseProjection(),
           gapIds: ["GAP-064", "GAP-066"],
         },
         { status: 503, headers: noStoreHeaders },

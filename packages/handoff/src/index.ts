@@ -458,18 +458,18 @@ export function buildAgentExecutionLedgerReadinessPlan(
       }
     }
 
-    const evidenceValues = [
-      execution.taskId,
-      execution.assignedAgent,
-      ...execution.commandsRun,
-      ...execution.filesChanged,
-      ...execution.evidenceArtifacts,
-      ...execution.remainingGaps,
-      execution.secretSafety,
+    const evidenceFields: Array<readonly [string, string]> = [
+      ["taskId", execution.taskId],
+      ["assignedAgent", execution.assignedAgent],
+      ...execution.commandsRun.map((value, index) => ["commandsRun:" + index, value] as const),
+      ...execution.filesChanged.map((value, index) => ["filesChanged:" + index, value] as const),
+      ...execution.evidenceArtifacts.map((value, index) => ["evidenceArtifacts:" + index, value] as const),
+      ...execution.remainingGaps.map((value, index) => ["remainingGaps:" + index, value] as const),
+      ["secretSafety", execution.secretSafety],
     ];
-    evidenceValues.forEach((value, index) => {
+    evidenceFields.forEach(([field, value]) => {
       if (containsUnsafeAgentExecutionEvidence(value)) {
-        unsafeEvidenceFields.push(`${task.id}:${index}`);
+        unsafeEvidenceFields.push(task.id + ":" + field);
       }
     });
   }
@@ -770,19 +770,19 @@ export function buildAgentTaskTrackingReadinessPlan(
       incompleteIssueTaskIds.push(`${task.id}:projectItemUrl`);
     }
 
-    const values = [
-      issue.taskId,
-      issue.issueTitle,
-      issue.assigneeRole,
-      ...issue.labels,
-      ...issue.gapIds,
-      issue.issueUrl,
-      issue.projectItemUrl,
-      ...issue.acceptanceEvidenceFields,
+    const trackingFields: Array<readonly [string, string]> = [
+      ["taskId", issue.taskId],
+      ["issueTitle", issue.issueTitle],
+      ["assigneeRole", issue.assigneeRole],
+      ...issue.labels.map((value, index) => ["labels:" + index, value] as const),
+      ...issue.gapIds.map((value, index) => ["gapIds:" + index, value] as const),
+      ["issueUrl", issue.issueUrl],
+      ["projectItemUrl", issue.projectItemUrl],
+      ...issue.acceptanceEvidenceFields.map((value, index) => ["acceptanceEvidenceFields:" + index, value] as const),
     ];
-    values.forEach((value, index) => {
+    trackingFields.forEach(([field, value]) => {
       if (containsUnsafeAgentTaskTrackingField(value)) {
-        unsafeTrackingFields.push(`${task.id}:${index}`);
+        unsafeTrackingFields.push(task.id + ":" + field);
       }
     });
   }

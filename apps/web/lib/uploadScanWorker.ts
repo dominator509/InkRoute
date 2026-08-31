@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   buildUploadScanPipelinePlan,
   detectMimeTypeFromSignature,
@@ -242,6 +244,10 @@ export type UploadScanWorkerArtifactReview = {
   retainedExternalGates: readonly string[];
 };
 
+function hashUploadScanWorkerSelector(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
 const uploadScanWorkerSecretPatterns = [
   /(scanner[_-]?api[_-]?key['":=\s]+)[^"',\s}]+/gi,
   /(storage[_-]?(?:secret|token|key)['":=\s]+)[^"',\s}]+/gi,
@@ -268,7 +274,7 @@ export function buildRedactedUploadScanWorkerArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|signedUrl|scannerPayload|rawBody|stack|objectKey|sourceObjectKey/i.test(key)
+        /auditId|bucket|checksum|credential|derivativeObjectKey|fileAssetId|hash|jobId|malwareScanId|objectKey|password|providerPayload|quarantineObjectKey|rawBody|scannerPayload|scanJobId|secret|signedUrl|sourceObjectKey|stack|tenantId|token|verdictId|authorization/i.test(key)
           ? "[REDACTED]"
           : buildRedactedUploadScanWorkerArtifact(entry),
       ]),
@@ -340,7 +346,7 @@ export async function persistUploadScanWorkerOutcome(
     input.plan.derivativeMetadata.strippedMetadata.exifRemoved ||
     input.plan.derivativeMetadata.strippedMetadata.gpsRemoved ||
     input.plan.derivativeMetadata.normalizedDerivativeGenerated;
-  const metadata = buildRedactedUploadScanWorkerArtifact({
+  const redactedMetadata = buildRedactedUploadScanWorkerArtifact({
     gapIds: input.plan.gapIds,
     objectKey: input.plan.objectKey,
     detectedMimeType: input.plan.detectedMimeType,
@@ -349,6 +355,15 @@ export async function persistUploadScanWorkerOutcome(
     derivativeObjectKey: input.plan.derivativeMetadata.derivativeObjectKey,
     reasons: input.plan.plan.reasons,
   }) as Record<string, unknown>;
+  const metadata = {
+    ...redactedMetadata,
+    tenantIdHash: hashUploadScanWorkerSelector(input.plan.tenantId),
+    fileAssetIdHash: hashUploadScanWorkerSelector(input.plan.fileAssetId),
+    objectKeyHash: hashUploadScanWorkerSelector(input.plan.objectKey),
+    rawTenantIdStored: false,
+    rawFileAssetIdStored: false,
+    rawObjectKeyStored: false,
+  };
 
   const updated = await client.fileAsset.updateMany({
     where: { id: input.plan.fileAssetId, tenantId: input.plan.tenantId },

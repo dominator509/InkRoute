@@ -108,8 +108,9 @@ describe("workspace required checks runtime contract", () => {
     expect(rootPackageJson).toContain('"workspace:all"');
     expect(rootPackageJson).toContain('"quality:required-checks"');
     expect(requiredChecksContract).toContain("workspace:required-checks");
-    expect(requiredChecksContract).toContain("branchProtection");
-    expect(requiredChecksVerifier).toContain("buildWorkspaceRequiredChecksReadinessPlan");
+    expect(requiredChecksContract).toContain("requiredBranchProtectionChecks");
+    expect(requiredChecksVerifier).toContain("workspace-required-checks-contract.json");
+    expect(requiredChecksVerifier).toContain("requiredPrEnforcementTerms");
     expect(workspaceTests).toContain("buildWorkspaceRequiredChecksReadinessPlan");
     expect(qualityRequiredChecksContract).toContain("required-checks");
   });
@@ -179,7 +180,7 @@ describe("workspace required checks runtime contract", () => {
       buildWorkspaceRequiredChecksDecisionRequiredEvidence(workspaceRequiredChecksReadinessRequiredEvidence),
     );
     expect(decision.requiredEvidence).toBe(workspaceRequiredChecksRequiredEvidence);
-    expect(decision.blockers).toContain("pnpm workspace:all must include and pass workspace required checks.");
+    expect(decision.blockers).toContain("Every required workspace checks command must be completed.");
     expect(decision.blockers).toContain("WorkspaceRequiredChecksRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Redacted workspace required-checks evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required workspace checks artifact must be captured.");
@@ -222,7 +223,7 @@ describe("workspace required checks runtime contract", () => {
     expect(gapTracker).toContain(
       "live command, CI, branch-protection, failing-PR merge-block, PR gap-diff merge-block, redacted-log, persisted run, and artifact evidence remain gated",
     );
-    expect(gapTracker).toContain("GAP-133 is workspace-required-checks-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-133 workspace required-checks artifact hardening");
     expect(gapTracker).toContain("buildWorkspaceRequiredChecksExecutionPlan");
     expect(gapTracker).toContain("workspaceRequiredChecksExecutionPolicy");
     expect(gapTracker).toContain("workspaceRequiredChecksReadinessRequiredEvidence");
@@ -312,14 +313,32 @@ describe("workspace required checks runtime contract", () => {
       },
       mergeBlockLog: "blocked owner@example.com with token github_pat_1234567890ABCDEFGHIJKLMNOP",
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
+      workspaceAuditOutput: "workspace audit failed for user_private_123",
+      prGapDiffPayload: { branchName: "feature/private-gap" },
+      failingPrMergeBlockProof: "merge blocked run_private_123",
+      codeownersReviewBody: "review from owner_private_123",
+      rawGitHubPayload: { repository: "private/repo" },
+      neutralWorkspaceTrace: "workspace_audit_01HZYXZYXZYXZYXZYXZYXZYXZ blocked gap_diff_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCheckTrace: "required_check_01HZYXZYXZYXZYXZYXZYXZYXZ failed workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerTrace: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ approved codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "workspace diff stored reports/workspace/private-gap-diff.patch",
     };
 
     expect(buildRedactedWorkspaceRequiredChecksArtifact(artifact)).toEqual({
       runId: "[REDACTED]",
       repositoryUrl: "[REDACTED]",
       branchProtectionSettings: "[REDACTED]",
-      mergeBlockLog: "blocked [REDACTED] with token [REDACTED]",
+      mergeBlockLog: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
+      workspaceAuditOutput: "[REDACTED]",
+      prGapDiffPayload: "[REDACTED]",
+      failingPrMergeBlockProof: "[REDACTED]",
+      codeownersReviewBody: "[REDACTED]",
+      rawGitHubPayload: "[REDACTED]",
+      neutralWorkspaceTrace: "[REDACTED]",
+      neutralCheckTrace: "[REDACTED]",
+      neutralReviewerTrace: "[REDACTED]",
+      neutralArtifactTrace: "[REDACTED]",
     });
 
     const review = buildWorkspaceRequiredChecksArtifactReview(artifact);
@@ -333,8 +352,23 @@ describe("workspace required checks runtime contract", () => {
         "branchProtectionSettings",
         "mergeBlockLog",
         "ciRunUrl",
+        "workspaceAuditOutput",
+        "prGapDiffPayload",
+        "failingPrMergeBlockProof",
+        "codeownersReviewBody",
+        "rawGitHubPayload",
+        "neutralWorkspaceTrace",
+        "neutralCheckTrace",
+        "neutralReviewerTrace",
+        "neutralArtifactTrace",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("workspace_audit_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("gap_diff_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reports/workspace/private-gap-diff.patch");
     expect(review.requiredExternalEvidence).toContain("Required-check evidence logs reviewed as redacted and secret-free.");
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");
     expect(bundle.artifactPath).toBe("coverage/workspace-required-checks-redacted-evidence-bundle.json");

@@ -9,6 +9,7 @@ import {
   type MobileUpdatePlan,
   type ReleaseAuditDraft,
 } from "@inkroute/releases";
+import { createHash } from "node:crypto";
 
 export interface MobileUpdateRuntimeConfig {
   channel: "preview" | "production";
@@ -24,10 +25,12 @@ export interface MobileUpdateRuntimeConfig {
 
 export interface MobileUpdateAdoptionEvent {
   releaseId: string;
-  updateId: string;
+  updateIdHash: string;
+  rawUpdateIdEchoed: false;
   channel: "preview" | "production";
   runtimeVersion: string;
-  deviceId: string;
+  deviceIdHash: string;
+  rawDeviceIdEchoed: false;
   adoptedAt: string;
   status: "received" | "failed" | "rolled_back";
   redactedDetail: string;
@@ -50,9 +53,14 @@ export interface MobileUpdateRolloutDecision {
   failedCount: number;
   rolledBackCount: number;
   failureRate: number;
-  rollbackUpdateId: string | null;
+  rollbackUpdateIdHash: string | null;
+  rawRollbackUpdateIdEchoed: false;
   blockers: readonly string[];
   redactedSummary: string;
+}
+
+function buildMobileUpdateSelectorHash(scope: string, value: string): string {
+  return `${scope}:${createHash("sha256").update(value).digest("hex")}`;
 }
 
 export function evaluateMobileUpdateRollout(input: {
@@ -94,7 +102,8 @@ export function evaluateMobileUpdateRollout(input: {
     failedCount,
     rolledBackCount,
     failureRate,
-    rollbackUpdateId,
+    rollbackUpdateIdHash: rollbackUpdateId ? buildMobileUpdateSelectorHash("mobile-ota-rollback-update", rollbackUpdateId) : null,
+    rawRollbackUpdateIdEchoed: false,
     blockers,
     redactedSummary:
       "Mobile OTA rollout decision uses redacted adoption counts only; no device identifiers, tokens, or provider credentials are stored.",
@@ -148,10 +157,12 @@ export function buildMobileUpdateRuntimeContract(config: MobileUpdateRuntimeConf
 
   const adoptionEvent: MobileUpdateAdoptionEvent = {
     releaseId: `mobile-${config.runtimeVersion}-${config.channel}`,
-    updateId: config.currentUpdateId ?? "update-pending",
+    updateIdHash: buildMobileUpdateSelectorHash("mobile-ota-update", config.currentUpdateId ?? "update-pending"),
+    rawUpdateIdEchoed: false,
     channel: config.channel,
     runtimeVersion: config.runtimeVersion,
-    deviceId: "device-redacted",
+    deviceIdHash: buildMobileUpdateSelectorHash("mobile-ota-device", "device-redacted"),
+    rawDeviceIdEchoed: false,
     adoptedAt: "2026-06-09T00:00:00.000Z",
     status: config.currentUpdateId ? "received" : "failed",
     redactedDetail: config.currentUpdateId ? "Preview update id recorded without device PII." : "No OTA update id is available yet.",
@@ -181,8 +192,10 @@ export function buildMobileUpdateRuntimeContract(config: MobileUpdateRuntimeConf
     redactedPayload: {
       channel: config.channel,
       runtimeVersion: config.runtimeVersion,
-      currentUpdateId: config.currentUpdateId ?? "pending",
-      previousUpdateId: config.previousUpdateId ?? "pending",
+      currentUpdateIdHash: buildMobileUpdateSelectorHash("mobile-ota-current-update", config.currentUpdateId ?? "pending"),
+      previousUpdateIdHash: buildMobileUpdateSelectorHash("mobile-ota-previous-update", config.previousUpdateId ?? "pending"),
+      rawCurrentUpdateIdStored: false,
+      rawPreviousUpdateIdStored: false,
       rollbackRequired: !config.previousUpdateId,
     },
     createdAt: adoptionEvent.adoptedAt,

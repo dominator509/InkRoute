@@ -9,7 +9,7 @@ import {
   type ProviderEventReconciliationPlan,
   buildProviderEventReconciliationPlan,
 } from "@inkroute/notifications";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export type EmailProviderMutationInput = EmailProviderSendPlanInput & {
   providerRequestId: string;
@@ -17,6 +17,8 @@ export type EmailProviderMutationInput = EmailProviderSendPlanInput & {
 
 export interface EmailProviderSendResult {
   providerMessageId: string;
+  providerMessageIdHash?: string;
+  rawProviderMessageIdEchoed?: false;
   redactedPayload: Record<string, unknown>;
 }
 
@@ -306,8 +308,15 @@ export function sanitizeEmailProviderSendResult(result: EmailProviderSendResult 
     return null;
   }
 
+  const providerMessageIdHash =
+    result.rawProviderMessageIdEchoed === false && result.providerMessageIdHash
+      ? result.providerMessageIdHash
+      : createHash("sha256").update(result.providerMessageId).digest("hex");
+
   return {
-    providerMessageId: result.providerMessageId,
+    providerMessageId: "[redacted-provider-message-id]",
+    providerMessageIdHash,
+    rawProviderMessageIdEchoed: false,
     redactedPayload: redactEmailProviderPayloadValue(result.redactedPayload) as Record<string, unknown>,
   };
 }
@@ -317,15 +326,15 @@ export function buildRedactedEmailWebhookPayload(payload: Record<string, unknown
 }
 
 function buildEmailDeliveryKey(input: { readonly tenantId: string; readonly notificationId: string; readonly deliveryId: string }): string {
-  return `${input.tenantId}:${input.notificationId}:${input.deliveryId}`;
+  return `email-delivery:${createHash("sha256").update(JSON.stringify([input.tenantId, input.notificationId, input.deliveryId])).digest("hex")}`;
 }
 
 function buildEmailIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return `email-idempotency:${createHash("sha256").update(JSON.stringify([input.tenantId, input.key])).digest("hex")}`;
 }
 
 function buildSuppressionKey(input: { readonly tenantId: string; readonly destinationHash: string }): string {
-  return `${input.tenantId}:${input.destinationHash}`;
+  return `email-suppression:${createHash("sha256").update(JSON.stringify([input.tenantId, input.destinationHash])).digest("hex")}`;
 }
 
 export function createInMemoryEmailProviderRepository(

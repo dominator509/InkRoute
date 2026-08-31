@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { buildTravelPublishMutationPlan, type TravelPublishMutationAction } from "@inkroute/calendar";
+import {
+  buildTravelPublishMutationPlan,
+  type TravelPublishMutationAction,
+  type TravelPublishMutationPlan,
+} from "@inkroute/calendar";
 import { demoTravelStops } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
 import type { TravelStop } from "@inkroute/types";
@@ -31,6 +35,58 @@ function resultString(value: unknown, key: string): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const result = value as Record<string, unknown>;
   return typeof result[key] === "string" ? result[key] : null;
+}
+
+function buildSafeTravelPublishPlanResponse(plan: TravelPublishMutationPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    requiresTransaction: plan.requiresTransaction,
+    revalidationTagCount: plan.revalidationTags.length,
+    notificationJobCount: plan.notificationJobCount,
+    writeModels: plan.writes.map((write) => write.model),
+    requiredControls: plan.requiredControls,
+    rollbackStepCount: plan.rollbackPlan.length,
+    blockers: plan.blockers,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawIdempotencyKeyEchoed: false,
+    rawStopPayloadEchoed: false,
+    rawPreviousStopPayloadEchoed: false,
+    rawWritePayloadsEchoed: false,
+    rawWaitlistClientIdsEchoed: false,
+    rawRevalidationTagsEchoed: false,
+    rawRollbackReasonEchoed: false,
+    rawActorIdEchoed: false,
+  };
+}
+
+function buildTravelPublishResponseProjection() {
+  return {
+    travelPublishResponseAllowlisted: true,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    travelCityIdEchoed: false,
+    travelScheduleIdEchoed: false,
+    rawPlanPayloadEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeTravelPublishResponse(
+  result: { status: "persisted" | "replayed" },
+  plan: TravelPublishMutationPlan,
+) {
+  return {
+    ok: true,
+    status: result.status === "replayed" ? "database-replayed" : "database-persisted",
+    idempotencyReplay: result.status === "replayed",
+    responseProjection: buildTravelPublishResponseProjection(),
+    plan: buildSafeTravelPublishPlanResponse(plan),
+    readiness: dashboardTravelPublishContract.readiness,
+    gapIds: ["GAP-060"],
+    boundary: "Travel publish persists TravelCity/TravelSchedule plus AuditLog/IdempotencyKey metadata with request-hash replay protection; response receipts do not echo audit IDs, idempotency-key IDs, raw plan payloads, travel city IDs, travel schedule IDs, or other internal persistence IDs, while cache revalidation, notification provider queues, sync transports, rollback provider tests, and dashboard-to-public E2E proof remain evidence-gated.",
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -112,7 +168,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         error: { code: "TRAVEL_PUBLISH_BLOCKED", message: "Travel publish mutation is not safe to execute." },
-        plan,
+        plan: buildSafeTravelPublishPlanResponse(plan),
         readiness: dashboardTravelPublishContract.readiness,
         gapIds: ["GAP-060"],
       },
@@ -125,7 +181,7 @@ export async function POST(request: NextRequest) {
     const endsAt = parseDate(stop.endsAt);
     if (!startsAt || !endsAt || startsAt >= endsAt) {
       return NextResponse.json(
-        { ok: false, error: { code: "INVALID_TRAVEL_WINDOW", message: "Travel publish requires valid startsAt and endsAt instants." }, plan, gapIds: ["GAP-060"] },
+        { ok: false, error: { code: "INVALID_TRAVEL_WINDOW", message: "Travel publish requires valid startsAt and endsAt instants." }, plan: buildSafeTravelPublishPlanResponse(plan), gapIds: ["GAP-060"] },
         { status: 400, headers: noStoreHeaders },
       );
     }
@@ -163,8 +219,10 @@ export async function POST(request: NextRequest) {
             requestHash,
             metadata: {
               action,
-              stopId: stop.id,
-              artistId: stop.artistId,
+              travelStopMatched: true,
+              artistMatched: true,
+              rawRequestHashStored: false,
+              internalPersistenceIdsStored: false,
               citySlug,
               providerEffectsExecuted: false,
               cacheRevalidated: false,
@@ -182,9 +240,10 @@ export async function POST(request: NextRequest) {
           return {
             status: "replayed" as const,
             idempotency,
-            travelScheduleId: resultString(idempotency.result, "travelScheduleId"),
-            travelCityId: resultString(idempotency.result, "travelCityId"),
-            auditId: resultString(idempotency.result, "auditId"),
+            travelCityPersisted: resultString(idempotency.result, "travelCityPersisted") === "true",
+            travelSchedulePersisted: resultString(idempotency.result, "travelSchedulePersisted") === "true",
+            auditLogged: resultString(idempotency.result, "auditLogged") === "true",
+            bookingStatus: resultString(idempotency.result, "bookingStatus"),
           };
         }
 
@@ -240,12 +299,15 @@ export async function POST(request: NextRequest) {
             entityId: schedule.id,
             metadata: {
               source: "dashboard-travel-publish-route",
-              idempotencyKey,
-              idempotencyKeyId: idempotency.id,
-              requestHash,
-              stopId: stop.id,
-              revalidationTags: plan.revalidationTags,
+              idempotencyPersisted: true,
+              requestHashPersisted: true,
+              stopMatched: true,
+              revalidationTagCount: plan.revalidationTags.length,
               notificationJobCount: plan.notificationJobCount,
+              rawIdempotencyKeyStored: false,
+              rawRequestHashStored: false,
+              rawRevalidationTagsStored: false,
+              internalPersistenceIdsStored: false,
               providerEffectsExecuted: false,
               cacheRevalidated: false,
             },
@@ -258,22 +320,32 @@ export async function POST(request: NextRequest) {
           data: {
             status: "completed",
             result: {
-              travelCityId: city.id,
-              travelScheduleId: schedule.id,
-              auditId: audit.id,
-              requestHash,
+              travelCityPersisted: true,
+              travelSchedulePersisted: true,
+              auditLogged: true,
+              requestHashPersisted: true,
+              rawRequestHashStored: false,
+              bookingStatus: schedule.bookingStatus,
               providerEffectsExecuted: false,
               cacheRevalidated: false,
+              internalPersistenceIdsStored: false,
             },
           },
         });
 
-        return { status: "persisted" as const, idempotency, travelCityId: city.id, travelScheduleId: schedule.id, bookingStatus: schedule.bookingStatus, auditId: audit.id };
+        return {
+          status: "persisted" as const,
+          idempotency,
+          travelCityPersisted: Boolean(city.id),
+          travelSchedulePersisted: Boolean(schedule.id),
+          auditLogged: Boolean(audit.id),
+          bookingStatus: schedule.bookingStatus,
+        };
       });
 
       if (result.status === "artist_not_found") {
         return NextResponse.json(
-          { ok: false, error: { code: "RELATED_RECORD_NOT_FOUND", message: "Travel publish artist must exist for this tenant." }, plan, gapIds: ["GAP-060"] },
+          { ok: false, error: { code: "RELATED_RECORD_NOT_FOUND", message: "Travel publish artist must exist for this tenant." }, plan: buildSafeTravelPublishPlanResponse(plan), gapIds: ["GAP-060"] },
           { status: 404, headers: noStoreHeaders },
         );
       }
@@ -282,8 +354,12 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different travel publish payload." },
-            idempotencyKeyId: result.idempotency.id,
-            plan,
+            responseProjection: {
+              travelPublishIdempotencyConflictResponseAllowlisted: true,
+              idempotencyKeyIdEchoed: false,
+              rawIdempotencyKeyEchoed: false,
+            },
+            plan: buildSafeTravelPublishPlanResponse(plan),
             gapIds: ["GAP-060"],
             boundary: "Travel publish idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
           },
@@ -292,25 +368,13 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        {
-          ok: true,
-          status: result.status === "replayed" ? "database-replayed" : "database-persisted",
-          travelCityId: result.travelCityId,
-          travelScheduleId: result.travelScheduleId,
-          auditId: result.auditId,
-          idempotencyKeyId: result.idempotency.id,
-          idempotencyReplay: result.status === "replayed",
-          plan,
-          readiness: dashboardTravelPublishContract.readiness,
-          gapIds: ["GAP-060"],
-          boundary: "Travel publish now persists TravelCity/TravelSchedule plus AuditLog/IdempotencyKey metadata with request-hash replay protection; cache revalidation, notification provider queues, sync transports, rollback provider tests, and dashboard-to-public E2E proof remain evidence-gated.",
-        },
+        buildSafeTravelPublishResponse(result, plan),
         { status: result.status === "replayed" ? 200 : 201, headers: noStoreHeaders },
       );
     } catch (error) {
       if (process.env.NODE_ENV === "production" || !isDatabaseUnavailable(error)) {
         return NextResponse.json(
-          { ok: false, error: { code: "TRAVEL_PUBLISH_PERSISTENCE_FAILED", message: "Travel publish mutation could not be persisted." }, plan, gapIds: ["GAP-060"] },
+          { ok: false, error: { code: "TRAVEL_PUBLISH_PERSISTENCE_FAILED", message: "Travel publish mutation could not be persisted." }, plan: buildSafeTravelPublishPlanResponse(plan), gapIds: ["GAP-060"] },
           { status: 500, headers: noStoreHeaders },
         );
       }
@@ -322,7 +386,7 @@ export async function POST(request: NextRequest) {
       ok: false,
       status: "repository-required",
       message: "Travel publish plan is valid, but durable repository, revalidation, sync, and notification transports must execute after commit.",
-      plan,
+      plan: buildSafeTravelPublishPlanResponse(plan),
       readiness: dashboardTravelPublishContract.readiness,
       gapIds: ["GAP-060"],
     },

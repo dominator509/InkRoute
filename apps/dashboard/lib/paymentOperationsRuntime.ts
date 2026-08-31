@@ -315,7 +315,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitivePaymentOperationsArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|stripe|refund|dispute|receipt|export|accounting|tax|audit|payment|deposit|idempotency|email|phone|medical|card|customer)/i;
+const sensitivePaymentOperationsArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|stripe|refund|dispute|receipt|export|accounting|tax|audit|payment|deposit|idempotency|email|phone|medical|card|customer|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitivePaymentOperationsArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token|stripe|re_)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|stripe|refund|dispute|receipt|export|accounting|tax|audit|payment|deposit|idempotency|provider|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactPaymentOperationsArtifactValue = (
   value: unknown,
@@ -339,6 +341,13 @@ const redactPaymentOperationsArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitivePaymentOperationsArtifactValue.test(value)) {
+    sensitivePaymentOperationsArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitivePaymentOperationsArtifactValue, "[REDACTED]");
+  }
+
+  sensitivePaymentOperationsArtifactValue.lastIndex = 0;
   return value;
 };
 

@@ -6,6 +6,7 @@ import {
 } from "@inkroute/booking";
 import { prisma } from "@inkroute/db";
 import type { BookingStatus } from "@inkroute/types";
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../../../dashboardAuth";
 
@@ -14,6 +15,14 @@ interface BookingStateRouteContext {
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function selectorHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function buildBookingStateIdempotencyKey(parts: readonly string[]): string {
+  return `booking-state:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
 
 const allowedActions = new Set<BookingLifecycleAction>([
   "request_more_info",
@@ -49,6 +58,118 @@ function normalizeIdempotencyKey(value: unknown): string | undefined {
 
 function toJsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function replayResultString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return typeof value === "string" ? value : null;
+}
+
+function summarizeBookingStateReplayResult(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      replayResultShape: "unavailable",
+      rawResultEchoed: false,
+      redactedFields: ["result.rawPayload", "result.note", "result.metadata"],
+    };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    replayResultShape: "booking-state-summary",
+    action: replayResultString(record, "action"),
+    fromStatus: replayResultString(record, "fromStatus"),
+    toStatus: replayResultString(record, "toStatus"),
+    bookingStateEventPersisted: record.bookingStateEventPersisted === true,
+    auditLogged: record.auditLogged === true,
+    internalPersistenceIdsStored: record.internalPersistenceIdsStored === false ? false : null,
+    rawResultEchoed: false,
+    redactedFields: ["result.rawPayload", "result.note", "result.metadata", "result.eventId", "result.auditId"],
+  };
+}
+
+function buildSafeBookingTransitionPlanResponse(plan: ReturnType<typeof createBookingTransitionPlan>) {
+  return {
+    status: plan.status,
+    canCommit: plan.canCommit,
+    reason: plan.reason,
+    transitionPresent: Boolean(plan.transition),
+    requiresAtomicTransaction: plan.requiresAtomicTransaction,
+    writeModelCount: plan.writes.length,
+    writeModels: plan.writes.map((write) => write.model),
+    rawTransitionEchoed: false,
+    rawWritePayloadsEchoed: false,
+    rawTenantIdEchoed: false,
+    rawBookingRequestIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeDashboardMutationPlanResponse(plan: ReturnType<typeof buildDashboardMutationPlan>) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    providerBoundary: plan.providerBoundary,
+    requiresAudit: plan.requiresAudit,
+    requiresIdempotency: plan.requiresIdempotency,
+    canCommit: plan.canCommit,
+    writeModels: plan.writes,
+    auditAction: plan.auditAction,
+    blockers: plan.blockers,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawTenantIdEchoed: false,
+    rawActorIdEchoed: false,
+    rawBookingRequestIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawDashboardMutationPlanEchoed: false,
+  };
+}
+
+function toIsoString(value: { toISOString: () => string } | null | undefined): string | null {
+  return value ? value.toISOString() : null;
+}
+
+function buildSafeBookingLifecycleReceipt(booking: { status: string; updatedAt: Date }) {
+  return {
+    bookingUpdated: true,
+    status: booking.status,
+    updatedAt: toIsoString(booking.updatedAt),
+    bookingRequestIdEchoed: false,
+  };
+}
+
+function buildBookingLifecycleResponseProjection() {
+  return {
+    bookingLifecycleResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    eventIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyResultEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeBookingStateEventReceipt(event: { type: string; createdAt: Date }) {
+  return {
+    bookingStateEventPersisted: true,
+    type: event.type,
+    createdAt: toIsoString(event.createdAt),
+    eventIdEchoed: false,
+  };
+}
+
+function buildSafeBookingTransitionReceipt(plan: ReturnType<typeof createBookingTransitionPlan>) {
+  return {
+    transitionApplied: Boolean(plan.transition),
+    fromStatus: plan.transition?.from ?? null,
+    toStatus: plan.transition?.to ?? null,
+    eventType: plan.transition?.eventType ?? null,
+    rawTransitionEchoed: false,
+  };
 }
 
 function toDashboardMutationAction(action: BookingLifecycleAction): DashboardMutationAction {
@@ -109,14 +230,14 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          bookingId,
           action,
           error: {
             code: "PROVIDER_BOOKING_STATE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production booking lifecycle mutations require DB-backed actor resolution plus BookingStateEvent and AuditLog persistence; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-038"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildBookingLifecycleResponseProjection(),
           productionBoundary: { localBookingStateMutationFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -127,13 +248,13 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
       {
         ok: false,
         source: actor.source,
-        tenantId,
-        bookingId,
         action,
         error: {
           code: "DATABASE_REQUIRED",
           message: "Booking lifecycle mutations require database-backed dashboard auth so BookingStateEvent and AuditLog rows can be persisted.",
         },
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildBookingLifecycleResponseProjection(),
         gapIds: ["GAP-007", "GAP-037"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -141,7 +262,7 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
   }
 
   try {
-    const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey) ?? `booking-state:${tenantId}:${bookingId}:${action}`;
+    const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey) ?? buildBookingStateIdempotencyKey([tenantId, bookingId, action]);
     const result = await prisma.$transaction(async (tx) => {
       const booking = await tx.bookingRequest.findFirst({
         where: { id: bookingId, tenantId },
@@ -197,7 +318,8 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
           status: "claimed",
           metadata: toJsonValue({
             route: "/api/bookings/[bookingId]/state",
-            bookingId,
+            bookingIdHash: selectorHash(bookingId),
+            rawBookingIdStored: false,
             action,
             fromStatus: booking.status,
             actorRole: actor.role,
@@ -207,7 +329,8 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         update: {
           metadata: toJsonValue({
             route: "/api/bookings/[bookingId]/state",
-            bookingId,
+            bookingIdHash: selectorHash(bookingId),
+            rawBookingIdStored: false,
             action,
             fromStatus: booking.status,
             actorRole: actor.role,
@@ -241,8 +364,9 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
             action,
             actorRole: actor.role,
             dashboardMutationPlan,
-            idempotencyKey,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true, type: true, createdAt: true },
@@ -259,12 +383,13 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
             source: "dashboard-api",
             fromStatus: booking.status,
             toStatus: plan.transition.to,
-            eventId: event.id,
+            bookingStateEventPersisted: true,
             actorRole: actor.role,
             dashboardMutationAuditAction: dashboardMutationPlan.auditAction,
             dashboardMutationProviderBoundary: dashboardMutationPlan.providerBoundary,
-            idempotencyKey,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             assignedToUserChanged: typeof input.assignedToUserId === "string" && input.assignedToUserId.trim() !== booking.assignedToUserId,
           },
         },
@@ -276,13 +401,13 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         data: {
           status: "completed",
           result: toJsonValue({
-            bookingId: booking.id,
             action,
             fromStatus: booking.status,
             toStatus: plan.transition.to,
-            eventId: event.id,
-            auditId: audit.id,
+            bookingStateEventPersisted: true,
+            auditLogged: true,
             rawPayloadStored: false,
+            internalPersistenceIdsStored: false,
           }),
         },
         select: { id: true },
@@ -297,7 +422,7 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
 
     if (result.status === "invalid_transition") {
       return NextResponse.json(
-        { ok: false, error: { code: "INVALID_TRANSITION", message: result.plan.reason }, plan: result.plan },
+        { ok: false, error: { code: "INVALID_TRANSITION", message: result.plan.reason }, plan: buildSafeBookingTransitionPlanResponse(result.plan) },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -307,13 +432,15 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         {
           ok: true,
           source: actor.source,
-          tenantId,
-          bookingId,
           replayed: true,
-          idempotencyKeyId: result.idempotency.id,
-          result: result.idempotency.result,
+          idempotencyRecorded: true,
+          idempotencyKeyIdEchoed: false,
+          replayResult: summarizeBookingStateReplayResult(result.idempotency.result),
+          tenantScope: { actorTenantMatched: true, bookingTenantMatched: true },
+          responseProjection: buildBookingLifecycleResponseProjection(),
+          internalPersistenceIdsEchoed: false,
           gapIds: ["GAP-007", "GAP-037", "GAP-038"],
-          boundary: "Booking lifecycle mutation replay returned the previously persisted idempotency result without duplicating BookingStateEvent or AuditLog rows.",
+          boundary: "Booking lifecycle mutation replay returned an allowlisted idempotency summary without duplicating BookingStateEvent or AuditLog rows.",
         },
         { headers: noStoreHeaders },
       );
@@ -323,13 +450,17 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        booking: result.booking,
-        event: result.event,
-        auditId: result.audit.id,
-        idempotencyKeyId: result.idempotency.id,
-        dashboardMutationPlan: result.dashboardMutationPlan,
-        transition: result.plan.transition,
+        booking: buildSafeBookingLifecycleReceipt(result.booking),
+        event: buildSafeBookingStateEventReceipt(result.event),
+        auditLogged: true,
+        idempotencyRecorded: true,
+        auditIdEchoed: false,
+        idempotencyKeyIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+        dashboardMutationPlan: buildSafeDashboardMutationPlanResponse(result.dashboardMutationPlan),
+        transition: buildSafeBookingTransitionReceipt(result.plan),
+        tenantScope: { actorTenantMatched: true, bookingTenantMatched: true },
+        responseProjection: buildBookingLifecycleResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-038"],
         boundary: "Booking lifecycle mutation persisted in one tenant-scoped transaction with IdempotencyKey, BookingStateEvent, and AuditLog rows.",
       },
@@ -341,10 +472,10 @@ export async function POST(request: NextRequest, context: BookingStateRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          bookingId,
           action,
           error: { code: "DATABASE_UNAVAILABLE", message: "Booking state mutation requires the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildBookingLifecycleResponseProjection(),
           gapIds: ["GAP-007", "GAP-037"],
         },
         { status: 503, headers: noStoreHeaders },

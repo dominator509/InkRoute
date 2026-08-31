@@ -9,6 +9,7 @@ import {
   type SentrySdkConfigurationPlan,
 } from "@inkroute/observability";
 import { inkrouteDemoTenant } from "@inkroute/config";
+import { createHash } from "node:crypto";
 
 export interface MobileCrashCaptureContext {
   tenantId: string;
@@ -64,6 +65,10 @@ function redactMobileCrashCaptureError(error: unknown): string {
   return "External mobile crash capture failed; provider response, payload, and credentials redacted.";
 }
 
+function buildMobileCrashSelectorHash(scope: string, value: string): string {
+  return `${scope}:${createHash("sha256").update(value).digest("hex")}`;
+}
+
 export function buildMobileCrashReportDraft(
   error: Error,
   context: MobileCrashCaptureContext,
@@ -81,7 +86,8 @@ export function buildMobileCrashReportDraft(
     release: context.release,
     metadata: {
       ...metadata,
-      requestId: context.requestId,
+      requestIdHash: buildMobileCrashSelectorHash("mobile-crash-request", context.requestId),
+      rawRequestIdStored: false,
       easChannel: context.easChannel ?? "unknown",
       runtimeVersion: context.runtimeVersion ?? "unknown",
     },
@@ -146,7 +152,8 @@ export function buildMobileCrashErrorReportPayload(report: ObservabilityReportDr
     metadata: {
       ...report.redactedMetadata,
       mobileCrashFallback: true,
-      reportId: report.id,
+      reportPrepared: true,
+      rawReportIdEchoed: false,
       stackHash: report.stackHash,
       fingerprint: report.fingerprint,
       redactionLevel: report.redactionLevel,
@@ -182,7 +189,7 @@ export function createMobileCrashErrorReportIngestAdapter(
         method: "POST",
         headers: {
           "content-type": "application/json",
-          "x-request-id": report.id,
+          "x-request-id": buildMobileCrashSelectorHash("mobile-crash-ingest", report.id),
           "x-inkroute-error-honeypot": "",
           ...(options.botProtectionToken ? { "x-inkroute-bot-token": options.botProtectionToken } : {}),
         },

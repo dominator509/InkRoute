@@ -118,8 +118,12 @@ describe("dashboard timezone recurrence QA contract", () => {
     expect(routeSource).toContain("TIMEZONE_RECURRENCE_RUNTIME_EVIDENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("diagnosticTimezoneQaDisabled");
     expect(routeSource).toContain("requiresProviderRenderEvidence");
+    expect(routeSource).toContain("buildTimezoneQaResponseProjection");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
+    expect(routeSource).not.toContain("tenantId,");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 });

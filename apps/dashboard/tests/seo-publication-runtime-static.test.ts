@@ -26,6 +26,7 @@ describe("SEO publication runtime contract", () => {
   const seoSource = readRepoFile("packages/seo/src/index.ts");
   const seoPage = readRepoFile("apps/dashboard/app/seo/page.tsx");
   const seoPublicationActionPanel = readRepoFile("apps/dashboard/components/SeoPublicationActionPanel.tsx");
+  const runtimeSource = readRepoFile("apps/dashboard/lib/seoPublicationRuntime.ts");
   const routeSource = readRepoFile("apps/dashboard/app/api/seo/route.ts");
   const staticTest = readRepoFile("apps/dashboard/tests/seo-publication-route-static.test.ts");
   const readStaticTest = readRepoFile("apps/dashboard/tests/seo-read-route-static.test.ts");
@@ -65,6 +66,12 @@ describe("SEO publication runtime contract", () => {
     ]);
     expect(seoPublicationArtifactPaths).toContain("coverage/seo-publication-runtime.json");
     expect(seoPublicationArtifactPaths).toContain("test-results/seo-publication-runtime");
+  });
+
+  it("keeps SEO publication runtime metadata raw-idempotency-key-free", () => {
+    expect(runtimeSource).toContain("idempotencyPersisted: true");
+    expect(runtimeSource).toContain("rawIdempotencyKeyStored: false");
+    expect(runtimeSource).not.toContain("idempotencyKey: input.idempotencyKey,");
   });
 
   it("keeps package planner, dashboard route transaction, read/static guards, and publication boundary wired", () => {
@@ -185,6 +192,12 @@ describe("SEO publication runtime contract", () => {
       artifacts: [
         {
           path: "coverage/seo-publication-dashboard-publish-flow-redacted.json",
+          tenantId: "tenant_private",
+          actorId: "user_private",
+          entityId: "seo_city_private",
+          relatedId: "review_private",
+          idempotencyKey: "seo:publish:private",
+          revalidationTags: ["seo:private-city"],
           searchConsolePayload: { authorization: "Bearer searchconsole-token", email: "ari@example.test" },
           draftCopy: "Client phone +1 206 555 0142 and private launch notes",
           nested: [{ providerPayload: { token: "provider-secret" } }],
@@ -194,6 +207,12 @@ describe("SEO publication runtime contract", () => {
 
     expect(review.status).toBe("passed");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("searchconsole-token");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("tenant_private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("user_private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("seo_city_private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("review_private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("seo:publish:private");
+    expect(JSON.stringify(review.redactedArtifacts)).not.toContain("seo:private-city");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("ari@example.test");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("206 555 0142");
     expect(JSON.stringify(review.redactedArtifacts)).not.toContain("provider-secret");

@@ -1,9 +1,53 @@
-import { buildDeliveryPlan } from "@inkroute/notifications";
+import { buildDeliveryPlan, type NotificationDeliveryPlan } from "@inkroute/notifications";
 import { notificationPreviewInputSchema } from "@inkroute/validators";
 import { NextRequest, NextResponse } from "next/server";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function buildSafeNotificationPreviewPlanResponse(plan: NotificationDeliveryPlan) {
+  return {
+    template: {
+      key: plan.template.key,
+      purpose: plan.template.purpose,
+      defaultChannels: plan.template.defaultChannels,
+      containsSensitiveContent: plan.template.containsSensitiveContent,
+      requiresHumanReview: plan.template.requiresHumanReview,
+      renderedSubjectEchoed: false,
+      renderedBodyEchoed: false,
+      renderedSmsBodyEchoed: false,
+      renderedPushTitleEchoed: false,
+      renderedPushBodyEchoed: false,
+      complianceFooterEchoed: false,
+    },
+    audience: plan.audience,
+    purpose: plan.purpose,
+    candidateSummaries: plan.candidates.map((candidate) => ({
+      channel: candidate.channel,
+      provider: candidate.provider,
+      status: candidate.status,
+      reason: candidate.reason,
+      destinationMaskedEchoed: false,
+    })),
+    chosenChannels: plan.chosenChannels,
+    blockedChannelSummaries: plan.blockedChannels.map((candidate) => ({
+      channel: candidate.channel,
+      provider: candidate.provider,
+      status: candidate.status,
+      reason: candidate.reason,
+      destinationMaskedEchoed: false,
+    })),
+    requiresProviderCredential: plan.requiresProviderCredential,
+    requiresAuditLog: plan.requiresAuditLog,
+    complianceNoteCount: plan.complianceNotes.length,
+    complianceNotesEchoed: false,
+    rawTemplateContextEchoed: false,
+    rawDestinationEchoed: false,
+    rawProviderPayloadEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
 export async function POST(request: NextRequest) {
   let actor;
@@ -71,9 +115,8 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       source: actor.source,
-      tenantId,
       persistence: "none",
-      plan,
+      plan: buildSafeNotificationPreviewPlanResponse(plan),
       gapIds: ["GAP-010", "GAP-038", "GAP-065", "GAP-069"],
       boundary: "Notification preview computes template and consent-aware delivery candidates only; provider dispatch, durable queue processing, and sandbox/device proof remain evidence-gated.",
     },

@@ -1,4 +1,4 @@
-import { buildAgentExecutionLedgerReadinessPlan } from "@inkroute/handoff";
+import { agentExecutionLedgerRequiredCommands, buildAgentExecutionLedgerReadinessPlan } from "@inkroute/handoff";
 import type { AgentTarget } from "@inkroute/handoff";
 
 export type AgentExecutionLedgerRuntimeStatus =
@@ -103,21 +103,7 @@ export const agentExecutionLedgerRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json",
 ] as const;
 
-export const agentExecutionLedgerRuntimeCommands = [
-  "pnpm handoff:verify-ledger",
-  "pnpm handoff:audit",
-  "pnpm handoff:verify-docs",
-  "pnpm handoff:next",
-  "agent task command plans from docs/handoff/manifests/agent-execution-queue.json",
-  "capture redacted agent command transcripts",
-  "record agent changed-files matrix",
-  "capture provider evidence labels",
-  "record remaining gaps and risks",
-  "complete agent execution secret-safety review",
-  "update GAP_TRACKER rows with execution evidence",
-  "external Codex/Jules/Claude/local execution result import",
-  "capture CI agent execution ledger artifacts",
-] as const;
+export const agentExecutionLedgerRuntimeCommands = agentExecutionLedgerRequiredCommands;
 
 export const agentExecutionLedgerRuntimeLocalCommands = [
   "pnpm handoff:verify-ledger",
@@ -252,7 +238,7 @@ export interface AgentExecutionLedgerRuntimeArtifactReview {
 }
 
 const sensitiveAgentExecutionKeyPattern =
-  /(token|secret|password|authorization|cookie|env|provider|projectId|resourceId|transcript|command|stdout|stderr|diff|patch|evidence|artifactUrl|ciRunUrl|tenantId|userId|runId|email|phone|apiKey)/i;
+  /(token|secret|password|authorization|cookie|env|provider|projectId|resourceId|transcript|command|stdout|stderr|diff|patch|evidence|artifact|artifactUrl|ci|ciRun|ciRunUrl|tenantId|userId|runId|email|phone|apiKey|changedFiles|fileMatrix|remainingGap|gapTracker|trackerUpdate|secretSafety|externalResult|import|queue|ledger|parity|handoff|actor|reviewer|repository|branch|pr|pullrequest|codeowner|metadata|raw|request|response|log|output|path|url|uri|database|dsn|stack|error|neutralAgentTrace)/i;
 
 const sensitiveAgentExecutionStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -260,7 +246,9 @@ const sensitiveAgentExecutionStringPatterns: readonly [RegExp, string][] = [
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
   [/\b(?:sk|pk|rk|ghp|gho|ghu|ghs|whsec)_[A-Za-z0-9_]+\b/g, "[REDACTED_PROVIDER_TOKEN]"],
-  [/\b(?:tenant|user|project|provider|artifact|run|task)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/postgres(?:ql)?:\/\/[^\s"'<>]+/gi, "[REDACTED_DSN]"],
+  [/\b(?:tenant|user|actor|agent|task|project|provider|artifact|run|result|queue|ledger|gap|handoff|workflow|ci|commit|repository|branch|pr|pullrequest|reviewer|codeowner|changed|file|transcript|diff|patch|import|evidence)_[A-Za-z0-9_.-]+\b/gi, "[REDACTED_ID]"],
+  [/\b(?:coverage|artifacts|test-results|reports|diffs|docs)\/[A-Za-z0-9_./-]{6,}\b/gi, "[REDACTED_ARTIFACT_PATH]"],
 ];
 
 export function buildAgentExecutionLedgerRuntimeEvidenceDecision(
@@ -530,7 +518,8 @@ export const agentExecutionLedgerRunPersistenceContract: AgentExecutionLedgerRun
   ],
 };
 
-export const agentExecutionLedgerRuntimeReadiness = buildAgentExecutionLedgerReadinessPlan({
+export const agentExecutionLedgerRuntimeReadiness = {
+  ...buildAgentExecutionLedgerReadinessPlan({
   queueTasks: agentExecutionLedgerTaskIds.map((id, index) => {
     const target = agentExecutionLedgerTargets[index] ?? "Local terminal";
     return {
@@ -563,5 +552,7 @@ export const agentExecutionLedgerRuntimeReadiness = buildAgentExecutionLedgerRea
   handoffAuditPassed: false,
   gapTrackerUpdated: false,
   externalAgentResultsImported: false,
-});
+  }),
+  requiredEvidence: agentExecutionLedgerRuntimeArtifactPaths,
+} as const;
 

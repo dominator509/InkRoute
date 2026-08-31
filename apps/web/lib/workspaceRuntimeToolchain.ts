@@ -1,5 +1,6 @@
-﻿import {
+import {
   buildWorkspaceRuntimeToolchainReadinessPlan,
+  workspaceRuntimeToolchainRequiredCommands,
   workspaceRuntimeToolchainRequiredEvidence as workspaceRuntimeToolchainPackageRequiredEvidence,
 } from "@inkroute/workspace";
 
@@ -91,17 +92,7 @@ export const workspaceRuntimeToolchainRunPersistenceContract: WorkspaceRuntimeTo
   ],
 };
 
-export const workspaceRuntimeToolchainCommands = [
-  "pnpm --filter @inkroute/workspace typecheck",
-  "pnpm --filter @inkroute/workspace test",
-  "pnpm workspace:toolchain",
-  "pnpm workspace:all",
-  "pnpm install",
-  "pnpm --filter @inkroute/web build",
-  "pnpm --filter @inkroute/dashboard build",
-  "GitHub Actions Phase 18 workspace runtime readiness job",
-  "runtime readiness report keeps production blockers visible",
-] as const;
+export const workspaceRuntimeToolchainCommands = workspaceRuntimeToolchainRequiredCommands;
 
 export const workspaceRuntimeToolchainGeneratedReports = [
   "docs/workspace/manifests/workspace-import-audit.json",
@@ -444,9 +435,9 @@ export function buildWorkspaceRuntimeToolchainEvidenceDecision(
 }
 
 const sensitiveWorkspaceToolchainKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|workspace|repository|branch)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|workspace|repository|branch|pr|pullrequest|reviewer|codeowner|raw|payload|body|stack|error|log|output|transcript|command|install|build|toolchain|package|script|audit|runtime|readiness|blocker|production|artifact|path|ci|commit|run|quality|typecheck|test|manifest)/iu;
 const sensitiveWorkspaceToolchainValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|\b(?:workspace|toolchain|package|script|audit|runtime|readiness|blocker|production|artifact|manifest|typecheck|quality|test|build|ci|workflow|commit|run|repository|branch|pr|pullrequest|reviewer|codeowner|tenant|user|account)_[A-Za-z0-9_.-]+\b|\b(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}\b|[A-Za-z0-9_-]{24,})/giu;
 
 const redactWorkspaceToolchainString = (value: string): string =>
   value.replace(sensitiveWorkspaceToolchainValuePattern, "[REDACTED]");

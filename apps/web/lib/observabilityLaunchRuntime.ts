@@ -1,4 +1,4 @@
-﻿import { buildObservabilityLaunchEvidencePlan } from "@inkroute/observability";
+import { buildObservabilityLaunchEvidencePlan, observabilityLaunchRequiredEvidence } from "@inkroute/observability";
 
 export type ObservabilityLaunchRuntimeStatus =
   | "wired"
@@ -412,9 +412,9 @@ export interface ObservabilityLaunchArtifactReview {
 }
 
 const sensitiveObservabilityLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|ip|sentry|dsn|otel|trace|span|stack|payload|provider|tenant|user|client|error|event|issue|release|database|url|uri|key|id)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|ip|sentry|dsn|otel|trace|span|stack|payload|provider|tenant|user|client|error|event|issue|release|database|url|uri|repository|repo|branch|pull|pr|reviewer|codeowner|key|id)/iu;
 const sensitiveObservabilityLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\b(?:\d{1,3}\.){3}\d{1,3}\b|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\b(?:\d{1,3}\.){3}\d{1,3}\b|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 export const observabilityLaunchExecutionPolicy = {
   codexMayClassifyStaticObservabilityLaunchReadiness: true,
@@ -694,7 +694,7 @@ export const buildObservabilityLaunchEvidenceDecision = (
   };
 };
 
-export const observabilityLaunchRuntimeReadiness = buildObservabilityLaunchEvidencePlan({
+const observabilityLaunchPackageReadiness = buildObservabilityLaunchEvidencePlan({
   packageScripts: ["typecheck", "test"],
   observabilityTypecheckPassed: false,
   observabilityTestsPassed: false,
@@ -722,5 +722,12 @@ export const observabilityLaunchRuntimeReadiness = buildObservabilityLaunchEvide
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const observabilityLaunchRuntimeReadiness = {
+  ...observabilityLaunchPackageReadiness,
+  requiredCommands: observabilityLaunchRuntimeCommands,
+  requiredControls: observabilityLaunchRuntimeControls,
+  requiredEvidence: observabilityLaunchRequiredEvidence,
+};
 
 

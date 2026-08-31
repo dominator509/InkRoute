@@ -7,6 +7,7 @@ import {
   createInMemoryGoogleCalendarSyncRepository,
   dashboardGoogleCalendarSyncContract,
   executeGoogleCalendarSyncMutation,
+  storeEncryptedGoogleCalendarProviderToken,
   sanitizeGoogleCalendarProviderResult,
 } from "../lib/googleCalendarSync";
 
@@ -43,6 +44,7 @@ describe("dashboard Google Calendar sync contract", () => {
       nextSyncToken: "sync_token_redacted_reference",
       redactedPayload: {
         visibleStatus: "busy",
+        id: "google_event_123",
         accessToken: "ya29.secret",
         nested: {
           refreshToken: "refresh_secret",
@@ -53,24 +55,48 @@ describe("dashboard Google Calendar sync contract", () => {
 
     expect(result?.redactedPayload).toEqual({
       visibleStatus: "busy",
+      id: {
+        redacted: "[redacted-google-provider-identifier]",
+        hash: expect.any(String),
+        rawProviderIdentifierEchoed: false,
+      },
       accessToken: "[redacted]",
       nested: {
         refreshToken: "[redacted]",
         attendees: [{ attendeeEmail: "[redacted]" }],
       },
     });
+    expect(result?.providerReference).toBe("[redacted-google-provider-reference]");
+    expect(result?.providerReferenceHash).toEqual(expect.any(String));
+    expect(result?.rawProviderReferenceEchoed).toBe(false);
+    expect(result?.nextSyncToken).toBe("[redacted-google-sync-token]");
+    expect(result?.nextSyncTokenHash).toEqual(expect.any(String));
+    expect(result?.rawNextSyncTokenEchoed).toBe(false);
     expect(JSON.stringify(result)).not.toContain("ya29.secret");
     expect(JSON.stringify(result)).not.toContain("refresh_secret");
     expect(JSON.stringify(result)).not.toContain("client@example.com");
+    expect(JSON.stringify(result)).not.toContain("calendar_primary");
+    expect(JSON.stringify(result)).not.toContain("sync_token_redacted_reference");
+    expect(JSON.stringify(result)).not.toContain("google_event_123");
   });
 
   it("executes a local Google sync repository contract for connection scope, idempotency, redaction, and transaction capture", async () => {
     const repository = createInMemoryGoogleCalendarSyncRepository();
     repository.state.authorizedConnectionKeys.add("tenant_demo:artist_demo:primary:freebusy_check");
-    repository.state.encryptedConnections.set("tenant_demo:artist_demo:primary", {
-      refreshTokenEncrypted: true,
-      requiredScopesGranted: true,
+    const encryptedToken = storeEncryptedGoogleCalendarProviderToken(repository.state, {
+      tenantId: "tenant_demo",
+      artistId: "artist_demo",
+      calendarId: "primary",
+      refreshToken: "refresh_secret",
+      keyId: "local-key-v1",
+      createdAt: "2026-06-09T12:00:00.000Z",
     });
+
+    expect(encryptedToken.tokenCiphertext).toContain("enc:google-calendar");
+    expect(encryptedToken.tokenDigest).toEqual(expect.any(String));
+    expect(encryptedToken.rawRefreshTokenStored).toBe(false);
+    expect(encryptedToken.rawRefreshTokenEchoed).toBe(false);
+    expect(JSON.stringify(repository.state.encryptedTokenRecords)).not.toContain("refresh_secret");
 
     const input = {
       tenantId: "tenant_demo",
@@ -109,8 +135,12 @@ describe("dashboard Google Calendar sync contract", () => {
     expect(first.status).toBe("ready");
     expect(duplicate.status).toBe("duplicate");
     expect(repository.state.transactions).toHaveLength(1);
+    expect(repository.state.transactions[0].providerResult?.providerReference).toBe("[redacted-google-provider-reference]");
+    expect(repository.state.transactions[0].providerResult?.rawProviderReferenceEchoed).toBe(false);
     expect(JSON.stringify(repository.state.transactions[0].providerResult)).not.toContain("ya29.secret");
+    expect(JSON.stringify(repository.state.transactions[0].providerResult)).not.toContain("refresh_secret");
     expect(JSON.stringify(repository.state.transactions[0].providerResult)).not.toContain("client@example.com");
+    expect(JSON.stringify(repository.state.transactions[0].providerResult)).not.toContain("calendar_primary");
 
     await expect(
       executeGoogleCalendarSyncMutation(
@@ -143,6 +173,14 @@ describe("dashboard Google Calendar sync contract", () => {
     expect(routeSource).toContain("calendar:write");
     expect(routeSource).toContain("GOOGLE_CALENDAR_SYNC_BLOCKED");
     expect(routeSource).toContain("provider-worker-required");
+    expect(routeSource).toContain("plan: buildSafeGoogleCalendarSyncPlanResponse(plan)");
+    expect(routeSource).toContain("writePayloadsEchoed: false");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("providerEventIdEchoed: false");
+    expect(routeSource).toContain("syncTokenEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
     expect(routeSource).toContain("{ status: 202, headers: noStoreHeaders }");
     expect(routeSource).not.toContain("{ status: 501, headers: noStoreHeaders }");
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');

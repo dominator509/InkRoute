@@ -549,7 +549,7 @@ export const providerStorageUploadRuntimeMatrix = [
   },
 ] as const satisfies readonly ProviderStorageUploadRuntimeMatrixEntry[];
 
-export const providerStorageUploadRuntimeReadiness = buildProviderStorageUploadReadinessPlan({
+const providerStorageUploadPackageReadiness = buildProviderStorageUploadReadinessPlan({
   packageScripts: ["typecheck", "test"],
   securityTestsPassed: false,
   securityTypecheckPassed: false,
@@ -580,24 +580,36 @@ export const providerStorageUploadRuntimeReadiness = buildProviderStorageUploadR
 });
 
 export function buildProviderStorageUploadDecisionRequiredEvidence(
-  readinessEvidence: typeof providerStorageUploadRuntimeReadiness.requiredEvidence,
+  readinessEvidence:
+    | typeof providerStorageUploadPackageReadiness.requiredEvidence
+    | ProviderStorageUploadRequiredEvidence,
 ): ProviderStorageUploadRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "ProviderStorageUploadRun row with command, readiness area, artifact, provider configuration, bucket policy, and scan/derivative matrices.",
-    "Artifact bundle proving provider config, private bucket ACL, derivative policy, signed URLs, transactional persistence, scan/derivative worker, private-original denial, tenant isolation, retention, CI evidence, and secret-safe artifacts.",
-  ];
+  const persistenceEvidence = "ProviderStorageUploadRun row with command, readiness area, artifact, provider configuration, bucket policy, and scan/derivative matrices." as const;
+  const artifactEvidence = "Artifact bundle proving provider config, private bucket ACL, derivative policy, signed URLs, transactional persistence, scan/derivative worker, private-original denial, tenant isolation, retention, CI evidence, and secret-safe artifacts." as const;
+  const evidence = readinessEvidence as readonly string[];
+
+  if (evidence.includes(persistenceEvidence) && evidence.includes(artifactEvidence)) {
+    return readinessEvidence as ProviderStorageUploadRequiredEvidence;
+  }
+
+  return [...readinessEvidence, persistenceEvidence, artifactEvidence] as ProviderStorageUploadRequiredEvidence;
 }
 
 export type ProviderStorageUploadRequiredEvidence = readonly [
-  ...typeof providerStorageUploadRuntimeReadiness.requiredEvidence,
+  ...typeof providerStorageUploadPackageReadiness.requiredEvidence,
   "ProviderStorageUploadRun row with command, readiness area, artifact, provider configuration, bucket policy, and scan/derivative matrices.",
   "Artifact bundle proving provider config, private bucket ACL, derivative policy, signed URLs, transactional persistence, scan/derivative worker, private-original denial, tenant isolation, retention, CI evidence, and secret-safe artifacts.",
 ];
 
 export const providerStorageUploadRequiredEvidence = buildProviderStorageUploadDecisionRequiredEvidence(
-  providerStorageUploadRuntimeReadiness.requiredEvidence,
+  providerStorageUploadPackageReadiness.requiredEvidence,
 );
+
+export const providerStorageUploadRuntimeReadiness = {
+  ...providerStorageUploadPackageReadiness,
+  requiredCommands: providerStorageUploadRuntimeCommands,
+  requiredEvidence: providerStorageUploadRequiredEvidence,
+} as const;
 
 export function buildProviderStorageUploadEvidenceDecision(
   input: ProviderStorageUploadEvidenceInput,
@@ -669,9 +681,9 @@ export function buildProviderStorageUploadEvidenceDecision(
 }
 
 const sensitiveProviderStorageKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|bucket|object|storage|provider|client|file|asset|grant)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|bucket|object|storage|provider|client|file|asset|grant|request|response|payload|body|signature|raw|signed|scan|malware|quarantine|derivative|acl|access|denial|audit|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner)$/iu;
 const sensitiveProviderStorageValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:AKIA|ASIA)[A-Z0-9]{16}|[A-Za-z0-9_-]{24,})/giu;
+  /(repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|https?:\/\/[^\s"']+|s3:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:AKIA|ASIA)[A-Z0-9]{16}|(?:tenant|client|booking|fileasset|signedurlgrant|referenceimage|portfolioimage|audit|bucket|object|storage|scan|malware|quarantine|derivative|workflow|ci|run|commit|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:private|public|derivative|quarantine)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactProviderStorageString = (value: string): string =>
   value.replace(sensitiveProviderStorageValuePattern, "[REDACTED]");

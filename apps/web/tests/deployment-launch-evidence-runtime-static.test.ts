@@ -93,11 +93,12 @@ describe("deployment launch evidence runtime contract", () => {
     expect(deploymentTests).toContain("buildDeploymentLaunchEvidencePlan");
     expect(dashboardReadinessRoute).toContain("release:read");
     expect(dashboardReadinessRoute).toContain("no-store");
-    expect(dashboardReadinessRoute).toContain("AuditLog");
+    expect(dashboardReadinessRoute).toContain("prisma.auditLog.create");
     expect(dashboardDeploymentPage).toContain("DeploymentReadinessActionPanel");
     expect(deploymentReadinessActionPanel).toContain('fetch("/api/deployment/readiness"');
     expect(deploymentReadinessActionPanel).toContain("Request readiness review");
-    expect(dashboardReadinessTest).toContain("secret-name-only redaction metadata");
+    expect(dashboardReadinessTest).toContain("redactedFields");
+    expect(dashboardReadinessTest).toContain("without exposing secret values");
     expect(deploymentDocs).toContain("Deployment");
     expect(releaseGovernanceWorkflow).toContain("workflow_dispatch");
   });
@@ -281,6 +282,15 @@ describe("deployment launch evidence runtime contract", () => {
       githubToken: "github_pat_abcdefghijklmnopqrstuvwxyz123456",
       sentryDsn: "https://public:secret@sentry.example.com/123",
       deploymentUrl: "https://inkroute-preview.example.com",
+      protectedEnvironmentApproval: "approved by ops@example.com for production run_123",
+      providerEnvVerifierOutput: "Vercel env check printed prj_abcdefghijklmnopqrstuvwxyz123456",
+      databaseMigrationDryRunOutput: "postgres://inkroute:secret@db.example.com:5432/inkroute migration dry run",
+      backupRestoreTranscript: "restore drill read backup_bucket_123",
+      sentryReleaseUploadLog: "sentry upload source-map https://sentry.example.com/releases/release_123",
+      rollbackDrillPacketPath: "coverage/deployment-rollback/raw-drill-packet.json",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      stackTrace: "Error: deployment launch evidence leaked provider payload",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         easProjectId: "eas_project_1234567890abcdefghijklmnopqrstuvwxyz",
@@ -297,11 +307,30 @@ describe("deployment launch evidence runtime contract", () => {
     expect(serialized).not.toContain("https://inkroute-preview.example.com");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("eas_project_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("ops@example.com");
+    expect(serialized).not.toContain("production run_123");
+    expect(serialized).not.toContain("backup_bucket_123");
+    expect(serialized).not.toContain("sentry upload source-map");
+    expect(serialized).not.toContain("raw-drill-packet.json");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("provider payload");
     expect(review.redactions).toEqual([
       "vercelProjectId",
       "githubToken",
       "sentryDsn",
       "deploymentUrl",
+      "protectedEnvironmentApproval",
+      "providerEnvVerifierOutput",
+      "databaseMigrationDryRunOutput",
+      "backupRestoreTranscript",
+      "sentryReleaseUploadLog",
+      "rollbackDrillPacketPath",
+      "neutralRepositoryTrace",
+      "stackTrace",
       "nested.databaseUrl",
       "nested.easProjectId",
     ]);

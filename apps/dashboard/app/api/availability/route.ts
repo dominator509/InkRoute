@@ -24,13 +24,99 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultAvailabilityWindowId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("availabilityWindowId" in result)) {
-    return null;
-  }
+function buildAvailabilityWindowResponseProjection() {
+  return {
+    availabilityWindowResponseAllowlisted: true,
+    availabilityWindowIdEchoed: false,
+    tenantIdEchoed: false,
+    artistIdEchoed: false,
+    travelCityIdEchoed: false,
+    travelScheduleIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { availabilityWindowId?: unknown }).availabilityWindowId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildAvailabilityConflictResponseProjection() {
+  return {
+    availabilityConflictResponseAllowlisted: true,
+    availabilityWindowIdEchoed: false,
+    tenantIdEchoed: false,
+    artistIdEchoed: false,
+    travelCityIdEchoed: false,
+    travelScheduleIdEchoed: false,
+    auditIdEchoed: false,
+    conflictingAvailabilityWindowIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeAvailabilityWindowResponse(result: {
+  status: "created" | "replayed";
+  availabilityWindow: {
+    kind: string;
+    status: string;
+    startsAt: Date;
+    endsAt: Date;
+    timezone: string;
+    maxBookings: number | null;
+    bufferBeforeMinutes: number;
+    bufferAfterMinutes: number;
+    publicLabel: string | null;
+    createdAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildAvailabilityWindowResponseProjection(),
+    availabilityWindow: {
+      kind: result.availabilityWindow.kind,
+      status: result.availabilityWindow.status,
+      startsAt: result.availabilityWindow.startsAt.toISOString(),
+      endsAt: result.availabilityWindow.endsAt.toISOString(),
+      timezone: result.availabilityWindow.timezone,
+      maxBookings: result.availabilityWindow.maxBookings,
+      bufferBeforeMinutes: result.availabilityWindow.bufferBeforeMinutes,
+      bufferAfterMinutes: result.availabilityWindow.bufferAfterMinutes,
+      publicLabel: result.availabilityWindow.publicLabel,
+      createdAt: result.availabilityWindow.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      availabilityWindowPersisted: true,
+      auditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+      persistedOverlapGuardApplied: result.status === "created",
+      concurrentHoldProtectionConfigured: true,
+      concurrentHoldProtectionVerified: false,
+    },
+  };
+}
+
+function buildSafeAvailabilityConflictResponse(result: {
+  conflictingAvailabilityWindow: {
+    startsAt: Date;
+    endsAt: Date;
+    status: string;
+  };
+}) {
+  return {
+    responseProjection: buildAvailabilityConflictResponseProjection(),
+    conflict: {
+      startsAt: result.conflictingAvailabilityWindow.startsAt.toISOString(),
+      endsAt: result.conflictingAvailabilityWindow.endsAt.toISOString(),
+      status: result.conflictingAvailabilityWindow.status,
+    },
+    persistenceReceipt: {
+      idempotencyPersisted: true,
+      persistedOverlapGuardApplied: true,
+      concurrentHoldProtectionConfigured: true,
+      concurrentHoldProtectionVerified: false,
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -90,13 +176,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "PROVIDER_AVAILABILITY_PERSISTENCE_NOT_CONFIGURED",
             message: "Production availability creation requires DB-backed dashboard auth, tenant-scoped AvailabilityWindow persistence, and AuditLog rows; local fallback mutations are disabled.",
             gapIds: ["GAP-007", "GAP-009", "GAP-037", "GAP-038", "GAP-056"],
           },
           productionBoundary: { localAvailabilityMutationFallbackDisabled: true },
+          responseProjection: buildAvailabilityWindowResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -106,11 +193,12 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         error: {
           code: "DATABASE_REQUIRED",
           message: "Availability creation requires database-backed dashboard auth so AvailabilityWindow and AuditLog rows can be persisted.",
         },
+        responseProjection: buildAvailabilityWindowResponseProjection(),
         gapIds: ["GAP-007", "GAP-009", "GAP-037", "GAP-038", "GAP-056"],
       },
       { status: 409, headers: noStoreHeaders },
@@ -158,10 +246,17 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayAvailabilityWindowId = idempotency.status === "completed" ? resultAvailabilityWindowId(idempotency.result) : null;
-      if (replayAvailabilityWindowId) {
+      if (idempotency.status === "completed") {
         const availabilityWindow = await tx.availabilityWindow.findFirst({
-          where: { id: replayAvailabilityWindowId, tenantId },
+          where: {
+            tenantId,
+            artistId: input.artistId,
+            travelCityId: input.travelCityId ?? null,
+            travelScheduleId: input.travelScheduleId ?? null,
+            kind: input.kind,
+            startsAt,
+            endsAt,
+          },
           select: {
             id: true,
             tenantId: true,
@@ -272,15 +367,17 @@ export async function POST(request: NextRequest) {
           entityId: availabilityWindow.id,
           metadata: {
             source: "dashboard-api",
-            artistId: availabilityWindow.artistId,
-            travelCityId: availabilityWindow.travelCityId,
-            travelScheduleId: availabilityWindow.travelScheduleId,
+            artistMatched: true,
+            travelCityMatched: Boolean(availabilityWindow.travelCityId),
+            travelScheduleMatched: Boolean(availabilityWindow.travelScheduleId),
             kind: availabilityWindow.kind,
             status: availabilityWindow.status,
             conflictBoundary: "Tenant-scoped persisted overlap guard ran before AvailabilityWindow create; concurrent hold race proof remains governed by GAP-056 evidence gates.",
             concurrentHoldProtectionConfigured: true,
             hasInternalNotes: internalNotes !== undefined,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
           },
         },
         select: { id: true, createdAt: true },
@@ -291,13 +388,14 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            availabilityWindowId: availabilityWindow.id,
-            auditId: audit.id,
+            availabilityWindowPersisted: true,
+            auditLogged: true,
             created: true,
             rawNotesStoredInResult: false,
             persistedOverlapGuardApplied: true,
             concurrentHoldProtectionConfigured: true,
             concurrentHoldProtectionVerified: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -324,21 +422,12 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "AVAILABILITY_CONFLICT",
             message: "Availability window overlaps an existing tenant-scoped artist availability window.",
           },
-          conflict: {
-            availabilityWindowId: result.conflictingAvailabilityWindow.id,
-            startsAt: result.conflictingAvailabilityWindow.startsAt.toISOString(),
-            endsAt: result.conflictingAvailabilityWindow.endsAt.toISOString(),
-            status: result.conflictingAvailabilityWindow.status,
-          },
-          idempotencyKeyId: result.idempotency.id,
-          persistedOverlapGuardApplied: true,
-          concurrentHoldProtectionConfigured: true,
-          concurrentHoldProtectionVerified: false,
+          ...buildSafeAvailabilityConflictResponse(result),
           gapIds: ["GAP-056"],
         },
         { status: 409, headers: noStoreHeaders },
@@ -349,20 +438,9 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        availabilityWindow: {
-          ...result.availabilityWindow,
-          startsAt: result.availabilityWindow.startsAt.toISOString(),
-          endsAt: result.availabilityWindow.endsAt.toISOString(),
-          createdAt: result.availabilityWindow.createdAt.toISOString(),
-        },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
-        persistedOverlapGuardApplied: result.status === "created",
-        concurrentHoldProtectionConfigured: true,
-        concurrentHoldProtectionVerified: false,
+        ...buildSafeAvailabilityWindowResponse(result),
         gapIds: ["GAP-007", "GAP-009", "GAP-037", "GAP-038", "GAP-056"],
         boundary: "Dashboard availability creation is tenant-scoped, no-store, idempotency-backed, audited, and protected by a persisted overlap guard inside a serializable transaction; concurrent hold race proof and seeded integration tests remain evidence-gated.",
       },
@@ -374,8 +452,9 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "DATABASE_UNAVAILABLE", message: "Availability creation requires the dashboard database connection." },
+          responseProjection: buildAvailabilityWindowResponseProjection(),
           gapIds: ["GAP-007", "GAP-009", "GAP-037", "GAP-038", "GAP-056"],
         },
         { status: 503, headers: noStoreHeaders },

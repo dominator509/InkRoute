@@ -444,9 +444,9 @@ export function buildRequiredChecksEvidenceDecision(input: RequiredChecksEvidenc
 }
 
 const sensitiveRequiredChecksKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|owner|branch|settings)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|repository|owner|branch|settings|raw|payload|body|stack|error|log|output|transcript|command|ci|commit|run|artifact|github|pull.?request|pr|merge|block|codeowners|codeowner|reviewer|review|diff|protection|quality|check)/iu;
 const sensitiveRequiredChecksValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|account|repository|branch|settings|github|pull.?request|pr|merge|block|codeowners|codeowner|reviewer|review|diff|protection|quality|check|workflow|ci|run|commit|artifact)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:artifacts|coverage|test-results|reports|diffs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactRequiredChecksString = (value: string): string =>
   value.replace(sensitiveRequiredChecksValuePattern, "[REDACTED]");

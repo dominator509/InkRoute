@@ -132,6 +132,7 @@ describe("GAP-115 secret management runtime wiring", () => {
     expect(gapTracker).toContain("GAP-115 is secret-management-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("secretManagementRuntimeLocalArtifacts");
     expect(gapTracker).toContain("secretManagementRuntimeExternalArtifacts");
+    expect(gapTracker).toContain("GAP-115 secret management artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current secret management runtime proof files for GAP-115", () => {
@@ -373,6 +374,23 @@ describe("GAP-115 secret management runtime wiring", () => {
       maskedLog: "AUTH_SECRET=super-secret-value\nSTRIPE_SECRET_KEY=sk_live_hidden",
       contactEmail: "owner@example.com",
       phone: "+1 555 888 1212",
+      verifierOutput: "secret verifier emitted secret_private_123",
+      strictEnvOutput: "DATABASE_URL=postgres://tenant_demo:secret@db.example.com/inkroute",
+      committedSecretScanOutput: "finding in diff_private_123",
+      rotationCadenceNotes: "rotate provider_secret_private_123 quarterly",
+      dualControlPolicyNotes: "approver user_private_123",
+      incidentTabletopTranscript: "incident rotated token_private_123",
+      providerAuditLogLabel: "audit_private_123",
+      neutralStoreTrace: "destination_secret_01HZYXZYXZYXZYXZYXZYXZYXZ references provider_reference_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ scanned commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralScanTrace: "finding_diff_01HZYXZYXZYXZYXZYXZYXZYXZ captured reports/secret-scan/private-output.json",
+      repositoryEvidence: "repo:dominator509/InkRoute",
+      branchEvidence: "branch:production/secret-management",
+      pullRequestEvidence: "pr_secret_management",
+      reviewerEvidence: "reviewer_secret_owner",
+      codeownerEvidence: "CODEOWNER:security-platform-team",
+      rawAuditPayload: { secretValue: "raw_secret_private_123" },
+      stackTrace: "Error: secret scan private stack",
       nested: {
         authorization: "Bearer secret-management-token",
         tenantId: "tenant_demo",
@@ -391,18 +409,53 @@ describe("GAP-115 secret management runtime wiring", () => {
     expect(serialized).not.toContain("+1 555 888 1212");
     expect(serialized).not.toContain("Bearer secret-management-token");
     expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("secret_private_123");
+    expect(serialized).not.toContain("diff_private_123");
+    expect(serialized).not.toContain("provider_secret_private_123");
+    expect(serialized).not.toContain("user_private_123");
+    expect(serialized).not.toContain("token_private_123");
+    expect(serialized).not.toContain("audit_private_123");
+    expect(serialized).not.toContain("destination_secret_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("provider_reference_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("finding_diff_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reports/secret-scan/private-output.json");
+    expect(serialized).not.toContain("raw_secret_private_123");
+    expect(serialized).not.toContain("secret scan private stack");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/secret-management");
+    expect(serialized).not.toContain("pr_secret_management");
+    expect(serialized).not.toContain("reviewer_secret_owner");
+    expect(serialized).not.toContain("CODEOWNER:security-platform-team");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
+        "[REDACTED_BRANCH_SELECTOR]",
+        "[REDACTED_CODEOWNER_SELECTOR]",
+        "[REDACTED_PR_SELECTOR]",
+        "[REDACTED_REPOSITORY_SELECTOR]",
+        "[REDACTED_REVIEWER_SELECTOR]",
         "authorization",
         "auditLogReference",
         "ciRunUrl",
+        "committedSecretScanOutput",
         "databaseUrl",
         "directUrl",
+        "dualControlPolicyNotes",
+        "incidentTabletopTranscript",
         "maskedLog",
+        "neutralCiTrace",
+        "neutralScanTrace",
+        "neutralStoreTrace",
         "phone",
+        "providerAuditLogLabel",
         "providerSecretStore",
+        "rawAuditPayload",
+        "rotationCadenceNotes",
         "secretValue",
+        "stackTrace",
+        "strictEnvOutput",
+        "verifierOutput",
       ]),
     );
     expect(review.externalEvidenceRequired).toBe(secretManagementRuntimeRequiredExternalEvidence);

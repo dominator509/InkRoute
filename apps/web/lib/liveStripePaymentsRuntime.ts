@@ -445,7 +445,7 @@ export const liveStripePaymentsRuntimeMatrix = [
   },
 ] as const satisfies readonly LiveStripePaymentsRuntimeMatrixEntry[];
 
-export const liveStripePaymentsRuntimeReadiness = buildLiveStripePaymentsReadinessPlan({
+const liveStripePaymentsPackageReadiness = buildLiveStripePaymentsReadinessPlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
     test: "vitest run --passWithNoTests",
@@ -471,24 +471,36 @@ export const liveStripePaymentsRuntimeReadiness = buildLiveStripePaymentsReadine
 });
 
 export function buildLiveStripePaymentsDecisionRequiredEvidence(
-  readinessEvidence: typeof liveStripePaymentsRuntimeReadiness.requiredEvidence,
+  readinessEvidence:
+    | typeof liveStripePaymentsPackageReadiness.requiredEvidence
+    | LiveStripePaymentsRequiredEvidence,
 ): LiveStripePaymentsRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "LiveStripePaymentsRun row with command, readiness area, artifact, Stripe configuration, and lifecycle evidence matrices.",
-    "Artifact bundle proving payments package checks, payment routes, Stripe config, real Checkout writes, webhook lifecycle, DB reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts.",
-  ];
+  const persistenceEvidence = "LiveStripePaymentsRun row with command, readiness area, artifact, Stripe configuration, and lifecycle evidence matrices." as const;
+  const artifactEvidence = "Artifact bundle proving payments package checks, payment routes, Stripe config, real Checkout writes, webhook lifecycle, DB reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts." as const;
+  const evidence = readinessEvidence as readonly string[];
+
+  if (evidence.includes(persistenceEvidence) && evidence.includes(artifactEvidence)) {
+    return readinessEvidence as LiveStripePaymentsRequiredEvidence;
+  }
+
+  return [...readinessEvidence, persistenceEvidence, artifactEvidence] as LiveStripePaymentsRequiredEvidence;
 }
 
 export type LiveStripePaymentsRequiredEvidence = readonly [
-  ...typeof liveStripePaymentsRuntimeReadiness.requiredEvidence,
+  ...typeof liveStripePaymentsPackageReadiness.requiredEvidence,
   "LiveStripePaymentsRun row with command, readiness area, artifact, Stripe configuration, and lifecycle evidence matrices.",
   "Artifact bundle proving payments package checks, payment routes, Stripe config, real Checkout writes, webhook lifecycle, DB reconciliation, refunds/disputes, Stripe CLI, booking-to-paid E2E, CI evidence, and secret-safe artifacts.",
 ];
 
 export const liveStripePaymentsRequiredEvidence = buildLiveStripePaymentsDecisionRequiredEvidence(
-  liveStripePaymentsRuntimeReadiness.requiredEvidence,
+  liveStripePaymentsPackageReadiness.requiredEvidence,
 );
+
+export const liveStripePaymentsRuntimeReadiness = {
+  ...liveStripePaymentsPackageReadiness,
+  requiredCommands: liveStripePaymentsRuntimeCommands,
+  requiredEvidence: liveStripePaymentsRequiredEvidence,
+} as const;
 
 export function buildLiveStripePaymentsEvidenceDecision(
   input: LiveStripePaymentsEvidenceInput,
@@ -672,9 +684,9 @@ export async function persistLiveStripePaymentsRun(
 }
 
 const sensitiveLiveStripePaymentsKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|stripe|payment|client|customer|card|intent|checkout|session|webhook)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|stripe|payment|client|customer|card|intent|checkout|session|webhook|provider|request|response|payload|body|signature|raw|reconciliation|idempotency|replay|refund|dispute|receipt|audit|artifact|path|command|typecheck|build|test|output|stdout|stderr|log|ci|workflow|run|commit|repository|repo|branch|pullRequest|pr|reviewer|codeowner)$/iu;
 const sensitiveLiveStripePaymentsValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|whsec|pi|cs|ch|evt|cus|acct|pm)_[A-Za-z0-9_]+|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|whsec|pi|cs|ch|evt|cus|acct|pm|tok|seti|src|refund|re|du)_[A-Za-z0-9_]+|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|stripe-signature[:=][^"'\s]+|(?:tenant|client|customer|booking|deposit|payment|refund|dispute|checkout|intent|webhook|audit|idempotency|replay|reconciliation|artifact|workflow|ci|run|commit)[-_:/]?[A-Za-z0-9_.-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactLiveStripePaymentsString = (value: string): string =>
   value.replace(sensitiveLiveStripePaymentsValuePattern, "[REDACTED]");

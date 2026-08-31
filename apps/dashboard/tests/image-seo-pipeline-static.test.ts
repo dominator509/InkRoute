@@ -74,12 +74,38 @@ describe("GAP-077 image SEO pipeline boundary", () => {
     expect(routeSource).toContain("tx.portfolioImage.create");
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain("tx.idempotencyKey.update");
-    expect(routeSource).toContain("idempotencyKeyId");
+    expect(routeSource).toContain("fileAssetPersisted: true");
+    expect(routeSource).toContain("portfolioImagePersisted: true");
+    expect(routeSource).toContain("auditLogged: true");
+    expect(routeSource).toContain("idempotencyRecorded: Boolean(persisted)");
+    expect(routeSource).toContain("fileAssetIdEchoed: false");
+    expect(routeSource).toContain("portfolioImageIdEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
+    expect(routeSource).toContain("idempotencyKeyIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsStored: false");
+    expect(routeSource).toContain("portfolioItemIdEchoed: false");
     expect(routeSource).toContain("idempotencyReplay");
     expect(routeSource).toContain("requestHash");
     expect(routeSource).toContain("sourceObjectKey: \"[redacted-dashboard-field]\"");
     expect(routeSource).toContain("PROVIDER_IMAGE_SEO_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("localImageSeoDryRunFallbackDisabled");
+    expect(routeSource).toContain("plan: buildSafeImageSeoPipelinePlanResponse(plan)");
+    expect(routeSource).toContain("objectKeyEchoed: false");
+    expect(routeSource).toContain("publicUrlEchoed: false");
+    expect(routeSource).toContain("blurDataUrlEchoed: false");
+    expect(routeSource).toContain("rawDerivativeMetadataEchoed: false");
+    expect(routeSource).toContain("derivativeMetadataEchoed: false");
+    expect(routeSource).not.toContain("idempotencyKeyId: result.idempotency.id");
+    expect(routeSource).not.toContain("portfolioItemId: plan.portfolioItemId,\n              objectKey");
+    expect(routeSource).not.toContain("idempotencyKeyId: persisted?.idempotencyKeyId");
+    expect(routeSource).not.toContain('fileAssetId: resultString(idempotency.result, "fileAssetId")');
+    expect(routeSource).not.toContain('portfolioImageId: resultString(idempotency.result, "portfolioImageId")');
+    expect(routeSource).not.toContain('auditId: resultString(idempotency.result, "auditId")');
+    expect(routeSource).not.toContain("fileAssetId: result.fileAssetId");
+    expect(routeSource).not.toContain("portfolioImageId: result.portfolioImageId");
+    expect(routeSource).not.toContain("auditId: result.auditId");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
     expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(routeSource).toContain("headers: noStoreHeaders");
     expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
@@ -184,6 +210,9 @@ describe("GAP-077 image SEO pipeline boundary", () => {
     const rawArtifact = {
       storage: {
         bucket: "tenant-private-originals",
+        tenantId: "tenant_image_seo_private",
+        portfolioItemId: "portfolio_item_image_seo_private",
+        fileAssetId: "file_asset_image_seo_private",
         sourceObjectKey: "tenant-1/private/originals/portfolio/item-1/dragon.jpg",
         signedUrl: "https://storage.example.com/private/originals/dragon.jpg?token=supabase-secret-token",
       },
@@ -192,8 +221,17 @@ describe("GAP-077 image SEO pipeline boundary", () => {
         phone: "+1 555 010 2222",
       },
       derivative: {
+        portfolioImageId: "portfolio_image_seo_private",
+        auditId: "audit_image_seo_private",
+        idempotencyKey: "idem_image_seo_private",
         objectKey: "tenant-1/public/derivatives/portfolio/item-1/dragon-768.webp",
         publicUrl: "https://cdn.inkroute.example/tenant-1/dragon-768.webp",
+        blurDataUrl: "data:image/webp;base64,private-blur",
+        rawDerivativeMetadata: { width: 768, objectKey: "tenant-1/public/derivatives/private-metadata.webp" },
+        safeNote:
+          "evidence_image_seo_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/image-seo/private-proof.json",
+        safeLighthousePath: "test-results/image-seo-pipeline/private-lighthouse.json",
+        safeStorageRun: "storage_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
       },
     };
 
@@ -202,11 +240,23 @@ describe("GAP-077 image SEO pipeline boundary", () => {
     const serialized = JSON.stringify(review.redactedArtifact);
 
     expect(JSON.stringify(redacted)).not.toContain("tenant-private-originals");
+    expect(serialized).not.toContain("tenant_image_seo_private");
+    expect(serialized).not.toContain("portfolio_item_image_seo_private");
+    expect(serialized).not.toContain("file_asset_image_seo_private");
+    expect(serialized).not.toContain("portfolio_image_seo_private");
+    expect(serialized).not.toContain("audit_image_seo_private");
+    expect(serialized).not.toContain("idem_image_seo_private");
     expect(serialized).not.toContain("tenant-1/private/originals");
     expect(serialized).not.toContain("supabase-secret-token");
     expect(serialized).not.toContain("owner@example.com");
     expect(serialized).not.toContain("+1 555 010 2222");
-    expect(serialized).toContain("https://cdn.inkroute.example/tenant-1/dragon-768.webp");
+    expect(serialized).not.toContain("https://cdn.inkroute.example/tenant-1/dragon-768.webp");
+    expect(serialized).not.toContain("data:image/webp;base64,private-blur");
+    expect(serialized).not.toContain("tenant-1/public/derivatives/private-metadata.webp");
+    expect(serialized).not.toContain("evidence_image_seo_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("artifacts/image-seo/private-proof.json");
+    expect(serialized).not.toContain("test-results/image-seo-pipeline/private-lighthouse.json");
+    expect(serialized).not.toContain("storage_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
     expect(review.requiredArtifactPath).toBe("coverage/image-seo-secret-safe-artifacts.json");

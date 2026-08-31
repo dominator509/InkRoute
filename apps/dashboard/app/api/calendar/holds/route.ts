@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { buildAvailabilityPersistencePlan } from "@inkroute/calendar";
+import { buildAvailabilityPersistencePlan, type AvailabilityPersistencePlan } from "@inkroute/calendar";
 import { prisma } from "@inkroute/db";
 
 import { dashboardAvailabilityPersistenceContract } from "../../../../lib/availabilityPersistence";
@@ -24,6 +24,56 @@ function resultString(value: unknown, key: string): string | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const result = value as Record<string, unknown>;
   return typeof result[key] === "string" ? result[key] : null;
+}
+
+function buildSafeAvailabilityHoldPlanResponse(plan: AvailabilityPersistencePlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    requiresTransaction: plan.requiresTransaction,
+    requiredControls: plan.requiredControls,
+    blockers: plan.blockers,
+    writeModels: plan.writes.map((write) => write.model),
+    writePayloadsEchoed: false,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawIdempotencyKeyEchoed: false,
+    bookingRequestIdEchoed: false,
+    availabilityWindowIdEchoed: false,
+    holdIdEchoed: false,
+    actorIdEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildCalendarHoldResponseProjection() {
+  return {
+    calendarHoldResponseAllowlisted: true,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawPlanPayloadEchoed: false,
+    rawHoldRecordEchoed: false,
+    availabilityWindowIdEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeCalendarHoldResponse(
+  result: { status: "created" | "replayed" },
+  plan: AvailabilityPersistencePlan,
+) {
+  return {
+    ok: true,
+    status: result.status === "replayed" ? "database-replayed" : "database-persisted",
+    idempotencyReplay: result.status === "replayed",
+    responseProjection: buildCalendarHoldResponseProjection(),
+    plan: buildSafeAvailabilityHoldPlanResponse(plan),
+    readiness: dashboardAvailabilityPersistenceContract.readiness,
+    gapIds: ["GAP-056"],
+    boundary: "Slot hold is tenant-scoped, idempotency-backed, and persisted as an AvailabilityWindow admin hold with AuditLog metadata; response receipts do not echo audit IDs, idempotency-key IDs, raw plan payloads, raw hold records, or availability-window IDs, while seeded race-condition and cross-tenant integration proof remains evidence-gated.",
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -71,7 +121,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         error: { code: "AVAILABILITY_HOLD_BLOCKED", message: "Slot hold is not safe to persist." },
-        plan,
+        plan: buildSafeAvailabilityHoldPlanResponse(plan),
         readiness: dashboardAvailabilityPersistenceContract.readiness,
         gapIds: ["GAP-056"],
       },
@@ -86,7 +136,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         error: { code: "INVALID_HOLD_WINDOW", message: "Slot holds require valid startsAt and endsAt instants." },
-        plan,
+        plan: buildSafeAvailabilityHoldPlanResponse(plan),
         readiness: dashboardAvailabilityPersistenceContract.readiness,
         gapIds: ["GAP-056"],
       },
@@ -117,7 +167,7 @@ export async function POST(request: NextRequest) {
           message: "Production slot holds require DB-backed actor resolution, tenant-scoped persistence, idempotency proof, and audit logs; local fallback writes are disabled.",
         },
         productionBoundary: { localCalendarHoldFallbackDisabled: true },
-        plan,
+        plan: buildSafeAvailabilityHoldPlanResponse(plan),
         readiness: dashboardAvailabilityPersistenceContract.readiness,
         gapIds: ["GAP-056"],
       },
@@ -141,12 +191,15 @@ export async function POST(request: NextRequest) {
             requestHash,
             metadata: {
               action: "create_slot_hold",
-              artistId: artist.id,
+              artistMatched: true,
               startsAt: startsAt.toISOString(),
               endsAt: endsAt.toISOString(),
               timezone,
-              bookingRequestId: bookingRequestId ?? null,
-              availabilityWindowId: availabilityWindowId ?? null,
+              bookingRequestMatched: Boolean(bookingRequestId),
+              availabilityWindowMatched: Boolean(availabilityWindowId),
+              requestHashPersisted: true,
+              rawRequestHashStored: false,
+              internalPersistenceIdsStored: false,
             },
           },
           update: {},
@@ -161,8 +214,8 @@ export async function POST(request: NextRequest) {
           return {
             status: "replayed" as const,
             idempotency,
-            availabilityWindowId: resultString(idempotency.result, "availabilityWindowId"),
-            auditId: resultString(idempotency.result, "auditId"),
+            availabilityWindowPersisted: resultString(idempotency.result, "availabilityWindowPersisted") === "true",
+            auditLogged: resultString(idempotency.result, "auditLogged") === "true",
           };
         }
 
@@ -188,7 +241,7 @@ export async function POST(request: NextRequest) {
             endsAt,
             timezone,
             publicLabel: "Dashboard slot hold",
-            internalNotes: `Slot hold created by ${actor.actorUserId}`,
+            internalNotes: "Slot hold created by dashboard actor; raw actor id stored only on AuditLog.",
           },
           select: { id: true, artistId: true, startsAt: true, endsAt: true, timezone: true, status: true, kind: true },
         });
@@ -202,11 +255,13 @@ export async function POST(request: NextRequest) {
             entityId: hold.id,
             metadata: {
               source: "dashboard-calendar-holds-route",
-              idempotencyKey,
-              idempotencyKeyId: idempotency.id,
-              requestHash,
-              bookingRequestId: bookingRequestId ?? null,
-              availabilityWindowId: availabilityWindowId ?? null,
+              idempotencyPersisted: true,
+              requestHashPersisted: true,
+              bookingRequestMatched: Boolean(bookingRequestId),
+              availabilityWindowMatched: Boolean(availabilityWindowId),
+              rawIdempotencyKeyStored: false,
+              rawRequestHashStored: false,
+              internalPersistenceIdsStored: false,
             },
           },
           select: { id: true },
@@ -214,10 +269,19 @@ export async function POST(request: NextRequest) {
 
         await tx.idempotencyKey.update({
           where: { tenantId_scope_key: { tenantId, scope: "availability.slot_hold", key: idempotencyKey } },
-          data: { status: "completed", result: { availabilityWindowId: hold.id, auditId: audit.id, requestHash } },
+          data: {
+            status: "completed",
+            result: {
+              availabilityWindowPersisted: "true",
+              auditLogged: "true",
+              internalPersistenceIdsStored: "false",
+              requestHashPersisted: "true",
+              rawRequestHashStored: "false",
+            },
+          },
         });
 
-        return { status: "created" as const, idempotency, hold, auditId: audit.id };
+        return { status: "created" as const, idempotency, availabilityWindowPersisted: true, auditLogged: Boolean(audit.id) };
       });
 
       if (result.status === "artist_not_found") {
@@ -231,7 +295,12 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error: { code: "AVAILABILITY_CONFLICT", message: "Slot hold overlaps an existing availability window." },
-            conflictId: result.conflictId,
+            responseProjection: {
+              calendarHoldConflictResponseAllowlisted: true,
+              conflictingAvailabilityWindowIdEchoed: false,
+              tenantIdEchoed: false,
+              internalPersistenceIdsEchoed: false,
+            },
             gapIds: ["GAP-056"],
           },
           { status: 409, headers: noStoreHeaders },
@@ -242,7 +311,13 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different slot-hold payload." },
-            idempotencyKeyId: result.idempotency.id,
+            responseProjection: {
+              calendarHoldIdempotencyConflictResponseAllowlisted: true,
+              idempotencyKeyIdEchoed: false,
+              rawIdempotencyKeyEchoed: false,
+              tenantIdEchoed: false,
+              internalPersistenceIdsEchoed: false,
+            },
             gapIds: ["GAP-056"],
             boundary: "Calendar hold idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
           },
@@ -251,19 +326,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        {
-          ok: true,
-          status: result.status === "replayed" ? "database-replayed" : "database-persisted",
-          availabilityWindowId: result.status === "replayed" ? result.availabilityWindowId : result.hold.id,
-          hold: result.status === "replayed" ? null : result.hold,
-          auditId: result.auditId,
-          idempotencyKeyId: result.idempotency.id,
-          idempotencyReplay: result.status === "replayed",
-          plan,
-          readiness: dashboardAvailabilityPersistenceContract.readiness,
-          gapIds: ["GAP-056"],
-          boundary: "Slot hold is tenant-scoped, idempotency-backed, and persisted as an AvailabilityWindow admin hold with AuditLog metadata; seeded race-condition and cross-tenant integration proof remains evidence-gated.",
-        },
+        buildSafeCalendarHoldResponse(result, plan),
         { status: result.status === "replayed" ? 200 : 201, headers: noStoreHeaders },
       );
     } catch (error) {
@@ -281,7 +344,7 @@ export async function POST(request: NextRequest) {
       ok: false,
       status: "repository-required",
       message: "Slot hold plan is valid, but durable availability repositories must execute the transaction.",
-      plan,
+      plan: buildSafeAvailabilityHoldPlanResponse(plan),
       readiness: dashboardAvailabilityPersistenceContract.readiness,
       gapIds: ["GAP-056"],
     },

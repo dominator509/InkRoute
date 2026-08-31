@@ -54,7 +54,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             <div className="tenant-card" aria-label="Current tenant preview">
               <p>{dashboardShellContext.tenant.publicSiteName}</p>
               <strong>{dashboardShellContext.artist.displayName}</strong>
-              <span>{dashboardShellContext.tenant.plan} plan · {dashboardShellContext.tenant.status}</span>
+              <span>{dashboardShellContext.tenant.plan} plan - {dashboardShellContext.tenant.status}</span>
             </div>
             <nav aria-label="Dashboard navigation" className="nav-list">
               {dashboardNavItems.map((item) => (

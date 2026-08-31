@@ -1,4 +1,7 @@
-import { buildDatabaseOperationsRuntimeReadinessPlan } from "@inkroute/deployment";
+import {
+  buildDatabaseOperationsRuntimeReadinessPlan,
+  databaseOperationsRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 
 export type DatabaseOperationsRuntimeStatus =
   | "wired"
@@ -83,22 +86,7 @@ export const databaseOperationsRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json"
 ] as const;
 
-export const databaseOperationsRuntimeCommands = [
-  "pnpm deploy:verify-database-ops",
-  "pnpm db:generate",
-  "pnpm --filter @inkroute/db db:validate",
-  "database migration dry-run",
-  "database generated SQL review",
-  "database staging migration apply",
-  "pnpm db:seed",
-  "database seed policy verification",
-  "database destructive SQL scan",
-  "database backup/restore drill",
-  "database tenant-isolation smoke",
-  "database branch promotion approval",
-  "database production data-safety review",
-  "capture CI database-operations artifacts"
-] as const;
+export const databaseOperationsRuntimeCommands = databaseOperationsRuntimeRequiredCommands;
 
 export const databaseOperationsRuntimeLocalCommands = [
   "pnpm deploy:verify-database-ops",
@@ -238,7 +226,7 @@ export interface DatabaseOperationsRuntimeArtifactReview {
 }
 
 const sensitiveDatabaseOperationsKeyPattern =
-  /(token|secret|password|authorization|cookie|databaseUrl|directUrl|connectionString|providerBranch|projectId|branchId|snapshotId|restoreId|query|sql|tenantId|userId|runId|email|phone|ciRunUrl)/i;
+  /(token|secret|password|authorization|cookie|databaseUrl|directUrl|connectionString|providerBranch|projectId|branchId|snapshotId|restoreId|query|sql|tenantId|userId|runId|email|phone|ciRunUrl|repository|repo|pull|pr|reviewer|codeowner)/i;
 
 const sensitiveDatabaseOperationsStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -246,7 +234,7 @@ const sensitiveDatabaseOperationsStringPatterns: readonly [RegExp, string][] = [
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
-  [/\b(?:tenant|user|project|branch|snapshot|restore|run|db)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|project|branch|snapshot|restore|run|db|repo|pull|pr|reviewer|codeowner)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
 ];
 
 export function buildDatabaseOperationsRuntimeEvidenceDecision(

@@ -270,12 +270,15 @@ export interface InMemorySeoAnalyticsAttributionRepositorySnapshot {
   readonly campaigns: readonly Record<string, unknown>[];
 }
 
-const sensitiveSeoAnalyticsArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|email|phone|searchconsole|client|medical|payment|private)/i;
+const sensitiveSeoAnalyticsArtifactKeyPattern =
+  /(token|secret|password|authorization|cookie|provider|payload|email|phone|searchconsole|client|medical|payment|private|tenant|booking|portfolio|attribution|campaign|analytics|event|importedRow|operationRun|query|page|utm|referrer|url|path|route|html|dom|dashboard|report|artifactUrl|ci|runId|commitSha|command|log|stack|raw)/i;
 const sensitiveSeoAnalyticsArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
   /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
   /\b(?:searchconsole|provider|token|secret|private)[\w:./?=&-]*/gi,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /<[^>]+>/g,
 ];
 
 export function buildRedactedSeoAnalyticsArtifact(input: unknown): unknown {

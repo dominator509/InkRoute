@@ -1,5 +1,7 @@
 ﻿import { buildDashboardTestExecutionEvidencePlan } from "@inkroute/testing";
 
+import { dashboardTestExecutionEvidenceRequiredCommands } from "@inkroute/testing";
+
 export type DashboardTestRuntimeStatus =
   | "wired"
   | "fixture-gated"
@@ -14,22 +16,7 @@ export interface DashboardTestRuntimeMatrixEntry {
   readonly status: DashboardTestRuntimeStatus;
 }
 
-export const dashboardTestRuntimeCommands = [
-  "pnpm --filter @inkroute/testing typecheck",
-  "pnpm --filter @inkroute/testing test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "pnpm --filter @inkroute/dashboard test",
-  "dashboard route rendering tests",
-  "dashboard auth/RBAC/tenant-isolation tests",
-  "dashboard booking mutation lifecycle tests",
-  "dashboard provider-safe state tests",
-  "dashboard axe accessibility checks",
-  "dashboard keyboard navigation checks",
-  "Playwright dashboard critical-flow suite",
-  "GitHub Actions dashboard test artifact upload",
-  "branch protection dashboard required-check proof",
-] as const;
+export const dashboardTestRuntimeCommands = dashboardTestExecutionEvidenceRequiredCommands;
 
 export const dashboardTestArtifactPaths = [
   "coverage/dashboard-test-runtime.json",
@@ -435,7 +422,9 @@ export const buildDashboardTestRunPayload = (): DashboardTestRunPayload => ({
 });
 
 const dashboardTestSensitiveArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|stripe|screenshot|trace|video|playwright|auth|rbac|booking|message|file|artifact|log|branch)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|cookie|email|phone|medical|payment|stripe|screenshot|trace|video|playwright|auth|rbac|booking|message|file|artifact|log|branch|ci|workflow|run|command|output|evidence|path|id|key)/i;
+const dashboardTestSensitiveArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|booking|payment|portfolio|travel|message|dashboard|route|browser|trace|screenshot|artifact|workflow|ci|run|commit|branch|database|session|provider|evidence|playwright|auth|rbac)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|private-tenant|[A-Za-z0-9_-]{24,})/giu;
 
 export const buildRedactedDashboardTestArtifact = (
   artifact: unknown,
@@ -462,6 +451,19 @@ export const buildRedactedDashboardTestArtifact = (
       );
     }
 
+    if (
+      typeof value === "string" &&
+      dashboardTestSensitiveArtifactValuePattern.test(value)
+    ) {
+      dashboardTestSensitiveArtifactValuePattern.lastIndex = 0;
+      redactions.push(path);
+      return value.replace(
+        dashboardTestSensitiveArtifactValuePattern,
+        "[REDACTED_DASHBOARD_TEST_PRIVATE_VALUE]",
+      );
+    }
+
+    dashboardTestSensitiveArtifactValuePattern.lastIndex = 0;
     return value;
   };
 

@@ -141,7 +141,9 @@ export const buildNotificationPersistenceExecutionPlan = (): NotificationPersist
 });
 
 const notificationPersistencePrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|message|notification|delivery|destination|body|payload|audit|idempotency|read.?state|status.?transition|handoff|worker|email|phone|medical|payment|customer)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|message|notification|delivery|destination|body|payload|audit|idempotency|read.?state|status.?transition|handoff|worker|email|phone|medical|payment|customer|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const notificationPersistencePrivateArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|message|notification|delivery|destination|payload|audit|idempotency|handoff|worker|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactNotificationPersistenceArtifactValue = (
   value: unknown,
@@ -168,6 +170,13 @@ const redactNotificationPersistenceArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && notificationPersistencePrivateArtifactValuePattern.test(value)) {
+    notificationPersistencePrivateArtifactValuePattern.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(notificationPersistencePrivateArtifactValuePattern, "[redacted]");
+  }
+
+  notificationPersistencePrivateArtifactValuePattern.lastIndex = 0;
   return value;
 };
 

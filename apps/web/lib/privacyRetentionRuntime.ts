@@ -374,7 +374,7 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   required.filter((item) => !(actual ?? []).includes(item));
 
 const sensitivePrivacyRetentionKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|consent|tenant|user|client|patient|attorney|provider|database|storage|object|url|uri|dsn|key|id|payload|artifact|tombstone|audit|case)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|consent|tenant|user|client|patient|attorney|provider|database|storage|object|url|uri|dsn|key|id|payload|artifact|tombstone|audit|case|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitivePrivacyRetentionValuePattern =
   /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|s3:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 

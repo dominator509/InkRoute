@@ -10,7 +10,7 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
       {
         ok: false,
         error: { code: "PROVIDER_PUBLIC_CONTENT_NOT_CONFIGURED" },
-        tenantSlug,
+        tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: tenantSlug },
         productionBoundary: {
           staticDemoPreviewDisabled: true,
           gapIds: ["GAP-006", "GAP-071", "GAP-072", "GAP-073", "GAP-074", "GAP-075", "GAP-076"],
@@ -31,7 +31,7 @@ export async function GET(_request: Request, context: { params: Promise<{ tenant
     {
       ok: true,
       status: "static_demo_not_database_backed",
-      tenantSlug,
+      tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: tenantSlug },
       preview,
       productionGaps: ["GAP-071", "GAP-072", "GAP-073", "GAP-074", "GAP-075", "GAP-076"],
     },

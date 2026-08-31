@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { mobileTestingExecutionCommands as canonicalMobileTestingExecutionCommands } from "./mobile-testing-commands";
+
 export type MobileScreenId =
   | "auth"
   | "home"
@@ -433,9 +436,11 @@ export interface OfflineQueueRepositoryContract {
 }
 
 export interface OfflineSyncAuditEvent {
-  itemId: string;
+  itemIdHash: string;
+  rawItemIdEchoed: false;
   decision: OfflineSyncDecisionStatus | "transport_failed";
-  idempotencyKey: string;
+  idempotencyKeyHash: string;
+  rawIdempotencyKeyEchoed: false;
   sensitive: boolean;
   occurredAt: string;
   redactedDetail: string;
@@ -472,7 +477,14 @@ export interface OfflineRuntimeReadinessPlan {
 export function buildOfflineIdempotencyKey(item: OfflineQueueItem): string {
   const tenant = item.tenantId ?? "unknown-tenant";
   const entity = item.entityId ?? item.id;
-  return `${tenant}:${item.kind}:${entity}:${item.createdAt}`;
+  const selectorHash = createHash("sha256")
+    .update(JSON.stringify([tenant, item.kind, entity, item.createdAt]))
+    .digest("hex");
+  return `offline:${selectorHash}`;
+}
+
+function buildOfflineSelectorHash(scope: string, parts: readonly string[]): string {
+  return `${scope}:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
 }
 
 function addMinutes(iso: string, minutes: number): string {
@@ -535,9 +547,11 @@ export function buildOfflineSyncAuditEvent(
   occurredAt: string,
 ): OfflineSyncAuditEvent {
   return {
-    itemId: item.id,
+    itemIdHash: buildOfflineSelectorHash("offline-audit-item", [item.tenantId ?? "unknown-tenant", item.kind, item.id]),
+    rawItemIdEchoed: false,
     decision: decision.status,
-    idempotencyKey: decision.idempotencyKey,
+    idempotencyKeyHash: buildOfflineSelectorHash("offline-audit-idempotency", [decision.idempotencyKey]),
+    rawIdempotencyKeyEchoed: false,
     sensitive: item.sensitive,
     occurredAt,
     redactedDetail: item.sensitive ? "Sensitive offline payload redacted." : "Offline sync decision recorded.",
@@ -707,6 +721,17 @@ export interface MobileApiRequestPlan {
   method: MobileApiMethod;
   url: string | null;
   headers: Record<string, string>;
+  headerProof: {
+    authorizationHeaderAttached: boolean;
+    tenantHeaderAttached: boolean;
+    requestIdHeaderAttached: boolean;
+    idempotencyHeaderAttached: boolean;
+    rawAuthorizationHeaderEchoed: false;
+    rawAccessTokenEchoed: false;
+    rawTenantIdEchoed: false;
+    rawRequestIdEchoed: false;
+    rawIdempotencyKeyEchoed: false;
+  };
   retryable: boolean;
   safeErrorPolicy: "redact-body";
   offlineQueueRequired: boolean;
@@ -749,10 +774,14 @@ export interface MobileBookingLifecycleActionContract {
   action: MobileBookingLifecycleAction;
   requiredHeaders: readonly ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"];
   metadata: {
-    tenantId: string;
-    bookingId: string;
-    requestId: string;
-    idempotencyKey: string;
+    tenantScopeRequired: true;
+    bookingIdRequired: true;
+    requestIdRequired: true;
+    rawTenantIdEchoed: false;
+    rawBookingIdEchoed: false;
+    rawRequestIdEchoed: false;
+    idempotencyKeyRequired: true;
+    rawIdempotencyKeyEchoed: false;
   };
   blockers: readonly string[];
   requiredEvidence: readonly string[];
@@ -780,11 +809,15 @@ export interface MobileTravelPublishContract {
   method: "POST";
   requiredHeaders: readonly ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"];
   metadata: {
-    tenantId: string;
-    travelScheduleId: string;
-    citySlug: string;
-    requestId: string;
-    idempotencyKey: string;
+    tenantScopeRequired: true;
+    travelScheduleIdRequired: true;
+    citySlugValidated: boolean;
+    requestIdRequired: true;
+    rawTenantIdEchoed: false;
+    rawTravelScheduleIdEchoed: false;
+    rawRequestIdEchoed: false;
+    idempotencyKeyRequired: true;
+    rawIdempotencyKeyEchoed: false;
   };
   blockers: readonly string[];
   requiredEvidence: readonly string[];
@@ -861,6 +894,17 @@ export function buildMobileApiRequestPlan(input: MobileApiRequestPlanInput): Mob
     method: input.method,
     url: input.baseUrl.trim() ? joinMobileApiUrl(input.baseUrl, input.path) : null,
     headers,
+    headerProof: {
+      authorizationHeaderAttached: Boolean(headers.Authorization),
+      tenantHeaderAttached: Boolean(headers["X-InkRoute-Tenant"]),
+      requestIdHeaderAttached: Boolean(headers["X-Request-Id"]),
+      idempotencyHeaderAttached: Boolean(headers["Idempotency-Key"]),
+      rawAuthorizationHeaderEchoed: false,
+      rawAccessTokenEchoed: false,
+      rawTenantIdEchoed: false,
+      rawRequestIdEchoed: false,
+      rawIdempotencyKeyEchoed: false,
+    },
     retryable: input.method === "GET" || Boolean(input.idempotencyKey?.trim()),
     safeErrorPolicy: "redact-body",
     offlineQueueRequired,
@@ -923,10 +967,14 @@ export function buildMobileBookingLifecycleActionContract(
     action: input.action,
     requiredHeaders: ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"],
     metadata: {
-      tenantId: input.tenantId,
-      bookingId: input.bookingId,
-      requestId: input.requestId,
-      idempotencyKey: input.idempotencyKey,
+      tenantScopeRequired: true,
+      bookingIdRequired: true,
+      requestIdRequired: true,
+      rawTenantIdEchoed: false,
+      rawBookingIdEchoed: false,
+      rawRequestIdEchoed: false,
+      idempotencyKeyRequired: true,
+      rawIdempotencyKeyEchoed: false,
     },
     blockers,
     requiredEvidence,
@@ -988,11 +1036,15 @@ export function buildMobileTravelPublishContract(input: MobileTravelPublishContr
     method: "POST",
     requiredHeaders: ["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"],
     metadata: {
-      tenantId: input.tenantId,
-      travelScheduleId: input.travelScheduleId,
-      citySlug: input.citySlug,
-      requestId: input.requestId,
-      idempotencyKey: input.idempotencyKey,
+      tenantScopeRequired: true,
+      travelScheduleIdRequired: true,
+      citySlugValidated: citySlugSafe,
+      requestIdRequired: true,
+      rawTenantIdEchoed: false,
+      rawTravelScheduleIdEchoed: false,
+      rawRequestIdEchoed: false,
+      idempotencyKeyRequired: true,
+      rawIdempotencyKeyEchoed: false,
     },
     blockers,
     requiredEvidence,
@@ -1196,17 +1248,7 @@ export interface MobileTestingExecutionReadinessInput {
   ciMobileChecksPassed: boolean;
 }
 
-export const mobileTestingExecutionReadinessRequiredCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "pnpm --filter @inkroute/mobile ios",
-  "pnpm --filter @inkroute/mobile android",
-  "eas build --profile preview --platform all",
-  "eas update --channel preview",
-  "eas update --channel preview --message rollback-republish-drill --non-interactive",
-] as const;
+export const mobileTestingExecutionReadinessRequiredCommands = canonicalMobileTestingExecutionCommands;
 
 export const mobileTestingExecutionReadinessRequiredEvidence = [
   "Expo dependency install, runtime start, mobile typecheck, and static/security test output",
@@ -1246,6 +1288,8 @@ export interface MobileUploadIntentContract {
   endpoint: "/api/mobile/portfolio/upload-intents";
   method: "POST";
   objectKey: string | null;
+  objectKeyContainsRawTenantId: false;
+  objectKeyContainsRawRequestId: false;
   providerSignedUploadRequired: true;
   providerStorageRuntimeGated: true;
   metadataReady: boolean;
@@ -1255,7 +1299,8 @@ export interface MobileUploadIntentContract {
 
 export function buildMobileUploadObjectKey(input: Pick<MobileUploadIntentContractInput, "tenantId" | "kind" | "filename" | "requestId">): string {
   const safeFilename = input.filename.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^[.-]+|[.-]+$/g, "") || "upload";
-  return `${input.tenantId}/mobile/${input.kind}/${input.requestId}/${safeFilename}`;
+  const selectorHash = createHash("sha256").update(JSON.stringify([input.tenantId, input.kind, input.requestId, safeFilename])).digest("hex");
+  return `mobile/${input.kind}/${selectorHash}/${safeFilename}`;
 }
 
 export function buildMobileUploadIntentContract(input: MobileUploadIntentContractInput): MobileUploadIntentContract {
@@ -1273,6 +1318,8 @@ export function buildMobileUploadIntentContract(input: MobileUploadIntentContrac
     endpoint: "/api/mobile/portfolio/upload-intents",
     method: "POST",
     objectKey: blockers.length === 0 ? buildMobileUploadObjectKey(input) : null,
+    objectKeyContainsRawTenantId: false,
+    objectKeyContainsRawRequestId: false,
     providerSignedUploadRequired: true,
     providerStorageRuntimeGated: true,
     metadataReady: blockers.length === 0,

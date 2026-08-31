@@ -29,7 +29,6 @@ type DeploymentOperationPolicy = {
 type DeploymentGetPayload = {
   ok: true;
   source: string;
-  tenantId: string;
   actorRole: string;
   targetEnvironment: "production" | "preview" | "staging" | "local";
   operationMode: "read-only";
@@ -41,26 +40,36 @@ type DeploymentGetPayload = {
   gapIds: string[];
   cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
   providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
+  tenantIdEchoed: false;
+  auditLogged?: boolean;
+  auditIdEchoed: false;
+  internalPersistenceIdsEchoed: false;
   boundary: string;
 };
 
 type DeploymentPostPayload = {
   ok: true;
   source: string;
-  tenantId: string;
   actorRole: string;
   targetEnvironment: DeploymentReadinessMutationInput["targetEnvironment"];
   operation: DeploymentReadinessMutationInput["operation"];
   operationResult: DeploymentOperationPolicy;
   environment: ReturnType<typeof evaluateEnvironmentReadiness>;
   plan: ReturnType<typeof buildDeploymentPlan>;
-  requestId?: string;
+  requestIdReceived: boolean;
+  rawRequestIdEchoed: false;
+  workflowRunIdVerified: false;
+  workflowRunIdEchoed: false;
+  workflowRunUrlEchoed: false;
   warning?: string;
-  auditId?: string;
+  auditLogged: boolean;
+  tenantIdEchoed: false;
+  auditIdEchoed: false;
+  internalPersistenceIdsEchoed: false;
   persistence: "database" | "local-fallback";
   gapIds: string[];
-  ciResult?: ReturnType<typeof buildReleaseRecordCiResultMetadata>;
-  ciResultWritePlan?: ReturnType<typeof buildReleaseRecordCiResultWritePlan>;
+  ciResult?: ReturnType<typeof buildSafeReleaseRecordCiResultMetadata>;
+  ciResultWritePlan?: ReturnType<typeof buildSafeReleaseRecordCiResultWritePlan>;
   cicdAutomation?: ReturnType<typeof buildCicdDeploymentAutomationContract>;
   providerGates?: ReturnType<typeof buildDeploymentProviderGateMatrix>;
   artifactPaths?: typeof cicdDeploymentAutomationArtifactPaths;
@@ -135,11 +144,67 @@ function buildEnvironmentSnapshot(targetEnvironment: DeploymentReadinessMutation
   );
 }
 
+function buildDeploymentReadinessResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    workflowRunIdEchoed: false,
+    workflowRunUrlEchoed: false,
+    environmentValuesEchoed: false,
+    secretValuesEchoed: false,
+  };
+}
+
+function buildSafeReleaseRecordCiResultMetadata(input: {
+  releaseChannel?: string | null;
+  status: "requested" | "blocked" | "dry_run" | "succeeded" | "failed";
+}) {
+  const { workflowRunId, workflowRunUrl, ...metadata } = buildReleaseRecordCiResultMetadata({
+    releaseChannel: input.releaseChannel,
+    status: input.status,
+  });
+
+  void workflowRunId;
+  void workflowRunUrl;
+
+  return {
+    ...metadata,
+    workflowRunLinked: false,
+    workflowRunIdEchoed: false,
+    workflowRunUrlEchoed: false,
+  };
+}
+
+function buildSafeReleaseRecordCiResultWritePlan(input: {
+  status: "requested" | "blocked" | "dry_run" | "succeeded" | "failed";
+}) {
+  const { releaseRecordId, updateFields, idempotencyKey, ...writePlan } = buildReleaseRecordCiResultWritePlan({
+    status: input.status,
+  });
+  const { ciWorkflowRunId, ciWorkflowRunUrl, ...safeUpdateFields } = updateFields;
+
+  void releaseRecordId;
+  void idempotencyKey;
+  void ciWorkflowRunId;
+  void ciWorkflowRunUrl;
+
+  return {
+    ...writePlan,
+    releaseRecordMatched: false,
+    idempotencyKeyPrepared: false,
+    updateFields: {
+      ...safeUpdateFields,
+      ciWorkflowRunIdEchoed: false,
+      ciWorkflowRunUrlEchoed: false,
+    },
+  };
+}
+
 function buildPayload(actor: ReturnType<typeof resolveDashboardActor>, environment: ReturnType<typeof buildEnvironmentSnapshot>): DeploymentGetPayload {
   return {
     ok: true,
     source: actor.source,
-    tenantId: actor.tenantId,
     actorRole: actor.role,
     targetEnvironment: "production",
     operationMode: "read-only",
@@ -151,6 +216,7 @@ function buildPayload(actor: ReturnType<typeof resolveDashboardActor>, environme
     gapIds: deploymentGapIds,
     cicdAutomation: buildCicdDeploymentAutomationContract(),
     providerGates: buildDeploymentProviderGateMatrix(),
+    ...buildDeploymentReadinessResponseProjection(),
     boundary:
       "Readiness route is now auth-guarded with tenant scope and audit-ready metadata, but deployment actions remain external to this API until CI/CD environments and provider credentials are provisioned.",
   };
@@ -159,7 +225,7 @@ function buildPayload(actor: ReturnType<typeof resolveDashboardActor>, environme
 function buildPostSuccessPayload(
   actor: ReturnType<typeof resolveDashboardActor>,
   input: DeploymentReadinessMutationInput,
-  auditId?: string,
+  auditLogged = false,
   environment?: ReturnType<typeof buildEnvironmentSnapshot>,
 ): DeploymentPostPayload {
   const resolvedEnvironment = environment ?? buildEnvironmentSnapshot(input.targetEnvironment);
@@ -168,7 +234,6 @@ function buildPostSuccessPayload(
   return {
     ok: true,
     source: actor.source,
-    tenantId: actor.tenantId,
     actorRole: actor.role,
     targetEnvironment: input.targetEnvironment,
     operation: input.operation,
@@ -178,21 +243,18 @@ function buildPostSuccessPayload(
     },
     environment: resolvedEnvironment,
     plan: buildDeploymentPlan(input.targetEnvironment),
-    ...(input.requestId === undefined ? {} : { requestId: input.requestId }),
+    requestIdReceived: Boolean(input.requestId),
+    rawRequestIdEchoed: false,
+    workflowRunIdVerified: false,
     persistence: actor.source === "local-fallback" ? "local-fallback" : "database",
-    ...(auditId ? { auditId } : {}),
+    auditLogged,
+    ...buildDeploymentReadinessResponseProjection(),
     gapIds: deploymentGapIds,
-    ciResult: buildReleaseRecordCiResultMetadata({
-      workflowRunId: input.requestId ?? null,
-      workflowRunUrl: null,
-      releaseVersion: null,
+    ciResult: buildSafeReleaseRecordCiResultMetadata({
       releaseChannel: input.targetEnvironment,
-      commitSha: null,
       status: policy.implemented ? "requested" : "blocked",
     }),
-    ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
-      workflowRunId: input.requestId ?? null,
-      workflowRunUrl: null,
+    ciResultWritePlan: buildSafeReleaseRecordCiResultWritePlan({
       status: policy.implemented ? "requested" : "blocked",
     }),
     cicdAutomation: buildCicdDeploymentAutomationContract(),
@@ -226,12 +288,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
             message: "Production deployment readiness reads require DB-backed actor resolution and auditable control-plane persistence; local fallback snapshots are disabled.",
             gapIds: deploymentGapIds,
           },
+          ...buildDeploymentReadinessResponseProjection(),
           productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -242,8 +304,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
-    const audit = await auditLogModel.create({
+
+    await prisma.auditLog.create({
       data: {
         tenantId,
         actorUserId: actor.actorUserId,
@@ -254,7 +316,17 @@ export async function GET(request: NextRequest) {
           targetEnvironment: "production",
           productionBlocked: environment.productionBlocked,
           missingRequiredNames: environment.missingRequiredNames,
-          redactedFields: ["DATABASE_URL", "DIRECT_URL", "AUTH_SECRET", "STRIPE_SECRET_KEY", "SENTRY_AUTH_TOKEN", "VERCEL_TOKEN"],
+          redactedFields: [
+            "DATABASE_URL",
+            "DIRECT_URL",
+            "AUTH_SECRET",
+            "STRIPE_SECRET_KEY",
+            "STRIPE_WEBHOOK_SECRET",
+            "SENTRY_AUTH_TOKEN",
+            "VERCEL_TOKEN",
+            "CSRF_SECRET",
+            "SECURITY_ENCRYPTION_PRIMARY_KEY",
+          ],
           cicdAutomation: buildCicdDeploymentAutomationContract(),
           providerGates: buildDeploymentProviderGateMatrix(),
           artifactPaths: cicdDeploymentAutomationArtifactPaths,
@@ -263,7 +335,10 @@ export async function GET(request: NextRequest) {
       select: { id: true },
     });
 
-    return NextResponse.json({ ...buildPayload(actor, environment), auditId: audit.id }, { headers: noStoreHeaders });
+    return NextResponse.json(
+      { ...buildPayload(actor, environment), auditLogged: true },
+      { headers: noStoreHeaders },
+    );
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
       if (process.env.NODE_ENV === "production") {
@@ -271,12 +346,12 @@ export async function GET(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId,
             error: {
               code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
               message: "Production deployment readiness reads require the dashboard database connection; audit-free fallback snapshots are disabled.",
               gapIds: deploymentGapIds,
             },
+            ...buildDeploymentReadinessResponseProjection(),
             productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
           },
           { status: 503, headers: noStoreHeaders },
@@ -330,12 +405,12 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId: actor.tenantId,
           error: {
             code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
             message: "Production deployment readiness writes require DB-backed actor resolution and auditable control-plane persistence; local fallback requests are disabled.",
             gapIds: deploymentGapIds,
           },
+          ...buildDeploymentReadinessResponseProjection(),
           productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -346,32 +421,28 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const auditLogModel = prisma.auditLog as { create: (args: unknown) => Promise<{ id: string }> };
-    const audit = await auditLogModel.create({
+
+    await prisma.auditLog.create({
       data: {
         tenantId: actor.tenantId,
         actorUserId: actor.actorUserId,
         action: `deployment:${input.operation}`,
         entityType: "DeploymentReadiness",
-        metadata: {
-          operation: input.operation,
-          targetEnvironment: input.targetEnvironment,
-          reason: input.reason,
-          requestId: input.requestId,
+          metadata: {
+            operation: input.operation,
+            targetEnvironment: input.targetEnvironment,
+            reason: input.reason,
+          requestIdReceived: Boolean(input.requestId),
+          rawRequestIdStored: false,
+          workflowRunIdVerified: false,
           blockerIds: input.blockerIds ?? [],
           source: actor.source,
           implemented: policy.implemented,
-          ciResult: buildReleaseRecordCiResultMetadata({
-            workflowRunId: input.requestId ?? null,
-            workflowRunUrl: null,
-            releaseVersion: null,
+          ciResult: buildSafeReleaseRecordCiResultMetadata({
             releaseChannel: input.targetEnvironment,
-            commitSha: null,
             status: policy.implemented ? "requested" : "blocked",
           }),
-          ciResultWritePlan: buildReleaseRecordCiResultWritePlan({
-            workflowRunId: input.requestId ?? null,
-            workflowRunUrl: null,
+          ciResultWritePlan: buildSafeReleaseRecordCiResultWritePlan({
             status: policy.implemented ? "requested" : "blocked",
           }),
           cicdAutomation: buildCicdDeploymentAutomationContract(),
@@ -381,7 +452,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const payload = buildPostSuccessPayload(actor, input, audit.id, environment);
+    const payload = buildPostSuccessPayload(actor, input, true, environment);
     return NextResponse.json(payload, { status: policy.statusCode, headers: noStoreHeaders });
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
@@ -390,12 +461,12 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             source: actor.source,
-            tenantId: actor.tenantId,
             error: {
               code: "PROVIDER_DEPLOYMENT_READINESS_NOT_CONFIGURED",
               message: "Production deployment readiness writes require the dashboard database connection; audit-free fallback requests are disabled.",
               gapIds: deploymentGapIds,
             },
+            ...buildDeploymentReadinessResponseProjection(),
             productionBoundary: { localDeploymentReadinessFallbackDisabled: true },
           },
           { status: 503, headers: noStoreHeaders },

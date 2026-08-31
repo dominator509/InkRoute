@@ -16,6 +16,6 @@ describe("privacy page status copy", () => {
     expect(privacyPage).toContain("Privacy request intake is wired for demo-scope persistence and production fail-closed handling");
     expect(privacyPage).toContain("production must still verify identity");
     expect(privacyPage).not.toContain("Privacy request flows are scaffolded only");
-    expect(privacyPage).not.toContain("Legal placeholder Â· Not final");
+    expect(privacyPage).not.toContain("Legal placeholder - Not final");
   });
 });

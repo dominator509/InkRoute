@@ -1,5 +1,9 @@
 ﻿import { buildDashboardLaunchEvidencePlan } from "@inkroute/auth";
 
+import {
+  dashboardLaunchEvidenceRequiredCommands,
+} from "@inkroute/auth";
+
 export type DashboardLaunchRuntimeStatus =
   | "wired"
   | "build-gated"
@@ -113,16 +117,7 @@ export const dashboardLaunchRunPersistenceContract: DashboardLaunchRunPersistenc
   ],
 };
 
-export const dashboardLaunchRuntimeCommands = [
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "pnpm --filter @inkroute/dashboard test",
-  "pnpm test:e2e --project=dashboard-chromium",
-  "dashboard provider-backed auth smoke tests",
-  "dashboard RBAC and cross-tenant denial tests",
-  "dashboard mutation AuditLog persistence tests",
-  "GitHub Actions dashboard launch evidence job",
-] as const;
+export const dashboardLaunchRuntimeCommands = dashboardLaunchEvidenceRequiredCommands;
 
 export const dashboardLaunchRuntimeLocalCommands = ["pnpm --filter @inkroute/dashboard typecheck"] as const;
 export const dashboardLaunchRuntimeExternalCommands = [
@@ -520,7 +515,7 @@ export const dashboardLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardLaunchRuntimeMatrixEntry[];
 
-export const dashboardLaunchRuntimeReadiness = buildDashboardLaunchEvidencePlan({
+const dashboardLaunchRuntimeReadinessInput = {
   packageScripts: {
     typecheck: "next typegen && tsc --noEmit",
     build: "next build",
@@ -543,16 +538,34 @@ export const dashboardLaunchRuntimeReadiness = buildDashboardLaunchEvidencePlan(
   loadingEmptyErrorStatesVerified: false,
   ciEvidenceCaptured: false,
   dashboardArtifactsSecretSafe: false,
-});
+};
+
+export const dashboardLaunchRuntimeReadiness = {
+  ...buildDashboardLaunchEvidencePlan(dashboardLaunchRuntimeReadinessInput),
+  ...dashboardLaunchRuntimeReadinessInput,
+};
+
+const dashboardLaunchDecisionRequiredEvidenceSuffix = [
+  "DashboardLaunchRun row with command, control, artifact, tenant API, and launch state matrices.",
+  "Artifact bundle proving dashboard typecheck/build/tests, Playwright smoke, seeded tenant data, provider auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts.",
+] as const;
+
+const dashboardLaunchDecisionRequiredEvidence: DashboardLaunchRequiredEvidence = [
+  ...dashboardLaunchRuntimeReadiness.requiredEvidence,
+  ...dashboardLaunchDecisionRequiredEvidenceSuffix,
+];
 
 export function buildDashboardLaunchDecisionRequiredEvidence(
   readinessEvidence: typeof dashboardLaunchRuntimeReadiness.requiredEvidence,
 ): DashboardLaunchRequiredEvidence {
+  if (readinessEvidence === dashboardLaunchRuntimeReadiness.requiredEvidence) {
+    return dashboardLaunchDecisionRequiredEvidence;
+  }
+
   return [
     ...readinessEvidence,
-    "DashboardLaunchRun row with command, control, artifact, tenant API, and launch state matrices.",
-    "Artifact bundle proving dashboard typecheck/build/tests, Playwright smoke, seeded tenant data, provider auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts.",
-  ];
+    ...dashboardLaunchDecisionRequiredEvidenceSuffix,
+  ] as DashboardLaunchRequiredEvidence;
 }
 
 export type DashboardLaunchRequiredEvidence = readonly [
@@ -561,9 +574,7 @@ export type DashboardLaunchRequiredEvidence = readonly [
   "Artifact bundle proving dashboard typecheck/build/tests, Playwright smoke, seeded tenant data, provider auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts.",
 ];
 
-export const dashboardLaunchRequiredEvidence = buildDashboardLaunchDecisionRequiredEvidence(
-  dashboardLaunchRuntimeReadiness.requiredEvidence,
-);
+export const dashboardLaunchRequiredEvidence = dashboardLaunchDecisionRequiredEvidence;
 
 export function buildDashboardLaunchEvidenceDecision(
   input: DashboardLaunchEvidenceInput,
@@ -627,9 +638,9 @@ export function buildDashboardLaunchEvidenceDecision(
 }
 
 const sensitiveDashboardLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|client|customer|payment|medical|consent|provider|repository|branch)$/iu;
+  /(token|secret|password|authorization|cookie|csrf|email|phone|tenant|user|account|database|url|uri|dsn|key|id|client|customer|payment|medical|consent|provider|repository|repo|branch|pullRequest|pr|reviewer|codeowner|session|member|role|rbac|audit|mutation|payload|body|route|path|artifact|screenshot|screenshots|video|playwright|browser|html|dom|seed|seeded|seededTenantData|field|redaction|loading|empty|error|state|command|build|typecheck|test|output|stdout|stderr|log|ci|workflow|run|commit|prisma)$/iu;
 const sensitiveDashboardLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|denied\s+(?:tenant|user|client|customer|account|session|member|role|audit|mutation|booking|payment|provider|route|artifact|trace|screenshot|seed|dashboard|workflow|ci|run|commit|branch|database|prisma|persistence|medical|consent)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:tenant|user|client|customer|account|session|member|role|audit|mutation|booking|payment|provider|route|artifact|trace|screenshot|seed|dashboard|workflow|ci|run|commit|branch|database|prisma|persistence|medical|consent)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactDashboardLaunchString = (value: string): string =>
   value.replace(sensitiveDashboardLaunchValuePattern, "[REDACTED]");

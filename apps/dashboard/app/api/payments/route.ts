@@ -4,15 +4,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { dashboardProjectedPayments } from "../../../lib/demo";
 import { assertPermission, isDatabaseUnavailable, resolveDashboardActor } from "../dashboardAuth";
 
+function redactPaymentMetadataValue(key: string, value: unknown): unknown {
+  if (/secret|token|intent|session|customer|email|phone|receipt|url/i.test(key)) return "[redacted-dashboard-field]";
+  if (Array.isArray(value)) return value.map((entry, index) => redactPaymentMetadataValue(String(index), entry));
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([nestedKey, nestedValue]) => [
+        nestedKey,
+        redactPaymentMetadataValue(nestedKey, nestedValue),
+      ]),
+    );
+  }
+  return value;
+}
+
 function redactPaymentMetadata(metadata: unknown): Record<string, unknown> {
   if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) return {};
-  const record = metadata as Record<string, unknown>;
-  return Object.fromEntries(
-    Object.entries(record).map(([key, value]) => [
-      key,
-      /secret|token|intent|session|customer|email|phone|receipt|url/i.test(key) ? "[redacted-dashboard-field]" : value,
-    ]),
-  );
+  return redactPaymentMetadataValue("metadata", metadata) as Record<string, unknown>;
 }
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -48,6 +56,58 @@ type PaymentListRow = {
   refunds: PaymentListRefundRow[];
 };
 
+function buildPaymentListResponseProjection() {
+  return {
+    paymentIdEchoed: false,
+    paymentIdsEchoed: false,
+    tenantIdEchoed: false,
+    bookingRequestIdsEchoed: false,
+    depositIdsEchoed: false,
+    refundIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafePaymentListRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    paymentId: _paymentId,
+    tenantId: _tenantId,
+    bookingId: _bookingId,
+    bookingRequestId: _bookingRequestId,
+    depositId: _depositId,
+    refundId: _refundId,
+    refundIds: _refundIds,
+    refunds: _refunds,
+    providerPaymentId,
+    providerSessionId,
+    receiptUrl,
+    ...safeRecord
+  } = record;
+  const refunds = Array.isArray(_refunds)
+    ? _refunds.map((refund) => {
+        if (typeof refund !== "object" || refund === null) return refund;
+        const { id: _refundRowId, refundId: _refundIdValue, ...safeRefund } = refund as Record<string, unknown>;
+        return { ...safeRefund, refundIdEchoed: false };
+      })
+    : undefined;
+
+  return {
+    ...safeRecord,
+    providerPaymentId: providerPaymentId ? "[redacted-dashboard-field]" : null,
+    providerSessionId: providerSessionId ? "[redacted-dashboard-field]" : null,
+    receiptUrl: receiptUrl ? "[redacted-dashboard-field]" : null,
+    hasProviderPaymentId: Boolean(safeRecord.hasProviderPaymentId ?? providerPaymentId),
+    hasProviderSessionId: Boolean(safeRecord.hasProviderSessionId ?? providerSessionId),
+    hasReceiptUrl: Boolean(safeRecord.hasReceiptUrl ?? receiptUrl),
+    bookingLinked: Boolean(safeRecord.bookingLinked ?? _bookingId ?? _bookingRequestId),
+    depositLinked: Boolean(safeRecord.depositLinked ?? _depositId),
+    ...(refunds ? { refunds } : {}),
+    responseProjection: buildPaymentListResponseProjection(),
+  };
+}
+
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
   try {
@@ -70,26 +130,30 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard payment reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPaymentListResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
       );
     }
 
+    const safePayments = dashboardProjectedPayments.slice(0, limit).map((payment) => buildSafePaymentListRecord(payment as Record<string, unknown>));
+
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        count: dashboardProjectedPayments.length,
-        payments: dashboardProjectedPayments.slice(0, limit),
+        count: safePayments.length,
+        payments: safePayments,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPaymentListResponseProjection(),
         gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns tenant-projected demo payments only; database mode is required for live payment reads.",
       },
@@ -99,8 +163,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const paymentModel = tx.payment as { findMany: (args: unknown) => Promise<PaymentListRow[]> };
-      const rows = await paymentModel.findMany({
+      const rows = await tx.payment.findMany({
         where: { tenantId },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -156,7 +219,8 @@ export async function GET(request: NextRequest) {
               metadata: {
                 source: "dashboard-api",
                 scope: "list",
-                auditId: audit.id,
+                auditLogged: true,
+                internalPersistenceIdsStored: false,
                 redactedFields: ["providerPaymentId", "providerSessionId", "receiptUrl", "metadata"],
               },
             },
@@ -172,11 +236,7 @@ export async function GET(request: NextRequest) {
       tenantId,
       source: "repository",
       records: result.rows.map((row: PaymentListRow) => ({
-        id: row.id,
-        tenantId: row.tenantId,
         clientName: row.bookingRequest?.clientNameSnapshot ?? "Unassigned client",
-        bookingId: row.bookingRequestId,
-        depositId: row.depositId,
         amountCents: row.amountCents,
         status: row.status,
         provider: row.provider,
@@ -185,10 +245,15 @@ export async function GET(request: NextRequest) {
         paidAt: row.paidAt?.toISOString() ?? null,
         failedAt: row.failedAt?.toISOString() ?? null,
         createdAt: row.createdAt.toISOString(),
-        providerPaymentId: row.providerPaymentId,
-        providerSessionId: row.providerSessionId,
-        receiptUrl: row.receiptUrl,
+        providerPaymentId: row.providerPaymentId ? "[redacted-dashboard-field]" : null,
+        providerSessionId: row.providerSessionId ? "[redacted-dashboard-field]" : null,
+        receiptUrl: row.receiptUrl ? "[redacted-dashboard-field]" : null,
+        hasProviderPaymentId: Boolean(row.providerPaymentId),
+        hasProviderSessionId: Boolean(row.providerSessionId),
+        hasReceiptUrl: Boolean(row.receiptUrl),
         metadata: redactPaymentMetadata(row.metadata),
+        bookingLinked: Boolean(row.bookingRequestId),
+        depositLinked: Boolean(row.depositId),
         refundCount: row.refunds.length,
         refundedAmountCents: row.refunds.reduce((sum: number, refund: PaymentListRefundRow) => sum + refund.amountCents, 0),
       })),
@@ -199,11 +264,12 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         count: view.records.length,
-        payments: view.records,
-        auditId: result.audit.id,
+        payments: view.records.map((payment) => buildSafePaymentListRecord(payment as Record<string, unknown>)),
+        auditLogged: true,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildPaymentListResponseProjection(),
         gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard payment list reads are tenant-scoped, redacted, no-store, and audited in AuditLog plus PaymentAuditLog.",
       },
@@ -215,8 +281,9 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Payment list reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildPaymentListResponseProjection(),
           gapIds: ["GAP-004", "GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },

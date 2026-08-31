@@ -28,6 +28,21 @@ describe("mobile API client static contract", () => {
     expect(apiClientSource).toContain("idempotencyKey: request.idempotencyKey");
   });
 
+  it("exposes safe mobile request proof without echoing auth or replay identifiers", () => {
+    expect(apiClientSource).toContain("buildMobileApiSafeRequestProof");
+    expect(apiClientSource).toContain("authHeaderAttached: plan.headerProof.authorizationHeaderAttached");
+    expect(apiClientSource).toContain("tenantHeaderAttached: plan.headerProof.tenantHeaderAttached");
+    expect(apiClientSource).toContain("requestIdHeaderAttached: plan.headerProof.requestIdHeaderAttached");
+    expect(apiClientSource).toContain("idempotencyHeaderAttached: plan.headerProof.idempotencyHeaderAttached");
+    expect(apiClientSource).toContain("rawAuthorizationHeaderEchoed: false");
+    expect(apiClientSource).toContain("rawAccessTokenEchoed: false");
+    expect(apiClientSource).toContain("rawTenantIdEchoed: false");
+    expect(apiClientSource).toContain("rawRequestIdEchoed: false");
+    expect(apiClientSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(apiClientSource).toContain("rawUrlEchoed: false");
+    expect(apiClientSource).toContain("rawBodyEchoed: false");
+  });
+
   it("blocks unsafe requests before fetch and redacts response errors", () => {
     expect(apiClientSource).toContain('if (plan.status !== "ready" || !plan.url)');
     expect(apiClientSource).toContain("plan.blockers.join");

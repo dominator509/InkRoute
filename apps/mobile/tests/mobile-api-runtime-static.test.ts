@@ -191,6 +191,10 @@ describe("mobile API sync runtime contract", () => {
         offlineReplayPayload: "mutation_private",
         publicSummary: "mobile API sync evidence captured",
       },
+      safeNote:
+        "evidence_mobile_api_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/mobile-api/private-proof.json",
+      safeReplayPath: "test-results/mobile-api-runtime/private-offline-replay.json",
+      safeProviderRun: "provider_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedMobileApiArtifact(artifact);
@@ -200,6 +204,9 @@ describe("mobile API sync runtime contract", () => {
       "requestUrl",
       "idempotencyKey",
       "nested.offlineReplayPayload",
+      "safeNote",
+      "safeReplayPath",
+      "safeProviderRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantId: "[REDACTED]",
@@ -210,7 +217,21 @@ describe("mobile API sync runtime contract", () => {
         offlineReplayPayload: "[REDACTED]",
         publicSummary: "mobile API sync evidence captured",
       },
+      safeReplayPath: "[REDACTED]",
+      safeProviderRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_api_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/mobile-api/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/mobile-api-runtime/private-offline-replay.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "provider_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildMobileApiArtifactReview({
       publicSummary: "safe mobile API evidence",

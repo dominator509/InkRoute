@@ -241,7 +241,8 @@ export const buildStructuredDataCrawlExecutionPlan = (): StructuredDataCrawlExec
   requiredExternalEvidence: structuredDataCrawlRequiredExternalEvidence,
 });
 
-const sensitiveStructuredDataArtifactKeyPattern = /(token|secret|password|authorization|cookie|provider|payload|email|phone|client|draft|private)/i;
+const sensitiveStructuredDataArtifactKeyPattern =
+  /(authorization|canonical|client|cookie|draft|email|html|jsonld|metadata|noindex|pagecontent|path|phone|private|provider|payload|rendered|robots|route|schema|script|secret|sitemap|tenant|token|url|validation)/i;
 const sensitiveStructuredDataArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,

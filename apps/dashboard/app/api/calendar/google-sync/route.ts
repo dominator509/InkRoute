@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildGoogleCalendarProviderSyncPlan, type GoogleCalendarSyncAction } from "@inkroute/calendar";
+import {
+  buildGoogleCalendarProviderSyncPlan,
+  type GoogleCalendarProviderSyncPlan,
+  type GoogleCalendarSyncAction,
+} from "@inkroute/calendar";
 
 import { dashboardGoogleCalendarSyncContract } from "../../../../lib/googleCalendarSync";
 import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
@@ -7,6 +11,28 @@ import { assertPermission, resolveDashboardActor } from "../../dashboardAuth";
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
 const supportedActions = new Set<GoogleCalendarSyncAction>(dashboardGoogleCalendarSyncContract.supportedActions);
+
+function buildSafeGoogleCalendarSyncPlanResponse(plan: GoogleCalendarProviderSyncPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    providerCall: plan.providerCall,
+    requiresTransaction: plan.requiresTransaction,
+    nextAction: plan.nextAction,
+    requiredControls: plan.requiredControls,
+    blockers: plan.blockers,
+    writeModels: plan.writes.map((write) => write.model),
+    writePayloadsEchoed: false,
+    idempotencyKeyPresent: Boolean(plan.idempotencyKey),
+    rawIdempotencyKeyEchoed: false,
+    providerEventIdEchoed: false,
+    syncTokenEchoed: false,
+    pushChannelIdEchoed: false,
+    pushResourceIdEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
 export async function POST(request: NextRequest) {
   const actor = resolveDashboardActor(request);
@@ -62,7 +88,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         error: { code: "GOOGLE_CALENDAR_SYNC_BLOCKED", message: "Google Calendar sync is not safe to execute." },
-        plan,
+        plan: buildSafeGoogleCalendarSyncPlanResponse(plan),
         readiness: dashboardGoogleCalendarSyncContract.readiness,
         gapIds: ["GAP-057"],
       },
@@ -75,7 +101,7 @@ export async function POST(request: NextRequest) {
       ok: false,
       status: "provider-worker-required",
       message: "Google Calendar sync plan is valid, but the provider worker must execute the real Google call.",
-      plan,
+      plan: buildSafeGoogleCalendarSyncPlanResponse(plan),
       readiness: dashboardGoogleCalendarSyncContract.readiness,
       gapIds: ["GAP-057"],
     },

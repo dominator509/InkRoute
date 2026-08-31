@@ -61,6 +61,25 @@ describe("GitHub issue automation runtime contract", () => {
     expect(routeSource).toContain("dashboardStatusSynced: true");
     expect(routeSource).toContain("rawProviderPayloadStored: false");
     expect(routeSource).toContain("providerDispatchExecuted");
+    expect(routeSource).toContain("rawCreateIssueRequestStored: false");
+    expect(routeSource).toContain("buildRedactedGithubIssueAutomationArtifact(persistedErrorReport.metadata)");
+    expect(routeSource).toContain("buildRedactedGithubIssueAutomationArtifact(input.plan.createIssueRequest)");
+    expect(routeSource).toContain("buildSafeGithubIssueAutomationPlanResponse");
+    expect(routeSource).toContain("buildSafeGithubIssueRuntimePlanResponse");
+    expect(routeSource).toContain("buildSafeGithubIssueDispatchResponse");
+    expect(routeSource).toContain("buildGithubIssueAutomationResponseProjection");
+    expect(routeSource).toContain("rawAutomationPlanEchoed: false");
+    expect(routeSource).toContain("rawRuntimePlanEchoed: false");
+    expect(routeSource).toContain("rawCreateIssueRequestEchoed: false");
+    expect(routeSource).toContain("rawDispatchResponseEchoed: false");
+    expect(routeSource).toContain("rawIssueUrlEchoed: false");
+    expect(routeSource).toContain("issueNumberEchoed: false");
+    expect(routeSource).toContain("issueLinked: false");
+    expect(routeSource).not.toContain("issueUrl: null");
+    expect(routeSource).not.toContain("issueNumber: null");
+    expect(routeSource).toContain("repositoryEchoed: false");
+    expect(routeSource).toContain("rawProviderTokenEchoed: false");
+    expect(routeSource).toContain("auditIdEchoed: false");
     expect(routeSource).toContain("PROVIDER_GITHUB_ISSUE_ERROR_REPORT_LINK_NOT_CONFIGURED");
     expect(routeSource).toContain("syntheticGithubIssueReportFallbackDisabled");
     expect(routeSource).toContain('runtimePlan.status !== "ready"');
@@ -128,6 +147,8 @@ describe("GitHub issue automation runtime contract", () => {
     expect(routeSource).toContain("GITHUB_ISSUE_DISPATCH_ENABLED");
     expect(routeSource).toContain("https://api.github.com/repos/");
     expect(routeSource).toContain("liveSyntheticIssueCreationVerified: false");
+    expect(routeSource).not.toContain("data: { automationPlan, runtimePlan }");
+    expect(routeSource).not.toContain("dispatch,\n        auditLogId");
   });
 
   it("renders a dashboard approval form without enabling provider dispatch", () => {
@@ -207,14 +228,22 @@ describe("GitHub issue automation runtime contract", () => {
       provider: {
         authorization: "Bearer ghp_liveGithubIssueToken",
         repository: "owner/repo",
+        installationId: "github_installation_private",
       },
       createIssueRequest: {
+        tenantId: "tenant_github_issue_private",
+        errorReportId: "error_report_github_issue_private",
+        auditId: "audit_github_issue_private",
+        idempotencyKey: "idem_github_issue_private",
         title: "Crash from artist@example.com",
         body: "Phone +1 555 010 9999 and private stack trace should never persist",
         labels: ["bug", "observability"],
       },
       response: {
+        githubIssueLinkId: "github_issue_link_private",
+        issueNumber: 123,
         html_url: "https://github.com/owner/repo/issues/123",
+        workflowRunUrl: "https://github.com/owner/repo/actions/runs/private",
         token: "github_pat_secret",
       },
     };
@@ -224,11 +253,19 @@ describe("GitHub issue automation runtime contract", () => {
     const serialized = JSON.stringify(review.redactedArtifact);
 
     expect(JSON.stringify(redacted)).not.toContain("ghp_liveGithubIssueToken");
+    expect(serialized).not.toContain("owner/repo");
+    expect(serialized).not.toContain("github_installation_private");
+    expect(serialized).not.toContain("tenant_github_issue_private");
+    expect(serialized).not.toContain("error_report_github_issue_private");
+    expect(serialized).not.toContain("audit_github_issue_private");
+    expect(serialized).not.toContain("idem_github_issue_private");
+    expect(serialized).not.toContain("github_issue_link_private");
     expect(serialized).not.toContain("github_pat_secret");
     expect(serialized).not.toContain("artist@example.com");
     expect(serialized).not.toContain("+1 555 010 9999");
     expect(serialized).not.toContain("private stack trace");
-    expect(serialized).toContain("https://github.com/owner/repo/issues/123");
+    expect(serialized).not.toContain("https://github.com/owner/repo/issues/123");
+    expect(serialized).not.toContain("https://github.com/owner/repo/actions/runs/private");
     expect(review.safeToPersist).toBe(true);
     expect(review.unsafeFindings).toEqual([]);
     expect(review.requiredArtifactPath).toBe("coverage/github-issue-secret-safe-artifacts.json");

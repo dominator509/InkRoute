@@ -336,8 +336,11 @@ const providerContractSensitivePatterns = [
   /(expo[_-]?push[_-]?token['":=\s]+)[^"',\s}]+/gi,
   /(sentry[_-]?(?:dsn|event[_-]?id)['":=\s]+)[^"',\s}]+/gi,
   /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /https?:\/\/[^\s"'<>]+/gi,
+  /(?:redis|postgres(?:ql)?):\/\/[^\s"'<>]+/gi,
   /(token['":=\s]+)[^"',\s}]+/gi,
   /(secret['":=\s]+)[^"',\s}]+/gi,
+  /\b(?:provider|stripe|calendar|storage|message|email|sms|push|sentry|auth|rate|limit|idempotency|replay|webhook|event|workflow|ci|run|commit|fixture|repository|repo|branch|pull|pr|reviewer|codeowner)[-_:/]?[A-Za-z0-9_.-]{6,}\b/gi,
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
 ] as const;
@@ -358,7 +361,7 @@ export function buildRedactedProviderContractArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|token|secret|authorization|credential|password|rawBody|rawPayload|signature|webhook|providerPayload|sandboxTranscript|ciRunUrl|commitSha|runId|stripe|google|twilio|expo|sentry/i.test(key)
+        /email|phone|token|secret|authorization|credential|password|raw|body|payload|signature|webhook|providerPayload|sandboxTranscript|request|response|transcript|stack|error|log|output|env|database|dsn|ciRunUrl|commitSha|runId|stripe|google|twilio|expo|sentry|storage|calendar|oauth|session|rateLimit|idempotency|replay|repository|repo|branch|pull|pr|reviewer|codeowner/i.test(key)
           ? "[REDACTED]"
           : buildRedactedProviderContractArtifact(entry),
       ]),

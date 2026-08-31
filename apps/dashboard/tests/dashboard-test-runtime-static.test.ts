@@ -182,6 +182,10 @@ describe("dashboard test execution runtime contract", () => {
         privateScreenshotUrl: "https://artifacts.example.com/playwright-video/private.mp4",
         publicSummary: "dashboard test evidence captured",
       },
+      safeNote:
+        "evidence_dashboard_test_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/dashboard-test/private-proof.json",
+      safeTracePath: "test-results/dashboard-test-runtime/private-trace.zip",
+      safeBranchProof: "branch_protection_01HZYXZYXZYXZYXZYXZYXZYXZ",
     });
     const directRedaction = buildRedactedDashboardTestArtifact({
       publicSummary: "safe dashboard test evidence",
@@ -267,11 +271,26 @@ describe("dashboard test execution runtime contract", () => {
       "playwrightTraceUrl",
       "authSessionToken",
       "nested.privateScreenshotUrl",
+      "safeNote",
+      "safeTracePath",
+      "safeBranchProof",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("trace.zip");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("session_private");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "evidence_dashboard_test_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "artifacts/dashboard-test/private-proof.json",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "test-results/dashboard-test-runtime/private-trace.zip",
+    );
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain(
+      "branch_protection_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard test evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["branchProtectionLog"]);

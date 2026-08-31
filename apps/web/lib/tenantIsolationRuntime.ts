@@ -404,9 +404,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   required.filter((item) => !(actual ?? []).includes(item));
 
 const sensitiveTenantIsolationKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|tenant|user|client|actor|entity|database|postgres|url|uri|dsn|key|id|payload|artifact|audit|fixture)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|tenant|user|client|actor|entity|database|postgres|url|uri|dsn|key|id|payload|artifact|audit|fixture|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitiveTenantIsolationValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 
 const buildRedactedTenantIsolationValue = (value: unknown, path: string, redactions: string[]): unknown => {
   if (Array.isArray(value)) {
@@ -495,7 +495,7 @@ export const buildTenantIsolationEvidenceDecision = (
   };
 };
 
-export const tenantIsolationRuntimeReadiness = buildTenantIsolationRepositoryEvidencePlan({
+const tenantIsolationPackageReadiness = buildTenantIsolationRepositoryEvidencePlan({
   packageScripts: ["test", "typecheck", "db:validate", "db:generate", "db:migrate", "db:seed"],
   dbTypecheckPassed: false,
   dbTestsPassed: false,
@@ -514,6 +514,13 @@ export const tenantIsolationRuntimeReadiness = buildTenantIsolationRepositoryEvi
   ciEvidenceCaptured: false,
   secretSafeArtifactsCaptured: false,
 });
+
+export const tenantIsolationRuntimeReadiness = {
+  ...tenantIsolationPackageReadiness,
+  requiredCommands: tenantIsolationRuntimeCommands,
+  requiredControls: tenantIsolationRuntimeControls,
+  requiredEvidence: tenantIsolationEvidenceFlags,
+} as const;
 
 
 

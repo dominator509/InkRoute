@@ -145,7 +145,9 @@ export const buildTravelPublishExecutionPlan = (): TravelPublishExecutionPlan =>
 });
 
 const travelPublishPrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|travel|publish|waitlist|notification|queue|sync|rollback|e2e|trace|screenshot|artifact|email|phone|medical|payment|customer)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|travel|publish|waitlist|notification|queue|sync|rollback|e2e|trace|screenshot|artifact|email|phone|medical|payment|customer|path|ci|workflow|run|evidence|id|key)/i;
+const travelPublishPrivateArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|travel|publish|waitlist|notification|queue|sync|rollback|e2e|trace|screenshot|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactTravelPublishArtifactValue = (
   value: unknown,
@@ -170,6 +172,13 @@ const redactTravelPublishArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && travelPublishPrivateArtifactValuePattern.test(value)) {
+    travelPublishPrivateArtifactValuePattern.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(travelPublishPrivateArtifactValuePattern, "[redacted]");
+  }
+
+  travelPublishPrivateArtifactValuePattern.lastIndex = 0;
   return value;
 };
 

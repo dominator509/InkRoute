@@ -21,13 +21,49 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultRefundId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("refundId" in result)) {
-    return null;
-  }
+function buildRefundResponseProjection() {
+  return {
+    refundResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    refundIdEchoed: false,
+    paymentIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    depositIdEchoed: false,
+    providerRefundIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    rawReasonEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { refundId?: unknown }).refundId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeRefundResponse(result: {
+  status: "created" | "replayed";
+  refund: {
+    status: string;
+    amountCents: number;
+    currency: string;
+    createdAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildRefundResponseProjection(),
+    refund: {
+      status: result.refund.status,
+      amountCents: result.refund.amountCents,
+      currency: result.refund.currency,
+      createdAt: result.refund.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      refundPersisted: true,
+      paymentAuditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+      stripeRefundCreated: false,
+      webhookReconciled: false,
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -87,7 +123,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildRefundResponseProjection(),
           error: {
             code: "PROVIDER_REFUND_PERSISTENCE_NOT_CONFIGURED",
             message: "Production refund creation requires DB-backed dashboard auth, tenant-scoped Refund persistence, and PaymentAuditLog rows; local fallback mutations are disabled.",
@@ -103,7 +140,8 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildRefundResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Refund creation requires database-backed dashboard auth so Refund and PaymentAuditLog rows can be persisted.",
@@ -146,10 +184,15 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayRefundId = idempotency.status === "completed" ? resultRefundId(idempotency.result) : null;
-      if (replayRefundId) {
+      if (idempotency.status === "completed") {
         const refund = await tx.refund.findFirst({
-          where: { id: replayRefundId, tenantId },
+          where: {
+            tenantId,
+            paymentId: input.paymentId,
+            amountCents: input.amountCents,
+            currency: input.currency,
+            providerRefundId: input.providerRefundId ?? null,
+          },
           select: {
             id: true,
             paymentId: true,
@@ -225,10 +268,12 @@ export async function POST(request: NextRequest) {
           provider: payment.provider,
           metadata: {
             source: "dashboard-api",
-            refundId: refund.id,
+            refundPersisted: true,
             refundStatus: refund.status,
             providerExecution: "deferred",
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             boundary: "Local refund record only; Stripe refund execution, webhook reconciliation, provider rollback, and settlement proof remain gated.",
           },
         },
@@ -240,12 +285,13 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            refundId: refund.id,
-            auditId: audit.id,
+            refundPersisted: true,
+            auditLogged: true,
             created: true,
             rawReasonStoredInResult: false,
             stripeRefundCreated: false,
             webhookReconciled: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -254,22 +300,33 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.status === "payment_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "PAYMENT_NOT_FOUND", message: "Payment was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "PAYMENT_NOT_FOUND", message: "Payment was not found for this tenant." },
+          responseProjection: buildRefundResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
     if (result.status === "amount_exceeds_payment" || result.status === "currency_mismatch" || result.status === "scope_mismatch") {
-      return NextResponse.json({ ok: false, error: { code: "REFUND_SCOPE_INVALID", message: "Refund amount, currency, booking, and deposit must match the tenant-scoped payment." } }, { status: 409, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "REFUND_SCOPE_INVALID", message: "Refund amount, currency, booking, and deposit must match the tenant-scoped payment." },
+          responseProjection: buildRefundResponseProjection(),
+        },
+        { status: 409, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        refund: { ...result.refund, createdAt: result.refund.createdAt.toISOString() },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeRefundResponse(result),
         gapIds: ["GAP-007", "GAP-038", "GAP-060"],
         boundary: "Refund record creation is tenant-scoped, no-store, idempotency-backed, and payment-audited; Stripe refund execution and webhook reconciliation remain provider-gated.",
       },
@@ -281,7 +338,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildRefundResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Refund creation requires the dashboard database connection." },
           gapIds: ["GAP-007", "GAP-038", "GAP-060"],
         },

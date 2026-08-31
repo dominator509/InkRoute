@@ -52,7 +52,7 @@ export interface AbuseEventPersistenceContract {
   row: AbuseEventPersistenceInput;
   transactionWrites: readonly ["AbuseEvent", "AuditLog"];
   hashedFields: readonly ["abuseKeyHash", "ipHash", "userAgentHash"];
-  redactedFields: readonly ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token"];
+  redactedFields: readonly ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token", "rawHeaders", "cookie"];
   tenantIsolationKey: "tenantId";
   failClosedGate: "persist_before_reject_on_limiter_error";
 }
@@ -259,6 +259,10 @@ const abuseControlSensitivePatterns = [
   /(message[_-]?body['":=\s]+)[^"',}]+/gi,
   /(payload['":=\s]+)[^"',}]+/gi,
   /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
+  /(cookie:\s*)[^"',\n\r}]+/gi,
+  /(x-forwarded-for['":=\s]+)[^"',\n\r}]+/gi,
+  /(x-real-ip['":=\s]+)[^"',\n\r}]+/gi,
+  /(cf-connecting-ip['":=\s]+)[^"',\n\r}]+/gi,
   /(token['":=\s]+)[^"',\s}]+/gi,
   /(secret['":=\s]+)[^"',\s}]+/gi,
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
@@ -281,7 +285,7 @@ export function buildRedactedAbuseControlArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /email|phone|name|address|token|secret|authorization|credential|password|rawIp|ipHash|userAgent|payload|providerSignature|messageBody|webhook|stack/i.test(key)
+        /email|phone|name|address|token|secret|authorization|credential|password|cookie|headers|rawHeaders|xForwardedFor|xRealIp|cfConnectingIp|rawIp|ipHash|userAgent|payload|providerSignature|messageBody|webhook|stack/i.test(key)
           ? "[REDACTED]"
           : buildRedactedAbuseControlArtifact(entry),
       ]),
@@ -377,7 +381,7 @@ export function buildAbuseEventPersistenceContract(input: AbuseEventPersistenceI
     row: input,
     transactionWrites: ["AbuseEvent", "AuditLog"],
     hashedFields: ["abuseKeyHash", "ipHash", "userAgentHash"],
-    redactedFields: ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token"],
+    redactedFields: ["rawIp", "userAgent", "payload", "providerSignature", "messageBody", "token", "rawHeaders", "cookie"],
     tenantIsolationKey: "tenantId",
     failClosedGate: "persist_before_reject_on_limiter_error",
   };

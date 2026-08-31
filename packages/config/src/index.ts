@@ -1082,7 +1082,7 @@ export function buildDashboardDataRuntimeReadinessPlan(
   if (!input.dashboardTypecheckPassed) blockers.push("@inkroute/dashboard typecheck must pass with repository loaders.");
   if (!input.dashboardBuildPassed) blockers.push("@inkroute/dashboard build must pass with repository-backed routes.");
   if (missingRepositoryLoaders.length > 0) blockers.push(`Dashboard repository loaders are missing for: ${missingRepositoryLoaders.join(", ")}.`);
-  if (missingRouteWiring.length > 0) blockers.push(`Dashboard routes still need repository wiring for: ${missingRouteWiring.join(", ")}.`);
+  if (missingRouteWiring.length > 0) blockers.push(`Repository-backed dashboard route wiring is required for: ${missingRouteWiring.join(", ")}.`);
   if (!input.seededDatabaseVerified) blockers.push("Seeded database smoke evidence must prove dashboard routes can read tenant data.");
   if (!input.tenantIsolationTestsPassed) blockers.push("Dashboard repository tests must reject cross-tenant reads.");
   if (!input.redactionTestsPassed) blockers.push("Dashboard repository/API tests must prove private field redaction.");

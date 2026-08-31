@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export const notificationPersistenceRepositoryMethods = [
   "createMessageThreadInTransaction",
   "appendMessageInTransaction",
@@ -105,11 +107,11 @@ export function buildRedactedNotificationPersistencePayload(payload: Record<stri
 }
 
 function buildIdempotencyKey(input: { readonly tenantId: string; readonly key: string }): string {
-  return `${input.tenantId}:${input.key}`;
+  return `notification-persistence-idempotency:${createHash("sha256").update(JSON.stringify([input.tenantId, input.key])).digest("hex")}`;
 }
 
 function buildReadStateKey(input: { readonly tenantId: string; readonly threadId: string; readonly userId: string }): string {
-  return `${input.tenantId}:${input.threadId}:${input.userId}`;
+  return `notification-read-state:${createHash("sha256").update(JSON.stringify([input.tenantId, input.threadId, input.userId])).digest("hex")}`;
 }
 
 export function createInMemoryNotificationPersistenceRepository(

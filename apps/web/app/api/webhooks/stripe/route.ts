@@ -1,6 +1,7 @@
 import { inkrouteDemoTenant } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
 import { interpretStripeWebhook, verifyStripeWebhookSignature } from "@inkroute/payments";
+import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { persistWebhookEvent } from "../../../../lib/localRuntimeState";
 import { buildStripeWebhookRouteContract } from "../../../../lib/stripeWebhook";
@@ -17,6 +18,10 @@ function toJsonValue(value: unknown) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function providerSelectorFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
 function isDatabaseUnavailable(error: unknown): boolean {
   if (!process.env.DATABASE_URL) return true;
 
@@ -26,6 +31,74 @@ function isDatabaseUnavailable(error: unknown): boolean {
 
   const message = error.message.toLowerCase();
   return message.includes("connect") && message.includes("database");
+}
+
+function buildSafeStripeWebhookInterpretationResponse(interpretation: ReturnType<typeof interpretStripeWebhook>) {
+  return {
+    eventType: interpretation.eventType,
+    action: interpretation.action,
+    targetStatus: interpretation.targetStatus,
+    shouldTriggerBookingTransition: interpretation.shouldTriggerBookingTransition,
+    recommendedBookingStatus: interpretation.recommendedBookingStatus,
+    note: interpretation.note,
+    responseProjection: {
+      rawInterpretationEchoed: false,
+      rawProviderEventIdEchoed: false,
+      rawProviderPayloadEchoed: false,
+    },
+  };
+}
+
+function buildSafeStripeWebhookContractResponse(webhookContract: ReturnType<typeof buildStripeWebhookRouteContract>) {
+  return {
+    reconciliation: {
+      eventReceived: Boolean(webhookContract.reconciliation.eventId),
+      eventIdEchoed: false,
+      action: webhookContract.reconciliation.action,
+      targetStatus: webhookContract.reconciliation.targetStatus,
+      rawIdempotencyKeyEchoed: false,
+      shouldPersistAuditLog: webhookContract.reconciliation.shouldPersistAuditLog,
+      shouldReconcile: webhookContract.reconciliation.shouldReconcile,
+      blockers: webhookContract.reconciliation.blockers,
+      responseProjection: {
+        rawProviderEventIdEchoed: false,
+        rawIdempotencyKeyEchoed: false,
+      },
+    },
+    runtimeReadiness: {
+      status: webhookContract.runtimeReadiness.status,
+      missingSupportedEvents: webhookContract.runtimeReadiness.missingSupportedEvents,
+      requiredCommands: webhookContract.runtimeReadiness.requiredCommands,
+      requiredEvidence: webhookContract.runtimeReadiness.requiredEvidence,
+      blockerCount: webhookContract.runtimeReadiness.blockers.length,
+    },
+    shouldPersistReplay: webhookContract.shouldPersistReplay,
+    shouldRunTransaction: webhookContract.shouldRunTransaction,
+    boundary: webhookContract.boundary,
+    responseProjection: {
+      rawWebhookContractEchoed: false,
+      rawProviderEventIdEchoed: false,
+      rawProviderPayloadEchoed: false,
+    },
+  };
+}
+
+function buildSafeLocalStripeWebhookReceipt(storedWebhook: ReturnType<typeof persistWebhookEvent>) {
+  return {
+    source: storedWebhook.source,
+    eventType: storedWebhook.eventType,
+    receivedSignatureHeader: storedWebhook.receivedSignatureHeader,
+    payloadLength: storedWebhook.payloadLength,
+    createdAt: storedWebhook.createdAt,
+    responseProjection: {
+      webhookIdEchoed: false,
+      tenantIdEchoed: false,
+      rawProviderEventIdEchoed: false,
+      rawProviderPayloadEchoed: false,
+      rawSignatureEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
 }
 
 function stripeObject(payload: Record<string, unknown>): Record<string, unknown> {
@@ -158,19 +231,23 @@ async function persistStripeWebhookEvent(input: {
         provider: "stripe",
         providerDeliveryId: input.eventId,
         idempotencyKey: input.webhookContract.reconciliation.idempotencyKey,
-        providerFingerprint: paymentIntentId ?? sessionId ?? input.eventId,
+        providerFingerprint: providerSelectorFingerprint(paymentIntentId ?? sessionId ?? input.eventId),
         action: input.webhookContract.reconciliation.action,
         statusMutationApplied: shouldMutate,
         rawPayloadStored: false,
         sanitizedPayload: toJsonValue({
           eventType: input.eventType,
-          eventId: input.eventId,
+          eventIdReceived: Boolean(input.eventId),
+          rawProviderEventIdStored: false,
           signatureVerified: input.signatureVerified,
           rawBodyBytes: input.rawBodyBytes,
-          tenantId: input.tenantId,
-          bookingRequestId,
-          paymentId: payment?.id ?? paymentId,
-          depositId: deposit?.id ?? depositId,
+          tenantResolved: true,
+          bookingMetadataPresent: Boolean(bookingRequestId),
+          paymentLookupMetadataPresent: Boolean(paymentId),
+          depositLookupMetadataPresent: Boolean(depositId),
+          paymentMatched: Boolean(payment),
+          depositMatched: Boolean(deposit),
+          internalPersistenceIdsStored: false,
           providerSessionPresent: Boolean(sessionId),
           providerPaymentPresent: Boolean(paymentIntentId),
           amountCentsPresent: amountCents !== null,
@@ -192,7 +269,12 @@ async function persistStripeWebhookEvent(input: {
           ...(targetStatus === "failed" ? { failedAt: new Date() } : {}),
           ...(paymentIntentId ? { providerPaymentId: paymentIntentId } : {}),
           ...(sessionId ? { providerSessionId: sessionId } : {}),
-          metadata: toJsonValue({ stripeWebhookDeliveryId: delivery.id, lastStripeEventType: input.eventType, rawPayloadStored: false }),
+          metadata: toJsonValue({
+            stripeWebhookDeliveryRecorded: true,
+            lastStripeEventType: input.eventType,
+            rawPayloadStored: false,
+            internalPersistenceIdsStored: false,
+          }),
         },
         select: { id: true, status: true },
       })
@@ -209,8 +291,9 @@ async function persistStripeWebhookEvent(input: {
         action: "stripe.webhook.received",
         provider: "stripe",
         metadata: toJsonValue({
-          providerWebhookDeliveryId: delivery.id,
-          eventId: input.eventId,
+          providerWebhookDeliveryRecorded: true,
+          eventIdReceived: Boolean(input.eventId),
+          rawProviderEventIdStored: false,
           eventType: input.eventType,
           action: input.webhookContract.reconciliation.action,
           targetStatus,
@@ -218,6 +301,7 @@ async function persistStripeWebhookEvent(input: {
           moneyMatches,
           signatureVerified: input.signatureVerified,
           rawPayloadStored: false,
+          internalPersistenceIdsStored: false,
           gapIds: ["GAP-004", "GAP-049", "GAP-050", "GAP-051"],
         }),
       },
@@ -226,6 +310,43 @@ async function persistStripeWebhookEvent(input: {
 
     return { status: "persisted" as const, delivery, audit, paymentMutation, depositMutation, moneyMatches, statusMutationApplied: shouldMutate };
   });
+}
+
+function buildSafeStripeWebhookPersistenceResponse(persisted: Awaited<ReturnType<typeof persistStripeWebhookEvent>>) {
+  if (persisted.status === "replay") {
+    return {
+      status: persisted.status,
+      providerWebhookDeliveryRecorded: true,
+      providerWebhookDeliveryIdEchoed: false,
+      auditIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+      replayedAt: persisted.replay.replayedAt?.toISOString() ?? null,
+      rawPayloadEchoed: false,
+      rawProviderObjectEchoed: false,
+      rawIdempotencyKeyEchoed: false,
+    };
+  }
+
+  return {
+    status: persisted.status,
+    providerWebhookDeliveryRecorded: true,
+    providerWebhookDeliveryIdEchoed: false,
+    processedAt: persisted.delivery.processedAt.toISOString(),
+    auditLogged: true,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    paymentMutationApplied: Boolean(persisted.paymentMutation),
+    paymentStatus: persisted.paymentMutation?.status ?? null,
+    paymentIdEchoed: false,
+    depositMutationApplied: Boolean(persisted.depositMutation),
+    depositStatus: persisted.depositMutation?.status ?? null,
+    depositIdEchoed: false,
+    moneyMatches: persisted.moneyMatches,
+    statusMutationApplied: persisted.statusMutationApplied,
+    rawPayloadEchoed: false,
+    rawProviderObjectEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+  };
 }
 
 function productionStripeWebhookNotConfigured(input: { eventId: string; tenantSlug: string; interpretation: ReturnType<typeof interpretStripeWebhook>; message?: string }) {
@@ -238,9 +359,19 @@ function productionStripeWebhookNotConfigured(input: { eventId: string; tenantSl
         gapIds: ["GAP-004", "GAP-049", "GAP-050", "GAP-051"],
       },
       data: {
-        eventId: input.eventId,
-        tenantSlug: input.tenantSlug,
-        interpretation: input.interpretation,
+        eventReceived: input.eventId !== "unknown",
+        eventIdEchoed: false,
+        tenantScope: {
+          tenantResolved: input.tenantSlug !== "unknown",
+          tenantSlugEchoed: false,
+        },
+        interpretation: buildSafeStripeWebhookInterpretationResponse(input.interpretation),
+        responseProjection: {
+          rawProviderEventIdEchoed: false,
+          rawProviderPayloadEchoed: false,
+          rawInterpretationEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
         productionBoundary: {
           localStripeWebhookPersistenceDisabled: true,
           requiresDurableReplayProtection: true,
@@ -319,26 +450,22 @@ export async function POST(request: NextRequest) {
           ok: true,
           data: {
             tenantSlug,
-            tenantId: tenantResolution.tenantId,
+            tenantScope: { tenantResolved: true, tenantIdEchoed: false },
             persistence: "database",
-            persisted,
-            interpretation,
-            webhookContract: {
-              reconciliation: {
-                eventId: webhookContract.reconciliation.eventId,
-                action: webhookContract.reconciliation.action,
-                targetStatus: webhookContract.reconciliation.targetStatus,
-                idempotencyKey: webhookContract.reconciliation.idempotencyKey,
-                shouldPersistAuditLog: webhookContract.reconciliation.shouldPersistAuditLog,
-                shouldReconcile: webhookContract.reconciliation.shouldReconcile,
-                blockers: webhookContract.reconciliation.blockers,
-              },
-              shouldPersistReplay: webhookContract.shouldPersistReplay,
-              shouldRunTransaction: webhookContract.shouldRunTransaction,
-              boundary: webhookContract.boundary,
-            },
+            persisted: buildSafeStripeWebhookPersistenceResponse(persisted),
+            interpretation: buildSafeStripeWebhookInterpretationResponse(interpretation),
+            webhookContract: buildSafeStripeWebhookContractResponse(webhookContract),
             receivedSignatureHeader: "present",
             rawBodyBytes: rawBody.length,
+            responseProjection: {
+              stripePersistenceResponseAllowlisted: true,
+              rawPayloadEchoed: false,
+              rawProviderObjectEchoed: false,
+              rawProviderEventIdEchoed: false,
+              rawInterpretationEchoed: false,
+              rawWebhookContractEchoed: false,
+              rawIdempotencyKeyEchoed: false,
+            },
             productionBoundary: {
               providerVerified: Boolean(endpointSecret),
               rawPayloadStored: false,
@@ -383,29 +510,9 @@ export async function POST(request: NextRequest) {
       ok: true,
       data: {
         tenantSlug,
-        storedWebhook,
-        interpretation,
-        webhookContract: {
-          reconciliation: {
-            eventId: webhookContract.reconciliation.eventId,
-            action: webhookContract.reconciliation.action,
-            targetStatus: webhookContract.reconciliation.targetStatus,
-            idempotencyKey: webhookContract.reconciliation.idempotencyKey,
-            shouldPersistAuditLog: webhookContract.reconciliation.shouldPersistAuditLog,
-            shouldReconcile: webhookContract.reconciliation.shouldReconcile,
-            blockers: webhookContract.reconciliation.blockers,
-          },
-          runtimeReadiness: {
-            status: webhookContract.runtimeReadiness.status,
-            missingSupportedEvents: webhookContract.runtimeReadiness.missingSupportedEvents,
-            requiredCommands: webhookContract.runtimeReadiness.requiredCommands,
-            requiredEvidence: webhookContract.runtimeReadiness.requiredEvidence,
-            blockerCount: webhookContract.runtimeReadiness.blockers.length,
-          },
-          shouldPersistReplay: webhookContract.shouldPersistReplay,
-          shouldRunTransaction: webhookContract.shouldRunTransaction,
-          boundary: webhookContract.boundary,
-        },
+        storedWebhook: buildSafeLocalStripeWebhookReceipt(storedWebhook),
+        interpretation: buildSafeStripeWebhookInterpretationResponse(interpretation),
+        webhookContract: buildSafeStripeWebhookContractResponse(webhookContract),
         receivedSignatureHeader: "present",
         rawBodyBytes: rawBody.length,
         localRuntime: {

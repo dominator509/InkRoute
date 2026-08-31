@@ -19,6 +19,46 @@ function formatBudgetRange(min?: number | null, max?: number | null): string {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildBookingDetailResponseProjection() {
+  return {
+    bookingRequestIdEchoed: false,
+    tenantIdEchoed: false,
+    portfolioAttributionIdEchoed: false,
+    assignedToUserIdEchoed: false,
+    stateEventIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeBookingDetailRecord(record: Record<string, unknown>) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    portfolioAttribution: _portfolioAttribution,
+    portfolioAttributionId: _portfolioAttributionId,
+    assignedToUserId: _assignedToUserId,
+    stateEvents,
+    portfolioAttributed,
+    assignedToUserPresent,
+    ...safeRecord
+  } = record;
+
+  return {
+    ...safeRecord,
+    stateEvents: Array.isArray(stateEvents)
+      ? stateEvents.map((event) => {
+          if (typeof event !== "object" || event === null) return event;
+          const { id: _eventId, ...safeEvent } = event as Record<string, unknown>;
+          return safeEvent;
+        })
+      : stateEvents,
+    portfolioAttributed: Boolean(portfolioAttributed ?? (_portfolioAttribution && _portfolioAttribution !== "Unattributed") ?? _portfolioAttributionId),
+    assignedToUserPresent: Boolean(assignedToUserPresent ?? _assignedToUserId),
+    responseProjection: buildBookingDetailResponseProjection(),
+  };
+}
+
 export async function GET(request: NextRequest, context: BookingDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
@@ -47,13 +87,13 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          bookingId,
           error: {
             code: "PROVIDER_DASHBOARD_BOOKINGS_NOT_CONFIGURED",
             message: "Production dashboard booking detail reads require DB-backed actor resolution and tenant-scoped BookingRequest reads; local fallback demo rows are disabled.",
             gapIds: ["GAP-007", "GAP-031", "GAP-032", "GAP-037"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildBookingDetailResponseProjection(),
           productionBoundary: { localDashboardBookingFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -68,9 +108,10 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
-        booking,
+        booking: buildSafeBookingDetailRecord(booking as Record<string, unknown>),
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildBookingDetailResponseProjection(),
         gapIds: ["GAP-007", "GAP-037"],
         boundary: "Local fallback returns a tenant-projected demo booking only; database mode is required for live dashboard reads.",
       },
@@ -140,8 +181,6 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
       source: "repository",
       records: [
         {
-          id: result.row.id,
-          tenantId: result.row.tenantId,
           clientName: result.row.clientNameSnapshot,
           clientEmail: result.row.clientEmailSnapshot,
           clientPhone: result.row.clientPhoneSnapshot,
@@ -155,10 +194,9 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
           status: result.row.status,
           readinessScore: result.row.readinessScore,
           createdAt: result.row.createdAt.toISOString(),
-          portfolioAttribution: result.row.portfolioAttributionId ?? "Unattributed",
-          assignedToUserId: result.row.assignedToUserId,
+          portfolioAttributed: Boolean(result.row.portfolioAttributionId),
+          assignedToUserPresent: Boolean(result.row.assignedToUserId),
           stateEvents: result.row.stateEvents.map((event: { id: string; type: string; fromStatus: string | null; toStatus: string | null; note: string | null; createdAt: Date }) => ({
-            id: event.id,
             type: event.type,
             fromStatus: event.fromStatus,
             toStatus: event.toStatus,
@@ -174,10 +212,11 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
-        booking: view.records[0],
-        auditId: result.audit.id,
+        booking: buildSafeBookingDetailRecord(view.records[0] as Record<string, unknown>),
+        auditLogged: true,
+        tenantScope: { actorTenantMatched: true, bookingTenantMatched: true },
+        responseProjection: buildBookingDetailResponseProjection(),
         gapIds: ["GAP-007", "GAP-037"],
         boundary: "Dashboard booking detail reads are tenant-scoped, redacted, no-store, and audited.",
       },
@@ -189,9 +228,9 @@ export async function GET(request: NextRequest, context: BookingDetailRouteConte
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          bookingId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Booking detail reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildBookingDetailResponseProjection(),
           gapIds: ["GAP-007", "GAP-037"],
         },
         { status: 503, headers: noStoreHeaders },

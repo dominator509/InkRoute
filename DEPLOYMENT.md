@@ -11,7 +11,7 @@ Deployment is not configured. This document is a plan for Phase 15 and earlier p
 | Local | Development | pnpm, local/managed Postgres |
 | Preview | PR review | Vercel preview + Neon/Supabase branch |
 | Staging | Pre-production QA | Vercel staging + managed Postgres + test Stripe |
-| Production | Live SaaS | Vercel + managed Postgres + storage + Stripe live |
+| Production | Live SaaS | Vercel + managed Postgres + storage + Stripe live [blocked] |
 
 ## Web/dashboard deployment
 
@@ -72,7 +72,7 @@ Target CI steps:
 - Secure uploads implemented.
 - Legal review complete.
 - Privacy/TOS published.
-- Sentry/alerts configured.
+- Sentry/alerts configured [blocked].
 - Backups verified.
 - Accessibility smoke pass.
 - Core Web Vitals pass.
@@ -91,7 +91,7 @@ The dashboard route tree expanded in Phase 5, but it has not been built or deplo
 
 Payments must not be enabled in preview, staging, or production until these gates pass:
 
-1. Stripe test-mode account configured with `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and dashboard webhook endpoint.
+1. Stripe test-mode account configured with `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and dashboard webhook endpoint [blocked].
 2. Web/dashboard builds pass with the Stripe SDK installed only server-side.
 3. Public deposit-session route is protected by signed deposit token or authenticated dashboard action.
 4. Webhook route verifies signatures from the raw request body and rejects invalid signatures.
@@ -124,8 +124,8 @@ Do not launch the SEO engine as production-ready until public canonical domains 
 
 Do not enable production observability until these gates are complete:
 
-1. Sentry projects exist for web/dashboard/mobile or a deliberate shared-project strategy is approved.
-2. `SENTRY_AUTH_TOKEN`, org/project slugs, DSNs, webhook secrets, and alert webhooks are configured in deployment secrets.
+1. Sentry projects exist for web/dashboard/mobile or a deliberate shared-project strategy is approved [pending].
+2. `SENTRY_AUTH_TOKEN`, org/project slugs, DSNs, webhook secrets, and alert webhooks are configured in deployment secrets [blocked].
 3. Next.js source-map upload succeeds in CI without leaking tokens.
 4. Expo/EAS source-map and debug-symbol upload succeeds for preview builds.
 5. Synthetic error verification proves source maps, release tags, environment tags, and redaction.
@@ -141,7 +141,7 @@ Current state:
 
 - The workflow checks that release scaffold files exist.
 - Preview and production deployment jobs are intentionally disabled.
-- No Vercel, EAS, Sentry, Search Console, or database deployment secret is configured.
+- No Vercel, EAS, Sentry, Search Console, or database deployment secret is configured [blocked].
 - Dashboard release controls expose guarded local persistence contracts, but deployment jobs, protected approvals, provider-backed route evidence, and production mutations remain disabled until configured.
 
 Before enabling deployment jobs:

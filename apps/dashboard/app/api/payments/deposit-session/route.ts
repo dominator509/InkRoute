@@ -16,13 +16,57 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultDepositId(result: unknown): string | null {
-  if (!result || typeof result !== "object" || !("depositId" in result)) {
-    return null;
-  }
+function buildDepositSessionResponseProjection() {
+  return {
+    depositResponseAllowlisted: true,
+    tenantIdEchoed: false,
+    depositIdEchoed: false,
+    bookingRequestIdEchoed: false,
+    appointmentIdEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    providerCheckoutUrlEchoed: false,
+    providerSessionIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
 
-  const value = (result as { depositId?: unknown }).depositId;
-  return typeof value === "string" && value.length > 0 ? value : null;
+function buildSafeDepositSessionResponse(result: {
+  status: "created" | "replayed";
+  deposit: {
+    amountCents: number;
+    currency: string;
+    status: string;
+    dueAt: Date | null;
+    createdAt: Date;
+  };
+}) {
+  return {
+    responseProjection: buildDepositSessionResponseProjection(),
+    deposit: {
+      amountCents: result.deposit.amountCents,
+      currency: result.deposit.currency,
+      status: result.deposit.status,
+      dueAt: result.deposit.dueAt?.toISOString() ?? null,
+      createdAt: result.deposit.createdAt.toISOString(),
+    },
+    checkout: {
+      provider: "stripe",
+      created: false,
+      providerCheckoutUrlEchoed: false,
+      providerSessionIdEchoed: false,
+      requiredNextStep: "Stripe checkout session creation with provider credentials",
+    },
+    persistenceReceipt: {
+      depositPersisted: true,
+      paymentAuditPersisted: result.status === "created",
+      idempotencyPersisted: true,
+      idempotencyReplay: result.status === "replayed",
+      stripeCheckoutCreated: false,
+      webhookReconciled: false,
+    },
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -62,8 +106,8 @@ export async function POST(request: NextRequest) {
   const input = parsed.data;
   const idempotencyKey =
     request.headers.get("idempotency-key") ??
-    `deposit-draft:${tenantId}:${hashIdempotencySubject(
-      `${input.bookingRequestId}:${input.appointmentId ?? "booking"}:${input.amountCents}:${input.currency}`,
+    `deposit-draft:${hashIdempotencySubject(
+      JSON.stringify([tenantId, input.bookingRequestId, input.appointmentId ?? "booking", input.amountCents, input.currency]),
     )}`;
 
   if (actor.source === "local-fallback") {
@@ -72,7 +116,8 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildDepositSessionResponseProjection(),
           error: {
             code: "PROVIDER_DEPOSIT_SESSION_NOT_CONFIGURED",
             message: "Production deposit sessions require DB-backed dashboard auth, Deposit/PaymentAuditLog persistence, and Stripe checkout session creation; local fallback is disabled.",
@@ -85,7 +130,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { ok: false, source: actor.source, tenantId, error: { code: "DATABASE_REQUIRED", message: "Deposit sessions require database-backed dashboard auth so Deposit and PaymentAuditLog rows can be persisted." }, gapIds: ["GAP-004", "GAP-007", "GAP-038", "GAP-060"] },
+      {
+        ok: false,
+        source: actor.source,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildDepositSessionResponseProjection(),
+        error: { code: "DATABASE_REQUIRED", message: "Deposit sessions require database-backed dashboard auth so Deposit and PaymentAuditLog rows can be persisted." },
+        gapIds: ["GAP-004", "GAP-007", "GAP-038", "GAP-060"],
+      },
       { status: 409, headers: noStoreHeaders },
     );
   }
@@ -123,10 +175,18 @@ export async function POST(request: NextRequest) {
         },
         select: { id: true, status: true, result: true },
       });
-      const replayDepositId = idempotency.status === "completed" ? resultDepositId(idempotency.result) : null;
-      if (replayDepositId) {
+      if (idempotency.status === "completed") {
         const deposit = await tx.deposit.findFirst({
-          where: { id: replayDepositId, tenantId },
+          where: {
+            tenantId,
+            bookingRequestId: input.bookingRequestId,
+            appointmentId: input.appointmentId ?? null,
+            amountCents: input.amountCents,
+            currency: input.currency,
+            status: input.status,
+            dueAt: input.dueAt !== undefined ? new Date(input.dueAt) : null,
+          },
+          orderBy: { createdAt: "desc" },
           select: { id: true, bookingRequestId: true, appointmentId: true, amountCents: true, currency: true, status: true, dueAt: true, createdAt: true },
         });
 
@@ -169,7 +229,9 @@ export async function POST(request: NextRequest) {
           metadata: {
             source: "dashboard-api",
             stripeCheckoutCreated: false,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             boundary: "Deposit draft only; Stripe checkout session creation, webhook reconciliation, and provider rollback proof remain gated.",
           },
         },
@@ -181,11 +243,12 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: toJsonValue({
-            depositId: deposit.id,
-            auditId: audit.id,
+            depositPersisted: true,
+            paymentAuditPersisted: true,
             created: true,
             stripeCheckoutCreated: false,
             webhookReconciled: false,
+            internalPersistenceIdsStored: false,
           }),
         },
       });
@@ -194,24 +257,23 @@ export async function POST(request: NextRequest) {
     });
 
     if (result.status === "booking_not_found" || result.status === "appointment_not_found") {
-      return NextResponse.json({ ok: false, error: { code: "RELATED_RECORD_NOT_FOUND", message: "Deposit booking and appointment must exist for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "RELATED_RECORD_NOT_FOUND", message: "Deposit booking and appointment must exist for this tenant." },
+          responseProjection: buildDepositSessionResponseProjection(),
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     return NextResponse.json(
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
-        deposit: {
-          ...result.deposit,
-          dueAt: result.deposit.dueAt?.toISOString() ?? null,
-          createdAt: result.deposit.createdAt.toISOString(),
-        },
-        checkout: { provider: "stripe", created: false, url: null, requiredNextStep: "Stripe checkout session creation with provider credentials" },
-        auditId: result.status === "created" ? result.audit.id : null,
-        idempotencyKeyId: result.idempotency.id,
-        idempotencyReplay: result.status === "replayed",
+        ...buildSafeDepositSessionResponse(result),
         gapIds: ["GAP-004", "GAP-007", "GAP-038", "GAP-060"],
         boundary: "Deposit draft persistence is tenant-scoped, no-store, idempotency-backed, and payment-audited; Stripe checkout and webhook evidence remain provider-gated.",
       },
@@ -220,7 +282,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (isDatabaseUnavailable(error)) {
       return NextResponse.json(
-        { ok: false, source: actor.source, tenantId, error: { code: "DATABASE_UNAVAILABLE", message: "Deposit draft creation requires the dashboard database connection." }, gapIds: ["GAP-004", "GAP-007", "GAP-038", "GAP-060"] },
+        {
+          ok: false,
+          source: actor.source,
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildDepositSessionResponseProjection(),
+          error: { code: "DATABASE_UNAVAILABLE", message: "Deposit draft creation requires the dashboard database connection." },
+          gapIds: ["GAP-004", "GAP-007", "GAP-038", "GAP-060"],
+        },
         { status: 503, headers: noStoreHeaders },
       );
     }

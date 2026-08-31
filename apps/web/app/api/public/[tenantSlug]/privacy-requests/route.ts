@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@inkroute/db";
 import { buildPrivacyRequestDraft, redactRecord, type PrivacyRequestType } from "@inkroute/security";
 import { createHash } from "crypto";
-import { checkRateLimit, getClientIp, persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIpFromHeaders, persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 export const runtime = "nodejs";
 
@@ -28,6 +28,43 @@ function toJsonValue(value: unknown) {
 
 function privacyRequesterHash(value: string): string {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
+}
+
+function buildPrivacyRequestResponseProjection() {
+  return {
+    requesterEmailRedacted: true,
+    requesterEmailSelectedFromDatabase: false,
+    rawPayloadStored: false,
+    rawPayloadEchoed: false,
+    redactedSubmissionEchoed: false,
+    requesterHashEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    idempotencyResultInternalIdsStored: false,
+    privacyRequestIdEchoed: false,
+    auditIdEchoed: false,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafePrivacyRequestReceipt(input: { requestType: string; status: string; dueAt?: Date | string; receivedAt?: Date | string }) {
+  return {
+    requestType: input.requestType,
+    status: input.status,
+    ...(input.dueAt ? { dueAt: input.dueAt instanceof Date ? input.dueAt.toISOString() : input.dueAt } : {}),
+    ...(input.receivedAt ? { receivedAt: input.receivedAt instanceof Date ? input.receivedAt.toISOString() : input.receivedAt } : {}),
+    identityProofRequired: true,
+    tenantRelationshipProofRequired: true,
+  };
+}
+
+function buildSafePrivacyRequestDraft(draft: ReturnType<typeof buildPrivacyRequestDraft>) {
+  return {
+    type: draft.type,
+    status: draft.status,
+    identityVerificationRequired: draft.identityVerificationRequired,
+    deadlinePolicy: draft.deadlinePolicy,
+  };
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -109,7 +146,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     return NextResponse.json({ ok: false, error: { code: "TENANT_NOT_FOUND", message: "Privacy requests are available for local demo tenant slug only." } }, { status: 404, headers: noStoreHeaders });
   }
 
-  const rateLimit = checkRateLimit("public-privacy-request", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
+  const rateLimit = checkRateLimit("public-privacy-request", tenantSlug, `${getClientIpFromHeaders(request.headers)}:${resolvedTenant.tenantId}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
@@ -179,8 +216,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             ],
             fulfillmentMetadata: {
               source: "public-api",
-              tenantSlug: resolvedTenant.tenantSlug,
-              idempotencyKeyId: idempotency.id,
+              routeTenantSlugReceived: true,
+              tenantSlugStored: false,
+              idempotencyPersisted: true,
+              internalPersistenceIdsStored: false,
               requesterHash,
               identityProofRequired: true,
               tenantRelationshipProofRequired: true,
@@ -201,11 +240,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             entityId: privacyRequest.id,
             metadata: {
               source: "public-api",
-              tenantSlug: resolvedTenant.tenantSlug,
+              routeTenantSlugReceived: true,
+              tenantSlugStored: false,
               requestType: privacyRequest.requestType,
               status: privacyRequest.status,
               redaction: "redactRecord",
-              idempotencyKeyId: idempotency.id,
+              idempotencyPersisted: true,
+              internalPersistenceIdsStored: false,
               requesterHash,
               identityProofRequired: true,
               tenantRelationshipProofRequired: true,
@@ -221,12 +262,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           data: {
             status: "completed",
             result: toJsonValue({
-              privacyRequestId: privacyRequest.id,
-              auditId: audit.id,
+              privacyRequestPersisted: true,
+              auditLogged: true,
+              privacyRequestIdEchoed: false,
+              auditIdEchoed: false,
+              idempotencyResultInternalIdsStored: false,
+              internalPersistenceIdsStored: false,
+              internalPersistenceIdsEchoed: false,
               requestType: privacyRequest.requestType,
               status: privacyRequest.status,
               dueAt: privacyRequest.dueAt.toISOString(),
-              requesterHash,
+              requesterHashStored: true,
+              requesterHashEchoed: false,
               rawPayloadStored: false,
             }),
           },
@@ -240,22 +287,16 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         {
           ok: true,
           data: {
-            tenantSlug: resolvedTenant.tenantSlug,
-            tenantId: resolvedTenant.tenantId,
+            tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
             persistence: "database",
-            draft,
-            redactedSubmission,
-            persisted: {
-              id: result.privacyRequest.id,
-              tenantId: resolvedTenant.tenantId,
+            draft: buildSafePrivacyRequestDraft(draft),
+            receipt: buildSafePrivacyRequestReceipt({
               requestType: result.privacyRequest.requestType,
               status: result.privacyRequest.status,
-              dueAt: result.privacyRequest.dueAt.toISOString(),
-              receivedAt: result.privacyRequest.createdAt.toISOString(),
-              redactedSubmission,
-            },
-            auditId: result.audit.id,
-            idempotencyKeyId: result.idempotency.id,
+              dueAt: result.privacyRequest.dueAt,
+              receivedAt: result.privacyRequest.createdAt,
+            }),
+            responseProjection: buildPrivacyRequestResponseProjection(),
             requiredNextWork: [
               "Verify requester identity before export/delete/rectification execution.",
               "Prove requester relationship to tenant records before worker access.",
@@ -324,11 +365,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       ok: true,
       data: {
         tenantSlug,
-        tenantId: resolvedTenant.tenantId,
         persistence: "local-fallback",
-        draft,
-        redactedSubmission,
-        persisted,
+        draft: buildSafePrivacyRequestDraft(draft),
+        receipt: buildSafePrivacyRequestReceipt({
+          requestType: persisted.requestType,
+          status: "intake_received",
+          receivedAt: persisted.receivedAt,
+        }),
+        responseProjection: buildPrivacyRequestResponseProjection(),
         gapIds: ["GAP-013", "GAP-098", "GAP-099", "GAP-100"],
       },
     },

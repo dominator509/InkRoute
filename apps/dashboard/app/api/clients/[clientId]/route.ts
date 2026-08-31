@@ -22,10 +22,30 @@ function hashIdempotencySubject(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function resultAuditId(value: unknown): string | null {
-  if (!value || typeof value !== "object") return null;
-  const result = value as { auditId?: unknown };
-  return typeof result.auditId === "string" ? result.auditId : null;
+function buildClientDetailReadResponseProjection() {
+  return {
+    clientDetailReadResponseAllowlisted: true,
+    auditIdEchoed: false,
+    clientIdEchoed: false,
+    tenantIdEchoed: false,
+    relatedBookingIdsEchoed: false,
+    encryptedMedicalNotesEchoed: false,
+    privateNotesEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildClientPrivateNoteResponseProjection() {
+  return {
+    clientPrivateNoteResponseAllowlisted: true,
+    auditIdEchoed: false,
+    clientIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawIdempotencyKeyEchoed: false,
+    tenantIdEchoed: false,
+    rawNoteEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
 export async function GET(request: NextRequest, context: ClientDetailRouteContext) {
@@ -56,13 +76,13 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard client detail reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientDetailReadResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -77,9 +97,10 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         client,
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildClientDetailReadResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-040"],
         boundary: "Local fallback returns a tenant-projected demo client only; database mode is required for live CRM reads.",
       },
@@ -156,8 +177,6 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
       source: "repository",
       records: [
         {
-          id: result.row.id,
-          tenantId: result.row.tenantId,
           preferredName: result.row.preferredName,
           email: result.row.email,
           phone: result.row.phone,
@@ -175,8 +194,10 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
             ...(result.row.profile?.skinConcernsEncrypted ? ["skin-concern-notes-present"] : []),
             ...(result.row.profile?.internalNotes ? ["private-notes-present"] : []),
           ],
-          medicalNotes: result.row.profile?.medicalNotesEncrypted ?? null,
-          privateNotes: result.row.profile?.internalNotes ?? null,
+          medicalNotes: result.row.profile?.medicalNotesEncrypted ? "[redacted-dashboard-field]" : null,
+          privateNotes: result.row.profile?.internalNotes ? "[redacted-dashboard-field]" : null,
+          hasMedicalNotes: Boolean(result.row.profile?.medicalNotesEncrypted),
+          hasPrivateNotes: Boolean(result.row.profile?.internalNotes),
           relatedBookings: result.row.bookingRequests.map((booking: {
             id: string;
             status: string;
@@ -184,7 +205,6 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
             updatedAt: Date;
             payments: readonly { status: string }[];
           }) => ({
-            id: booking.id,
             status: booking.status,
             style: booking.style,
             updatedAt: booking.updatedAt.toISOString(),
@@ -199,10 +219,10 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         client: view.records[0],
-        auditId: result.audit.id,
+        tenantScope: { actorTenantMatched: true, clientTenantMatched: true },
+        responseProjection: buildClientDetailReadResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-040"],
         boundary: "Dashboard client detail reads are tenant-scoped, redacted, no-store, and audited.",
       },
@@ -214,9 +234,9 @@ export async function GET(request: NextRequest, context: ClientDetailRouteContex
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Client detail reads require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientDetailReadResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },
@@ -271,13 +291,13 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
           error: {
             code: "PROVIDER_CLIENT_WRITE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production client writes require DB-backed actor resolution, tenant-scoped persistence, audit logs, and retention policy evidence; local fallback writes are disabled.",
             gapIds: ["GAP-007", "GAP-038", "GAP-040"],
           },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientPrivateNoteResponseProjection(),
           productionBoundary: { localClientWriteFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -288,9 +308,9 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        clientId,
         persistence: "local-contract",
+        tenantScope: { actorTenantMatched: true },
+        responseProjection: buildClientPrivateNoteResponseProjection(),
         gapIds: ["GAP-007", "GAP-038", "GAP-040"],
         boundary: "Local fallback validates the private-note write contract with raw-note redaction and audit metadata; database mode is required for durable CRM writes.",
       },
@@ -317,7 +337,8 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
           metadata: {
             source: "dashboard-api",
             dashboardMutationAction: "append_client_private_note",
-            clientId,
+            clientIdHash: createHash("sha256").update(clientId).digest("hex"),
+            rawClientIdStored: false,
             noteLength: note.length,
             noteHash,
             rawNoteStoredInResult: false,
@@ -335,7 +356,7 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         return {
           status: "replayed" as const,
           idempotency,
-          auditId: resultAuditId(idempotency.result),
+          auditLogged: true,
         };
       }
 
@@ -361,8 +382,9 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
           metadata: {
             source: "dashboard-api",
             dashboardMutationAction: "append_client_private_note",
-            idempotencyKey,
-            idempotencyKeyId: idempotency.id,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             noteHash,
             noteLength: note.length,
             privateNoteStored: true,
@@ -377,21 +399,30 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         data: {
           status: "completed",
           result: {
-            clientId,
-            auditId: audit.id,
             noteHash,
             noteLength: note.length,
             privateNoteStored: true,
             rawNoteReturned: false,
+            auditLogged: true,
+            internalPersistenceIdsStored: false,
           },
         },
       });
 
-      return { status: "updated" as const, idempotency, auditId: audit.id };
+      return { status: "updated" as const, idempotency, auditLogged: Boolean(audit.id), privateNoteStored: true };
     });
 
     if (result.status === "not_found") {
-      return NextResponse.json({ ok: false, error: { code: "CLIENT_NOT_FOUND", message: "Client was not found for this tenant." } }, { status: 404, headers: noStoreHeaders });
+      return NextResponse.json(
+        {
+          ok: false,
+          error: { code: "CLIENT_NOT_FOUND", message: "Client was not found for this tenant." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientPrivateNoteResponseProjection(),
+          gapIds: ["GAP-007", "GAP-038", "GAP-040"],
+        },
+        { status: 404, headers: noStoreHeaders },
+      );
     }
 
     if (result.status === "idempotency_conflict") {
@@ -399,13 +430,19 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
           error: {
             code: "IDEMPOTENCY_CONFLICT",
             message: "Idempotency key was already used for a different private-note payload.",
           },
-          idempotencyKeyId: result.idempotency.id,
+          responseProjection: {
+            clientPrivateNoteIdempotencyConflictResponseAllowlisted: true,
+            clientIdEchoed: false,
+            idempotencyKeyIdEchoed: false,
+            rawIdempotencyKeyEchoed: false,
+            tenantIdEchoed: false,
+            rawNoteEchoed: false,
+          },
+          tenantScope: { actorTenantMatched: true, clientTenantMatched: true },
           gapIds: ["GAP-007", "GAP-038", "GAP-040"],
           boundary: "Private client note idempotency is request-hash guarded and defaults to denial on mismatched replay payloads.",
         },
@@ -417,14 +454,12 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
       {
         ok: true,
         source: actor.source,
-        tenantId,
-        clientId,
         persistence: "database",
-        auditId: result.auditId,
-        idempotencyKeyId: result.idempotency.id,
         idempotencyReplay: result.status === "replayed",
+        tenantScope: { actorTenantMatched: true, clientTenantMatched: true },
+        responseProjection: buildClientPrivateNoteResponseProjection(),
         gapIds: ["GAP-007", "GAP-038", "GAP-040"],
-        boundary: "Private client note writes are tenant-scoped, RBAC-gated, idempotency-backed, audited, and never echo the raw note.",
+        boundary: "Private client note writes are tenant-scoped, RBAC-gated, idempotency-backed, audited, and never echo the raw note, audit ID, idempotency-key ID, raw idempotency key, or internal persistence IDs.",
       },
       { headers: noStoreHeaders },
     );
@@ -434,9 +469,9 @@ export async function PATCH(request: NextRequest, context: ClientDetailRouteCont
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          clientId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Client writes require the dashboard database connection." },
+          tenantScope: { actorTenantMatched: true },
+          responseProjection: buildClientPrivateNoteResponseProjection(),
           gapIds: ["GAP-007", "GAP-038", "GAP-040"],
         },
         { status: 503, headers: noStoreHeaders },

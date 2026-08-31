@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createClientRequestKey } from "../lib/clientRequestKeys";
 
 type SchedulerState =
   | { status: "idle"; message: string }
@@ -24,9 +25,9 @@ export function NotificationSchedulerActionPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "schedule_sequence",
-          idempotencyKey: `dashboard-notification-sequence-${Date.now()}`,
-          bookingRequestId: "booking_demo_notification_sequence",
-          appointmentId: "appointment_demo_notification_sequence",
+          idempotencyKey: createClientRequestKey("dashboard-notification-sequence"),
+          bookingRequestId: createClientRequestKey("dashboard-scheduler-booking-subject"),
+          appointmentId: createClientRequestKey("dashboard-scheduler-appointment-subject"),
           appointmentStartsAt: new Date(now.getTime() + 86_400_000).toISOString(),
           providerReady: false,
         }),

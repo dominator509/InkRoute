@@ -255,6 +255,11 @@ describe("tenant isolation runtime contract", () => {
       crossTenantId: "tenant_b_1234567890abcdefghijklmnopqrstuvwxyz",
       actorEmail: "admin@example.com",
       databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/tenant-isolation",
+      pullRequestSelector: "pr_tenant_isolation",
+      reviewerHandle: "reviewer_tenant_owner",
+      codeownerSelector: "CODEOWNER:tenant-security-team",
       nested: {
         auditLogId: "audit_1234567890abcdefghijklmnopqrstuvwxyz",
         publicSummary: "tenant isolation evidence captured",
@@ -269,11 +274,21 @@ describe("tenant isolation runtime contract", () => {
     expect(serialized).not.toContain("admin@example.com");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("audit_1234567890abcdefghijklmnopqrstuvwxyz");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/tenant-isolation");
+    expect(serialized).not.toContain("pr_tenant_isolation");
+    expect(serialized).not.toContain("reviewer_tenant_owner");
+    expect(serialized).not.toContain("CODEOWNER:tenant-security-team");
     expect(review.redactions).toEqual([
       "tenantId",
       "crossTenantId",
       "actorEmail",
       "databaseUrl",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.auditLogId",
     ]);
     expect(review.safeForTracker).toBe(true);
@@ -299,6 +314,7 @@ describe("tenant isolation runtime contract", () => {
     expect(gapTracker).toContain("tenantIsolationRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedTenantIsolationArtifact");
     expect(gapTracker).toContain("buildTenantIsolationArtifactReview");
+    expect(gapTracker).toContain("GAP-022 tenant isolation artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current tenant isolation proof files for GAP-022", () => {

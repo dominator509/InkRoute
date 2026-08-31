@@ -238,9 +238,25 @@ describe("legal review runtime contract", () => {
       clientPhone: "+1 555 222 1212",
       privilegedAdvice: "Attorney legal advice should never be committed.",
       approvalSignature: "Jane Counsel / Bar 1234567890",
+      legalCopy: "Placeholder privacy terms for Jane Client before attorney approval.",
+      consentBody: "Consent text includes medical history and refund terms.",
+      qualityGateOutput: "pnpm quality:all output with legal-review audit details",
+      ciArtifactUrl: "https://github.com/example/inkroute/actions/runs/1234567890",
+      stackTrace: "Error: legal review failed at LegalReviewRun",
+      neutralApprovalTrace: "approval legal_review_01HZYXZYXZYXZYXZYXZYXZYXZ by counsel_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralDocumentTrace: "document legal_document_v1_01HZYXZYXZYXZYXZYXZYXZYXZ replaced placeholder policy_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      routeReportTrace: "route /terms generated report_01HZYXZYXZYXZYXZYXZYXZYXZ for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      commandOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed legal:verify-review",
+      neutralPersistenceTrace: "provider_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ retained artifacts/legal-review/private-approval.json",
+      repositorySelector: "repo:dominator509/InkRoute",
+      branchSelector: "branch:production/legal-review",
+      pullRequestSelector: "pr_legal_review",
+      reviewerHandle: "reviewer_legal_owner",
+      codeownerSelector: "CODEOWNER:legal-review-team",
       nested: {
         databaseUrl: "postgres://inkroute:secret@db.example.com:5432/inkroute",
         evidenceId: "legal_review_evidence_1234567890",
+        rawApprovalPayload: { reviewerName: "Jane Counsel", approvalDocumentVersion: "legal-doc-v1" },
         publicLabel: "privacy-approval-redacted",
       },
     };
@@ -252,15 +268,48 @@ describe("legal review runtime contract", () => {
     expect(serialized).not.toContain("+1 555 222 1212");
     expect(serialized).not.toContain("Attorney legal advice should never be committed.");
     expect(serialized).not.toContain("Jane Counsel");
+    expect(serialized).not.toContain("Placeholder privacy terms");
+    expect(serialized).not.toContain("medical history");
+    expect(serialized).not.toContain("pnpm quality:all output");
+    expect(serialized).not.toContain("actions/runs/1234567890");
+    expect(serialized).not.toContain("LegalReviewRun");
+    expect(serialized).not.toContain("legal_review_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("legal_document_v1_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("report_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("provider_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("artifacts/legal-review/private-approval.json");
     expect(serialized).not.toContain("postgres://inkroute:secret@db.example.com:5432/inkroute");
     expect(serialized).not.toContain("legal_review_evidence_1234567890");
+    expect(serialized).not.toContain("legal-doc-v1");
+    expect(serialized).not.toContain("repo:dominator509/InkRoute");
+    expect(serialized).not.toContain("branch:production/legal-review");
+    expect(serialized).not.toContain("pr_legal_review");
+    expect(serialized).not.toContain("reviewer_legal_owner");
+    expect(serialized).not.toContain("CODEOWNER:legal-review-team");
     expect(review.redactions).toEqual([
       "attorneyEmail",
       "clientPhone",
       "privilegedAdvice",
       "approvalSignature",
+      "legalCopy",
+      "consentBody",
+      "qualityGateOutput",
+      "ciArtifactUrl",
+      "stackTrace",
+      "neutralApprovalTrace",
+      "neutralDocumentTrace",
+      "routeReportTrace",
+      "commandOutput",
+      "neutralPersistenceTrace",
+      "repositorySelector",
+      "branchSelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.databaseUrl",
       "nested.evidenceId",
+      "nested.rawApprovalPayload",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(legalReviewRequiredExternalEvidence);
@@ -284,6 +333,7 @@ describe("legal review runtime contract", () => {
     expect(gapTracker).toContain("legalReviewRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedLegalReviewArtifact");
     expect(gapTracker).toContain("buildLegalReviewArtifactReview");
+    expect(gapTracker).toContain("GAP-013 legal review artifact hardening now redacts repository/branch/PR/reviewer/CODEOWNER selectors");
   });
 
   it("pins current legal review proof files for GAP-013", () => {

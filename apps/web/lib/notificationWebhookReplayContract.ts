@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export type NotificationWebhookProvider = "resend" | "twilio" | "expo";
 
 export interface NotificationWebhookReplayInput {
@@ -28,6 +30,10 @@ export const notificationWebhookReplayRequiredControls = [
   "Record NotificationDeliveryStatusTransition and AuditLog rows for accepted provider status changes.",
 ] as const;
 
+function buildNotificationWebhookReplayKey(parts: readonly string[]): string {
+  return `notification-webhook:${createHash("sha256").update(JSON.stringify(parts)).digest("hex")}`;
+}
+
 export function buildNotificationWebhookReplayDecision(
   input: NotificationWebhookReplayInput,
 ): NotificationWebhookReplayDecision {
@@ -46,7 +52,7 @@ export function buildNotificationWebhookReplayDecision(
 
   return {
     status: blockers.length === 0 ? "allow" : "reject",
-    idempotencyKey: `notification-webhook:${input.tenantId}:${provider}:${eventId || "missing-event-id"}`,
+    idempotencyKey: buildNotificationWebhookReplayKey([input.tenantId, provider, eventId || "missing-event-id"]),
     requiredWrites: ["ProviderEvent", "NotificationDelivery", "NotificationDeliveryStatusTransition", "AuditLog", "IdempotencyKey"],
     requiredControls: notificationWebhookReplayRequiredControls,
     blockers,

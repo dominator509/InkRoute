@@ -17,6 +17,10 @@ function hashQueueSubject(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+function idempotencyStorageFingerprint(value: string) {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
 function normalizeIdempotencyKey(request: NextRequest, fallback: string): string {
   const header = request.headers.get("x-idempotency-key")?.trim();
   return header && header.length <= 180 ? header : fallback;
@@ -26,7 +30,6 @@ function consentFromClient(client: {
   id: string;
   email: string;
   phone: string | null;
-  preferredName: string;
   marketingOptIn: boolean;
   smsOptIn: boolean;
 } | null): ClientConsentSnapshot {
@@ -38,6 +41,69 @@ function consentFromClient(client: {
     pushOptIn: false,
     marketingOptIn: Boolean(client?.marketingOptIn),
     transactionalAllowed: true,
+  };
+}
+
+function summarizeDeliveryPlanForResponse(deliveryPlan: ReturnType<typeof buildDeliveryPlan>) {
+  return {
+    status: deliveryPlan.status,
+    allowedChannels: deliveryPlan.candidates.filter((candidate) => candidate.status === "allowed").map((candidate) => candidate.channel),
+    providerPendingChannels: deliveryPlan.candidates.filter((candidate) => candidate.status === "requires_provider").map((candidate) => candidate.channel),
+    blockedChannels: deliveryPlan.candidates.filter((candidate) => candidate.status === "blocked").map((candidate) => candidate.channel),
+    rawDestinationsEchoed: false,
+    destinationHashOnly: true,
+  };
+}
+
+function stringArrayValue(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function summarizeQueueReplayResult(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {
+      replayResultShape: "unavailable",
+      rawResultEchoed: false,
+      redactedFields: ["result.rawPayload", "result.body", "result.destination"],
+    };
+  }
+
+  const record = value as Record<string, unknown>;
+  return {
+    replayResultShape: "notification-queue-summary",
+    notificationIdEchoed: false,
+    deliveryIdsEchoed: false,
+    handoffIdsEchoed: false,
+    auditIdEchoed: false,
+    notificationPersisted: record.notificationPersisted === true,
+    deliveriesPersisted: record.deliveriesPersisted === true,
+    providerHandoffsPersisted: record.providerHandoffsPersisted === true,
+    auditLogged: record.auditLogged === true,
+    providerDispatchDeferred: record.providerDispatchDeferred === true,
+    internalPersistenceIdsStored: record.internalPersistenceIdsStored === false ? false : null,
+    deliveryCount: typeof record.deliveryCount === "number" ? record.deliveryCount : stringArrayValue(record.deliveryIds).length,
+    handoffCount: typeof record.handoffCount === "number" ? record.handoffCount : stringArrayValue(record.handoffIds).length,
+    rawResultEchoed: false,
+    redactedFields: ["result.rawPayload", "result.body", "result.destination"],
+  };
+}
+
+function buildNotificationQueueResponseProjection() {
+  return {
+    notificationResponseAllowlisted: true,
+    notificationIdEchoed: false,
+    deliveryIdsEchoed: false,
+    handoffIdsEchoed: false,
+    auditIdEchoed: false,
+    idempotencyKeyIdEchoed: false,
+    rawDestinationsEchoed: false,
+    bodyPreviewEchoed: false,
+    clientProfileNameSelectedFromDatabase: false,
+    rawIdempotencyKeyEchoed: false,
+    rawIdempotencyResultEchoed: false,
+    destinationHashOnly: true,
+    tenantIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
   };
 }
 
@@ -93,7 +159,7 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          responseProjection: buildNotificationQueueResponseProjection(),
           error: {
             code: "PROVIDER_NOTIFICATION_QUEUE_PERSISTENCE_NOT_CONFIGURED",
             message: "Production notification queueing requires DB-backed dashboard auth, tenant-scoped notification persistence, and provider-handoff rows; local fallback mutations are disabled.",
@@ -109,7 +175,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         source: actor.source,
-        tenantId,
+        responseProjection: buildNotificationQueueResponseProjection(),
         error: {
           code: "DATABASE_REQUIRED",
           message: "Notification queueing requires database-backed dashboard auth so Notification, Delivery, Handoff, IdempotencyKey, and AuditLog rows can be persisted.",
@@ -125,7 +191,7 @@ export async function POST(request: NextRequest) {
       const client = input.clientId
         ? await tx.client.findFirst({
             where: { id: input.clientId, tenantId },
-            select: { id: true, email: true, phone: true, preferredName: true, marketingOptIn: true, smsOptIn: true },
+            select: { id: true, email: true, phone: true, marketingOptIn: true, smsOptIn: true },
           })
         : null;
 
@@ -168,7 +234,7 @@ export async function POST(request: NextRequest) {
         return { status: "idempotency_conflict" as const, idempotency };
       }
       if ((idempotency.status === "completed" || idempotency.status === "succeeded") && idempotency.result) {
-        return { status: "duplicate" as const, idempotency, result: idempotency.result };
+        return { status: "duplicate" as const, idempotency, replayResultSource: idempotency.result };
       }
 
       const consent = consentFromClient(client);
@@ -176,7 +242,7 @@ export async function POST(request: NextRequest) {
         key: input.type,
         context: {
           artistName: "InkRoute Artist",
-          clientName: client?.preferredName ?? "Client",
+          clientName: "Client",
           bookingUrl: input.bookingRequestId ? `/dashboard/bookings/${input.bookingRequestId}` : "/dashboard",
         },
         consent,
@@ -226,16 +292,19 @@ export async function POST(request: NextRequest) {
               deliveryId: delivery.id,
               channel: candidate.channel,
               provider: candidate.provider,
-              idempotencyKey: `${idempotencyKey}:${candidate.provider}:${candidate.channel}`,
+              idempotencyKey: `${idempotencyStorageFingerprint(idempotencyKey)}:${candidate.provider}:${candidate.channel}`,
               destinationHash: candidate.destinationMasked ? hashValue(`${tenantId}:${candidate.channel}:${candidate.destinationMasked}`) : null,
               sanitizedPayload: {
-                notificationId: notification.id,
+                notificationPersisted: true,
+                internalPersistenceIdsStored: false,
+                rawIdempotencyKeyStored: false,
                 templateKey: input.type,
                 channel: candidate.channel,
                 provider: candidate.provider,
                 reason: candidate.reason,
                 title: input.title,
-                bodyPreview: input.body.slice(0, 160),
+                bodyPreviewStored: false,
+                rawDestinationStored: false,
                 providerExecution: "deferred",
               },
             },
@@ -254,20 +323,31 @@ export async function POST(request: NextRequest) {
           entityId: notification.id,
           metadata: {
             source: "dashboard-api",
-            idempotencyKey,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             queuedDeliveryCount: deliveries.length,
             providerHandoffCount: handoffs.length,
             providerExecution: "deferred",
+            rawDestinationStored: false,
+            bodyPreviewStored: false,
+            redactedFields: ["email", "phone", "destination", "body"],
           },
         },
         select: { id: true, createdAt: true },
       });
 
       const responsePayload = {
-        notificationId: notification.id,
-        deliveryIds: deliveries.map((delivery) => delivery.id),
-        handoffIds: handoffs.map((handoff) => handoff.id),
-        auditId: audit.id,
+        notificationPersisted: true,
+        deliveriesPersisted: deliveries.length > 0,
+        providerHandoffsPersisted: handoffs.length > 0,
+        auditLogged: true,
+        deliveryCount: deliveries.length,
+        handoffCount: handoffs.length,
+        providerDispatchDeferred: true,
+        rawDestinationStored: false,
+        bodyPreviewStored: false,
+        internalPersistenceIdsStored: false,
       };
 
       await tx.idempotencyKey.update({
@@ -275,12 +355,16 @@ export async function POST(request: NextRequest) {
         data: {
           status: "completed",
           result: responsePayload,
-          metadata: { notificationId: notification.id, queuedDeliveryCount: deliveries.length },
+          metadata: {
+            notificationPersisted: true,
+            queuedDeliveryCount: deliveries.length,
+            internalPersistenceIdsStored: false,
+          },
         },
         select: { id: true },
       });
 
-      return { status: "queued" as const, notification, deliveries, handoffs, audit, deliveryPlan, idempotency, idempotencyKey };
+      return { status: "queued" as const, notification, deliveries, handoffs, audit, deliveryPlan, deliveryPlanSummary: summarizeDeliveryPlanForResponse(deliveryPlan), idempotency, idempotencyKey };
     });
 
     if (result.status === "client_not_found") {
@@ -292,12 +376,11 @@ export async function POST(request: NextRequest) {
         {
           ok: true,
           source: actor.source,
-          tenantId,
           persistence: "database",
           duplicate: true,
-          idempotencyKeyId: result.idempotency.id,
           idempotencyReplay: true,
-          result: result.result,
+          replayResult: summarizeQueueReplayResult(result.replayResultSource),
+          responseProjection: buildNotificationQueueResponseProjection(),
           gapIds: ["GAP-010", "GAP-038", "GAP-065", "GAP-069"],
         },
         { status: 200, headers: noStoreHeaders },
@@ -309,9 +392,14 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "IDEMPOTENCY_CONFLICT", message: "Idempotency key was already used for a different notification queue payload." },
-          idempotencyKeyId: result.idempotency.id,
+          responseProjection: {
+            notificationQueueIdempotencyConflictResponseAllowlisted: true,
+            idempotencyKeyIdEchoed: false,
+            rawIdempotencyKeyEchoed: false,
+            tenantIdEchoed: false,
+            internalPersistenceIdsEchoed: false,
+          },
           gapIds: ["GAP-010", "GAP-038", "GAP-065", "GAP-069"],
         },
         { status: 409, headers: noStoreHeaders },
@@ -320,7 +408,7 @@ export async function POST(request: NextRequest) {
 
     if (result.status === "not_queueable") {
       return NextResponse.json(
-        { ok: false, error: { code: "NO_QUEUEABLE_CHANNELS", message: "No notification channels were allowed by destination and consent checks." }, deliveryPlan: result.deliveryPlan },
+        { ok: false, error: { code: "NO_QUEUEABLE_CHANNELS", message: "No notification channels were allowed by destination and consent checks." }, deliveryPlan: summarizeDeliveryPlanForResponse(result.deliveryPlan) },
         { status: 409, headers: noStoreHeaders },
       );
     }
@@ -329,22 +417,23 @@ export async function POST(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
+        responseProjection: buildNotificationQueueResponseProjection(),
         notification: {
-          ...result.notification,
+          type: result.notification.type,
+          status: result.notification.status,
           scheduledFor: result.notification.scheduledFor?.toISOString() ?? null,
           createdAt: result.notification.createdAt.toISOString(),
         },
-        deliveries: result.deliveries,
-        handoffs: result.handoffs,
-        auditId: result.audit.id,
-        idempotencyKey: result.idempotencyKey,
-        idempotencyKeyId: result.idempotency.id,
+        queueSummary: {
+          deliveryCount: result.deliveries.length,
+          handoffCount: result.handoffs.length,
+          providerPendingCount: result.deliveryPlanSummary.providerPendingChannels.length,
+        },
         idempotencyReplay: false,
-        deliveryPlan: result.deliveryPlan,
+        deliveryPlan: result.deliveryPlanSummary,
         gapIds: ["GAP-010", "GAP-038", "GAP-065", "GAP-069"],
-        boundary: "Notification queue route persists local queue, delivery, provider-handoff, idempotency, and audit rows only; provider workers/sends, retries, dead letters, and sandbox/device evidence remain gated.",
+        boundary: "Notification queue route persists local queue, delivery, provider-handoff, idempotency, and audit rows only; response receipts do not echo notification, delivery, handoff, audit, idempotency-key, raw destination, or raw idempotency-result identifiers, while provider workers/sends, retries, dead letters, and sandbox/device evidence remain gated.",
       },
       { status: 202, headers: noStoreHeaders },
     );
@@ -354,7 +443,7 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          responseProjection: buildNotificationQueueResponseProjection(),
           error: { code: "DATABASE_UNAVAILABLE", message: "Notification queueing requires the dashboard database connection." },
           gapIds: ["GAP-010", "GAP-038", "GAP-065", "GAP-069"],
         },

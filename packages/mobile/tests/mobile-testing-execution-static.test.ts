@@ -115,8 +115,8 @@ describe("GAP-108 mobile testing execution wiring", () => {
     );
     expect(mobileTestingExecutionReadiness.blockers).toEqual(
       expect.arrayContaining([
-        "Expo dependencies must install before mobile runtime testing.",
-        "Expo runtime must start for simulator and device QA.",
+        "Expo dependencies must install before simulator or device QA evidence is meaningful.",
+        "Expo runtime must start locally or in a preview build before device QA evidence is meaningful.",
         "Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.",
         "EAS update rollback QA must prove preview adoption and rollback republish on the same runtime."
       ])
@@ -352,6 +352,18 @@ describe("GAP-108 mobile testing execution wiring", () => {
       crashPayload: { rawBody: "{\"email\":\"client@example.com\",\"token\":\"crash-token\"}" },
       headers: ["Authorization: Bearer mobile-secret-token"],
       stack: "Error: mobile QA failed",
+      simulatorLog: "iOS simulator rendered tenant_private_123",
+      emulatorVideoPath: "artifacts/android/private-video.mp4",
+      screenshotPath: "artifacts/ios/private-screenshot.png",
+      easBuildUrl: "https://expo.dev/accounts/private/projects/inkroute/builds/123",
+      easUpdateUrl: "https://expo.dev/accounts/private/projects/inkroute/updates/456",
+      rollbackTranscript: "rollback update private_update_123",
+      accessibilityNotes: "screen reader captured private client name",
+      offlineSyncTranscript: "offline replay tenant_private_123 session_private_123",
+      secureStoreSessionId: "session_private_123",
+      tenantId: "tenant_private_123",
+      nativeErrorLog: "Native crash private_native_error",
+      environment: { DATABASE_URL: "postgresql://mobile:secret@db.example.test:5432/app" },
     };
 
     const redacted = buildRedactedMobileTestingArtifact(rawArtifact);
@@ -368,6 +380,15 @@ describe("GAP-108 mobile testing execution wiring", () => {
     expect(serialized).not.toContain("client@example.com");
     expect(serialized).not.toContain("+1 555 303 4040");
     expect(serialized).not.toContain("mobile-secret-token");
+    expect(serialized).not.toContain("tenant_private_123");
+    expect(serialized).not.toContain("artifacts/android/private-video.mp4");
+    expect(serialized).not.toContain("artifacts/ios/private-screenshot.png");
+    expect(serialized).not.toContain("expo.dev/accounts/private");
+    expect(serialized).not.toContain("private_update_123");
+    expect(serialized).not.toContain("private client name");
+    expect(serialized).not.toContain("session_private_123");
+    expect(serialized).not.toContain("private_native_error");
+    expect(serialized).not.toContain("postgresql://mobile:secret@db.example.test:5432/app");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(mobileTestingExecutionArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

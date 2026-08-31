@@ -319,7 +319,7 @@ export const mobileCrashReportDraft = buildObservabilityReportDraft({
   metadata: {
     userEmail: "artist@example.test",
     device: "simulator-not-run",
-    token: "demo-token-should-redact",
+    token: "demo-token-placeholder-gated-on-expo-push-setup",
   },
   tags: { phase: "11", surface: "mobile" },
 });

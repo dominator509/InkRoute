@@ -66,6 +66,10 @@ describe("sms provider contract", () => {
       to: "[redacted]",
       nested: { body: "[redacted]", signature: "[redacted]" },
     });
+    expect(sendResult?.providerMessageId).toBe("[redacted-provider-message-id]");
+    expect(sendResult?.providerMessageIdHash).toHaveLength(64);
+    expect(sendResult?.rawProviderMessageIdEchoed).toBe(false);
+    expect(JSON.stringify(sendResult)).not.toContain("SMdemo");
     expect(JSON.stringify(sendResult)).not.toContain("ACsecret");
     expect(JSON.stringify(sendResult)).not.toContain("+12065550142");
     expect(JSON.stringify(sendResult)).not.toContain("private sms body");
@@ -106,6 +110,8 @@ describe("sms provider contract", () => {
     expect(duplicate.status).toBe("duplicate");
     expect(repository.state.queuedDeliveries).toHaveLength(1);
     expect(repository.state.providerSendResults).toHaveLength(1);
+    expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("SMdemo");
+    expect(repository.state.providerSendResults[0]?.result.rawProviderMessageIdEchoed).toBe(false);
     expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("+12065550142");
     expect(JSON.stringify(repository.state.providerSendResults[0])).not.toContain("private sms body");
 

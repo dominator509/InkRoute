@@ -316,6 +316,18 @@ describe("documentation audit runtime contract", () => {
       providerReviewPayload: { contactEmail: "provider@example.com", token: "ghp_secret" },
       legalReviewer: { email: "attorney@example.com", phone: "+1 555 909 4444" },
       staleProviderStatusProofUrl: "https://provider.example.com/status/project_123",
+      markdownLinkReport: "Broken link report includes https://provider.example.com/private/project_123",
+      documentationInventoryOutput: "docs/ai/API_CONTRACTS.md contains provider_project_123",
+      commandLog: "pnpm quality:docs output for branch docs_audit_123",
+      privilegedLegalNotes: "Attorney privileged documentation review note",
+      neutralDocumentationTrace: "document_audit_01HZYXZYXZYXZYXZYXZYXZYXZ checked inventory_report_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralProviderTrace: "provider_review_01HZYXZYXZYXZYXZYXZYXZYXZ found stale_status_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCiTrace: "workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ checked commit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralRepositoryTrace:
+        "repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "docs/ai/private-provider-review.md and coverage/documentation-audit/private.json",
+      neutralDatabaseTrace: "DocumentationAuditRun persisted to postgresql://tenant_demo:secret@db.example.com/inkroute",
+      stackTrace: "Error: documentation audit leaked provider status payload",
       nested: {
         authorization: "Bearer documentation-audit-token",
         tenantId: "tenant_demo",
@@ -333,16 +345,44 @@ describe("documentation audit runtime contract", () => {
     expect(serialized).not.toContain("attorney@example.com");
     expect(serialized).not.toContain("+1 555 909 4444");
     expect(serialized).not.toContain("provider.example.com");
+    expect(serialized).not.toContain("Broken link report");
+    expect(serialized).not.toContain("API_CONTRACTS.md contains");
+    expect(serialized).not.toContain("quality:docs output");
+    expect(serialized).not.toContain("Attorney privileged documentation review note");
+    expect(serialized).not.toContain("documentation audit leaked");
     expect(serialized).not.toContain("Bearer documentation-audit-token");
     expect(serialized).not.toContain("tenant_demo");
+    expect(serialized).not.toContain("document_audit_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("inventory_report_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("provider_review_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("stale_status_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("repository_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("pr_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("docs/ai/private-provider-review.md");
+    expect(serialized).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
     expect(review.containsUnredactedSensitiveValues).toBe(false);
     expect(review.redactions).toEqual(
       expect.arrayContaining([
         "authorization",
         "ciRunUrl",
+        "commandLog",
+        "documentationInventoryOutput",
         "legalReviewer",
+        "markdownLinkReport",
+        "neutralArtifactTrace",
+        "neutralCiTrace",
+        "neutralDatabaseTrace",
+        "neutralDocumentationTrace",
+        "neutralProviderTrace",
+        "neutralRepositoryTrace",
         "providerProjectId",
         "providerReviewPayload",
+        "privilegedLegalNotes",
+        "stackTrace",
         "staleProviderStatusProofUrl",
       ]),
     );

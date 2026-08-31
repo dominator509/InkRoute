@@ -180,6 +180,10 @@ describe("email provider runtime contract", () => {
       destinationEmail: "client@example.test",
       rawWebhookPayload: "{\"private\":true}",
       publicSummary: "email provider evidence captured",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_email_provider",
+      reviewerHandle: "reviewer_email_owner",
+      codeownerSelector: "CODEOWNER:notifications-platform-team",
       nested: {
         svixSignature: "signature",
         publicStatus: "delivered",
@@ -192,6 +196,10 @@ describe("email provider runtime contract", () => {
       "verifiedSenderDomain",
       "destinationEmail",
       "rawWebhookPayload",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.svixSignature",
     ]);
     expect(redacted.artifact).toEqual({
@@ -200,6 +208,10 @@ describe("email provider runtime contract", () => {
       destinationEmail: "[redacted]",
       rawWebhookPayload: "[redacted]",
       publicSummary: "email provider evidence captured",
+      repositorySelector: "[redacted]",
+      pullRequestSelector: "[redacted]",
+      reviewerHandle: "[redacted]",
+      codeownerSelector: "[redacted]",
       nested: {
         svixSignature: "[redacted]",
         publicStatus: "delivered",

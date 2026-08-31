@@ -15,9 +15,7 @@ const previewKeys: NotificationTemplateKey[] = [
 
 const demoConsent: ClientConsentSnapshot = {
   clientId: "client_preview",
-  email: "client@example.test",
-  phone: "+15550101010",
-  pushToken: "ExponentPushToken[preview]",
+  pushToken: "preview_push_destination",
   inAppUserId: "client_preview",
   emailOptIn: true,
   smsOptIn: true,
@@ -25,6 +23,36 @@ const demoConsent: ClientConsentSnapshot = {
   marketingOptIn: true,
   transactionalAllowed: true,
 };
+
+function buildSafeDeliveryPlanResponse(plan: ReturnType<typeof buildDeliveryPlan>) {
+  const safeCandidate = (candidate: (typeof plan.candidates)[number]) => ({
+    channel: candidate.channel,
+    provider: candidate.provider,
+    status: candidate.status,
+    reason: candidate.reason,
+    destinationMaskedEchoed: false,
+  });
+
+  return {
+    template: { key: plan.template.key, purpose: plan.template.purpose },
+    audience: plan.audience,
+    purpose: plan.purpose,
+    candidates: plan.candidates.map(safeCandidate),
+    chosenChannels: plan.chosenChannels,
+    blockedChannels: plan.blockedChannels.map(safeCandidate),
+    requiresProviderCredential: plan.requiresProviderCredential,
+    requiresAuditLog: plan.requiresAuditLog,
+    complianceNotes: plan.complianceNotes,
+    responseProjection: {
+      rawContactFieldsEchoed: false,
+      rawDestinationEchoed: false,
+      destinationMaskedEchoed: false,
+      rawConsentSnapshotEchoed: false,
+      tenantIdEchoed: false,
+      internalPersistenceIdsEchoed: false,
+    },
+  };
+}
 
 export async function GET(_request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
@@ -46,6 +74,14 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ te
             "sandbox/device send evidence",
           ],
         },
+        responseProjection: {
+          rawContactFieldsEchoed: false,
+          rawDestinationEchoed: false,
+          destinationMaskedEchoed: false,
+          rawConsentSnapshotEchoed: false,
+          tenantIdEchoed: false,
+          internalPersistenceIdsEchoed: false,
+        },
       },
       { status: 503, headers: noStoreHeaders },
     );
@@ -66,10 +102,20 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ te
   return NextResponse.json({
     ok: true,
     data: {
-      tenantSlug,
+      tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
       mode: "static_phase9_preview",
       templates: previewKeys.map((key) => renderTemplate(key, contextPreview)),
-      deliveryPlans: previewKeys.map((key) => buildDeliveryPlan({ key, context: contextPreview, consent: demoConsent })),
+      deliveryPlans: previewKeys.map((key) =>
+        buildSafeDeliveryPlanResponse(buildDeliveryPlan({ key, context: contextPreview, consent: demoConsent, channels: ["email", "sms", "push", "in_app"] })),
+      ),
+      responseProjection: {
+        rawContactFieldsEchoed: false,
+        rawDestinationEchoed: false,
+        destinationMaskedEchoed: false,
+        rawConsentSnapshotEchoed: false,
+        tenantIdEchoed: false,
+        internalPersistenceIdsEchoed: false,
+      },
       productionBoundary: {
         status: "provider-gated",
         gapIds: ["GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065"],

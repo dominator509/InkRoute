@@ -3,6 +3,7 @@ import { inkrouteDemoTenant } from "@inkroute/config";
 import type { Permission, Role } from "@inkroute/types";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createHash } from "node:crypto";
 
 const FALLBACK_ACTOR_ID = "dashboard-demo-user";
 const allowedRoles: ReadonlyArray<Role> = ["owner", "artist", "assistant", "studio_manager", "admin"];
@@ -88,12 +89,20 @@ export interface DashboardActorContext {
 
 export interface DashboardMembershipLookupMetadata {
   tenantId: string;
+  tenantIdHash: string;
+  rawTenantIdEchoed: false;
   actorUserId: string;
+  actorUserIdHash: string;
+  rawActorUserIdEchoed: false;
   actorRole: Role;
   source: "database-tenant-member" | "local-fallback";
   status: "active" | "local-fallback";
   membershipId: string | null;
+  membershipIdHash: string | null;
+  rawMembershipIdEchoed: false;
   customRoleId: string | null;
+  customRoleIdHash: string | null;
+  rawCustomRoleIdEchoed: false;
   requiredNextStep: string | null;
 }
 
@@ -112,10 +121,16 @@ export interface DashboardAuthGuardAuditLogWrite {
   entityType: "DashboardAuthGuardRun";
   entityId: string;
   metadata: {
-    routePath: string;
+    tenantIdHash: string;
+    rawTenantIdStored: false;
+    actorUserIdHash: string;
+    rawActorUserIdStored: false;
+    routePathHash: string;
+    rawRoutePathStored: false;
     method: string;
     permission: Permission;
     guardAction: string;
+    guardActionRoutePathHashed: true;
     decisionStatus: DashboardAuthGuardDecisionStatus;
     actorSource: DashboardActorContext["source"];
     actorRole: Role;
@@ -156,6 +171,10 @@ function isProductionEnv() {
   return process.env.NODE_ENV === "production";
 }
 
+function headerOnlyDashboardAuthDisabledInProduction() {
+  return isProductionEnv();
+}
+
 export function resolveDashboardActor(request: NextRequest): DashboardActorContext {
   const tenantId = normalizeHeaderValue(
     request.headers.get("x-tenant-id") ??
@@ -169,6 +188,10 @@ export function resolveDashboardActor(request: NextRequest): DashboardActorConte
   const role = normalizeRole(request.headers.get("x-user-role") ?? request.headers.get("x-dashboard-role"));
 
   if (tenantId) {
+    if (headerOnlyDashboardAuthDisabledInProduction()) {
+      throw new Error("AUTH_REQUIRED");
+    }
+
     return {
       tenantId,
       actorUserId,
@@ -203,11 +226,14 @@ export function getLocalDashboardActor(): DashboardActorContext {
 }
 
 export function toTenantAccessContext(context: DashboardActorContext): TenantAccessContext {
+  const sessionIdHash = createHash("sha256")
+    .update(JSON.stringify([context.source, context.actorUserId, context.tenantId]))
+    .digest("hex");
   return {
     tenantId: context.tenantId,
     userId: context.actorUserId,
     role: context.role,
-    sessionId: `${context.source}:${context.actorUserId}:${context.tenantId}`,
+    sessionId: `dashboard:${context.source}:${sessionIdHash}`,
   };
 }
 
@@ -248,6 +274,9 @@ export function buildDashboardAuthGuardRunRecord(input: {
 }): DashboardAuthGuardRunRecord {
   const method = input.method.toUpperCase();
   const decisionStatus = input.guard.decision.status;
+  const routePathHash = createHash("sha256").update(input.routePath).digest("hex");
+  const tenantIdHash = createHash("sha256").update(input.actor.tenantId).digest("hex");
+  const actorUserIdHash = createHash("sha256").update(input.actor.actorUserId).digest("hex");
 
   return {
     tenantId: input.actor.tenantId,
@@ -262,12 +291,18 @@ export function buildDashboardAuthGuardRunRecord(input: {
       actorUserId: input.actor.actorUserId,
       action: input.guard.auditAction,
       entityType: "DashboardAuthGuardRun",
-      entityId: `${method}:${input.routePath}`,
+      entityId: `${method}:${routePathHash}`,
       metadata: {
-        routePath: input.routePath,
+        tenantIdHash,
+        rawTenantIdStored: false,
+        actorUserIdHash,
+        rawActorUserIdStored: false,
+        routePathHash,
+        rawRoutePathStored: false,
         method,
         permission: input.permission,
         guardAction: input.guard.auditAction,
+        guardActionRoutePathHashed: true,
         decisionStatus,
         actorSource: input.actor.source,
         actorRole: input.actor.role,

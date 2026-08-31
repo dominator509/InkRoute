@@ -7,6 +7,7 @@ import {
   type SignedIcsFeedTokenRecord,
 } from "@inkroute/calendar";
 import { inkrouteDemoArtist, inkrouteDemoTenant } from "@inkroute/config";
+import { createHash } from "node:crypto";
 
 export interface SignedIcsFeedTokenCreateInput {
   tenantSlug: string;
@@ -192,7 +193,7 @@ function buildSignedIcsFeedRepositoryKey(input: {
   readonly artistSlug: string;
   readonly tokenHash: string;
 }): string {
-  return `${input.tenantSlug}:${input.artistSlug}:${input.tokenHash}`;
+  return `ics_feed:${createHash("sha256").update(JSON.stringify([input.tenantSlug, input.artistSlug, input.tokenHash])).digest("hex")}`;
 }
 
 function signedIcsFeedTokenRecordFromRow(row: PersistedSignedIcsFeedTokenRow): SignedIcsFeedTokenRecord {

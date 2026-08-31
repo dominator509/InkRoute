@@ -1,4 +1,5 @@
 {
+  "id": "handoff-tooling-readiness",
   "phase": "16",
   "status": "tooling_contract_not_executed",
   "command": "pnpm handoff:verify-tooling",

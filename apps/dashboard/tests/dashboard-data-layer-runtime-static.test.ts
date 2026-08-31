@@ -103,6 +103,14 @@ describe("dashboard data layer runtime contract", () => {
     expect(dashboardMetricsRoute).toContain("dashboardMetricsQuerySchema.safeParse");
     expect(dashboardMetricsRoute).toContain("VALIDATION_FAILED");
     expect(dashboardMetricsRoute).toContain("query.data.tenantId ?? actor.tenantId");
+    expect(dashboardMetricsRoute).toContain("function buildMetricsResponseProjection");
+    expect(dashboardMetricsRoute).toContain("tenantIdEchoed: false");
+    expect(dashboardMetricsRoute).toContain("auditIdEchoed: false");
+    expect(dashboardMetricsRoute).toContain("internalPersistenceIdsEchoed: false");
+    expect(dashboardMetricsRoute).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(dashboardMetricsRoute).not.toContain("tenantId,\n          error:");
+    expect(dashboardMetricsRoute).not.toContain("tenantId,\n        persistence");
+    expect(dashboardMetricsRoute).not.toContain("auditId: result.audit.id");
     expect(dashboardDemo).toContain("Dashboard read and mutation contracts added");
     expect(dashboardDemo).toContain("Booking flow and tenant-scoped API contract wired");
     expect(dashboardDemo).toContain("Provider delivery and unsubscribe footer proof remain evidence-gated");
@@ -189,6 +197,12 @@ describe("dashboard data layer runtime contract", () => {
         privateObjectKey: "private-object/client-reference.png",
         publicSummary: "dashboard data layer evidence captured",
       },
+      routeReadPayload: "GET /api/bookings returned booking_01HZYXZYXZYXZYXZYXZYXZYXZ for tenant_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      repositoryReadTrace: "prisma query loaded client_01HZYXZYXZYXZYXZYXZYXZYXZ and audit_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      rbacRedactionProof: "member_01HZYXZYXZYXZYXZYXZYXZYXZ denied portfolio_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed",
+      safeNote: "evidence_dashboard_data_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/dashboard-data/private-proof.json",
+      safeDatabaseTrace: "postgresql://tenant_demo:secret@db.example.com/inkroute",
     });
     const directRedaction = buildRedactedDashboardDataLayerArtifact({
       publicSummary: "safe dashboard data evidence",
@@ -239,11 +253,24 @@ describe("dashboard data layer runtime contract", () => {
       "stripePaymentId",
       "databaseUrl",
       "nested.privateObjectKey",
+      "routeReadPayload",
+      "repositoryReadTrace",
+      "rbacRedactionProof",
+      "ciOutput",
+      "safeNote",
+      "safeDatabaseTrace",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("stripe_pi_private");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("postgres://");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("booking_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("client_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("member_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("evidence_dashboard_data_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("artifacts/dashboard-data/private-proof.json");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard data layer evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["rbacMemberRole"]);

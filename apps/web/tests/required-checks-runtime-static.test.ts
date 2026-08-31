@@ -320,6 +320,15 @@ describe("required checks runtime contract", () => {
       },
       ciRunUrl: "https://github.com/dominator509/InkRoute/actions/runs/27171288295",
       logOutput: "review requested from owner@example.com with token github_pat_1234567890ABCDEFGHIJKLMNOP",
+      mergeBlockProof: "PR blocked for user_private_123",
+      codeownersReviewBody: "review from owner_private_123",
+      rawPrPayload: { branch: "feature/private-branch" },
+      diffArtifactPath: "artifacts/private-gap-diff.patch",
+      branchProtectionAuditTranscript: "required check run_private_123",
+      neutralGithubTrace: "github_pr_01HZYXZYXZYXZYXZYXZYXZYXZ blocked branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralReviewerTrace: "reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ approved codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralCheckTrace: "required_check_01HZYXZYXZYXZYXZYXZYXZYXZ failed workflow ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      neutralArtifactTrace: "diff stored reports/required-checks/private-pr-diff.patch",
     };
 
     expect(buildRedactedRequiredChecksArtifact(artifact)).toEqual({
@@ -328,6 +337,15 @@ describe("required checks runtime contract", () => {
       branchProtectionSettings: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
       logOutput: "review requested from [REDACTED] with token [REDACTED]",
+      mergeBlockProof: "[REDACTED]",
+      codeownersReviewBody: "[REDACTED]",
+      rawPrPayload: "[REDACTED]",
+      diffArtifactPath: "[REDACTED]",
+      branchProtectionAuditTranscript: "[REDACTED]",
+      neutralGithubTrace: "[REDACTED] blocked [REDACTED]",
+      neutralReviewerTrace: "[REDACTED] approved [REDACTED]",
+      neutralCheckTrace: "[REDACTED] failed workflow [REDACTED]",
+      neutralArtifactTrace: "diff stored [REDACTED]",
     });
 
     const review = buildRequiredChecksRuntimeArtifactReview(artifact);
@@ -341,8 +359,23 @@ describe("required checks runtime contract", () => {
         "branchProtectionSettings",
         "ciRunUrl",
         "logOutput",
+        "mergeBlockProof",
+        "codeownersReviewBody",
+        "rawPrPayload",
+        "diffArtifactPath",
+        "branchProtectionAuditTranscript",
+        "neutralGithubTrace",
+        "neutralReviewerTrace",
+        "neutralCheckTrace",
+        "neutralArtifactTrace",
       ]),
     );
+    expect(JSON.stringify(review.artifact)).not.toContain("github_pr_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("branch_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reviewer_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("codeowner_private_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(review.artifact)).not.toContain("reports/required-checks/private-pr-diff.patch");
     expect(review.requiredExternalEvidence).toContain("Failing quality-gate PR merge-block evidence captured from GitHub.");
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");
     expect(bundle.artifactPath).toBe("coverage/required-checks-redacted-evidence-bundle.json");

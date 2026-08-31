@@ -268,7 +268,7 @@ export function buildRedactedDbIntegrationRuntimeArtifact(value: unknown): unkno
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /databaseUrl|directUrl|url|token|secret|authorization|credential|password|rawBody|stack|ciRunUrl|commitSha|runId|redactedTranscriptPath|commandTranscript|postgres/i.test(key)
+        /databaseUrl|directUrl|url|token|secret|authorization|credential|password|raw|payload|body|stack|error|ciRunUrl|commitSha|runId|redactedTranscriptPath|commandTranscript|command|output|log|env|postgres|prisma|migration|seed|tenant|audit|workflow|rowId|recordId|reset|rollback|dsn/i.test(key)
           ? "[REDACTED]"
           : buildRedactedDbIntegrationRuntimeArtifact(entry),
       ]),
@@ -473,7 +473,7 @@ export function persistDbIntegrationRun(
   });
 }
 
-export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessPlan({
+const dbIntegrationRuntimePackageReadiness = buildDbIntegrationRuntimeReadinessPlan({
   packageScripts: {
     "db:validate": "prisma validate --schema prisma/schema.prisma",
     "db:generate": "prisma generate --schema prisma/schema.prisma",
@@ -496,6 +496,11 @@ export const dbIntegrationRuntimeReadiness = buildDbIntegrationRuntimeReadinessP
   commandOutputCaptured: false,
   ciDbJobPassed: false
 });
+
+export const dbIntegrationRuntimeReadiness = {
+  ...dbIntegrationRuntimePackageReadiness,
+  requiredCommands: dbIntegrationRuntimeCommands,
+} as const;
 
 export const dbIntegrationRunPersistencePreview = buildDbIntegrationRunPersistenceContract({
   tenantId: "tenant_demo",

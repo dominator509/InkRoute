@@ -145,7 +145,7 @@ Initial posture:
 ## Deployment strategy
 
 Recommended first deployment:
-- Web/dashboard: Vercel projects connected to the monorepo.
+- Web/dashboard: Vercel projects connected to the monorepo [sandbox].
 - Database: Neon or Supabase Postgres.
 - Storage: Supabase Storage or S3-compatible bucket.
 - Mobile: Expo EAS Build, with optional EAS Update after runtime policy setup.
@@ -222,7 +222,7 @@ Sentry / fallback reporter / OpenTelemetry
   -> tenant-scoped `ErrorReport` persistence
   -> dashboard triage
   -> alert provider
-  -> approved GitHub issue / agent handoff
+  -> approved GitHub issue / agent handoff [pending]
 ```
 
 Live SDK capture, provider credentials, source-map upload, OTLP export, alert routing, issue automation, persistence, and runtime verification are not implemented in this environment.
@@ -273,7 +273,7 @@ Required production architecture:
 4. Uploads flow through signed private object storage, file signature validation, metadata stripping, scanning/quarantine, derivative approval, FileAsset persistence, and audit logging.
 5. Public forms and fallback endpoints are rate-limited and bot-protected. Cookie-authenticated mutations use CSRF defenses.
 6. Legal/privacy documents are versioned, attorney-reviewed, and tied to acceptance/audit records.
-7. Privacy request workers implement verified export/delete/rectification with retention/legal-hold rules.
+7. Privacy request workers implement verified export/delete/rectification with retention/legal-hold rules [blocked].
 
 
 ## Phase 14 testing/QA architecture

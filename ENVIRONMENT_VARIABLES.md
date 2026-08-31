@@ -56,10 +56,14 @@ See `.env.example` for the canonical starter list.
 | `RESEND_API_KEY` | Email provider key | Credential-gated |
 | `EMAIL_FROM` | Verified transactional sender address | Credential-gated |
 | `EMAIL_WEBHOOK_SECRET` | Email provider webhook signature secret | Credential-gated |
+| `RESEND_WEBHOOK_SECRET` | Resend-specific webhook signature secret; falls back to `EMAIL_WEBHOOK_SECRET` where applicable. | Credential-gated |
 | `TWILIO_ACCOUNT_SID` | SMS provider account | Credential-gated |
 | `TWILIO_AUTH_TOKEN` | SMS provider secret | Credential-gated |
 | `TWILIO_MESSAGING_SERVICE_SID` | SMS messaging service | Credential-gated |
 | `SMS_WEBHOOK_SECRET` | SMS webhook/signature verification support where provider requires it | Credential-gated |
+| `SMS_WEBHOOK_AUTH_TOKEN` | Alternate SMS webhook verification token used when Twilio auth token is not the verifier. | Credential-gated |
+| `SMS_PROVIDER_ENABLED` | Non-secret feature gate for SMS provider readiness previews. | Scaffolded |
+| `SENDGRID_API_KEY` | Optional email provider key used by feature-flag/provider readiness checks. | Credential-gated |
 | `EXPO_ACCESS_TOKEN` | Expo push provider token for server-side push sends | Credential-gated |
 
 ## Observability
@@ -74,13 +78,20 @@ See `.env.example` for the canonical starter list.
 | Variable | Purpose | Status |
 | --- | --- | --- |
 | `EXPO_PUBLIC_API_URL` | Mobile API base URL | Deployment-gated |
+| `EXPO_PUBLIC_APP_ENV` | Public mobile runtime environment label; must not contain secrets. | Scaffolded / runtime-read |
 | `EXPO_PUBLIC_SENTRY_DSN` | Mobile Sentry DSN | Credential-gated |
 | `EAS_PROJECT_ID` | Expo Application Services project | Deployment-gated |
+| `EAS_TOKEN` | Expo Application Services token for approved build/update automation. Server/CI secret only. | Credential-gated / secret |
+| `EXPO_PUBLIC_AUTH_CLIENT_ID` | Public mobile auth client id when real auth provider is configured. | Deployment-gated |
+| `EXPO_PUBLIC_APP_SCHEME` | Public mobile deep-link/app scheme. | Scaffolded |
+| `EXPO_PUBLIC_EAS_UPDATE_URL` | Public EAS Update URL once OTA updates are configured. | Deployment-gated |
+| `EXPO_PUBLIC_PUSH_PROJECT_ID` | Public push project id for mobile push routing. | Deployment-gated |
+| `EXPO_PUBLIC_RUNTIME_VERSION` | Public mobile runtime-version label for release/readiness evidence. | Scaffolded / runtime-read |
 
 
 ## Phase 5 dashboard environment note
 
-The Phase 5 dashboard remains static. Production dashboard work will require auth/session secrets, database URLs, storage credentials, Stripe keys, email/SMS/push provider keys, calendar OAuth credentials, Sentry DSNs, and release/feature flag environment values before actions can be enabled.
+The Phase 5 dashboard remains static. Production dashboard work will require auth/session secrets, database URLs, storage credentials, Stripe keys, email/SMS/push provider keys, calendar OAuth credentials, Sentry DSNs, and release/feature flag environment values before actions can be enabled [gated].
 
 ## Phase 6 mobile environment note
 
@@ -88,7 +99,7 @@ The Phase 6 Expo scaffold still requires production mobile variables and secrets
 
 ## Phase 7 payment environment notes
 
-The Phase 7 payment code intentionally avoids importing the Stripe SDK or reading Stripe secrets. Before enabling live payment routes, configure test-mode credentials first, pin a Stripe API version through SDK configuration or account settings, run Stripe CLI webhook tests, and confirm no secret values are exposed to the browser.
+The Phase 7 payment code intentionally avoids importing the Stripe SDK or reading Stripe secrets [sandbox]. Before enabling live payment routes, configure test-mode credentials first, pin a Stripe API version through SDK configuration or account settings, run Stripe CLI webhook tests, and confirm no secret values are exposed to the browser.
 
 ## Phase 8 calendar/travel environment notes
 
@@ -134,12 +145,25 @@ Phase 9 does not read notification secrets at runtime. Before enabling live deli
 | `SENTRY_WEBHOOK_SECRET` | Secret used to verify provider webhook callbacks | Credential-gated |
 | `ERROR_REPORT_INGEST_SECRET` | Optional fallback ingest secret for server/mobile reports | Credential-gated |
 | `OTEL_SERVICE_NAME` | OpenTelemetry service name per app/deployment | Deployment-gated |
+| `OTEL_TRACES_SAMPLER_ARG` | OpenTelemetry sampling argument used by runtime telemetry setup when configured. | Deployment-gated / runtime-read |
 | `OTEL_EXPORTER_OTLP_HEADERS` | OTLP exporter auth headers, stored only in server secrets | Credential-gated / secret |
 | `GITHUB_TOKEN` | Optional issue creation token for sanitized agentic bug workflow | Credential-gated / secret |
 | `GITHUB_REPOSITORY` | Repository target for approved issue automation | Deployment-gated |
+| `GITHUB_ISSUE_TOKEN` | Optional scoped token for approved sanitized GitHub issue automation. | Credential-gated / secret |
+| `GITHUB_ISSUE_DISPATCH_ENABLED` | Non-secret feature gate for issue-dispatch automation; defaults disabled. | Scaffolded / runtime-read |
+| `GITHUB_ISSUE_TEMPLATE_PATH` | Optional issue-template path for sanitized issue automation. | Deployment-gated / runtime-read |
+| `GITHUB_ISSUE_LABELS` | Optional comma-separated labels for sanitized issue automation. | Deployment-gated / runtime-read |
+| `GITHUB_ISSUE_ASSIGNEES` | Optional comma-separated assignees for sanitized issue automation. | Deployment-gated / runtime-read |
 | `ALERT_WEBHOOK_URL` | Slack/Pager/email bridge for high/critical sanitized alerts | Credential-gated / secret |
+| `ALERT_WORKER_TOKEN` | Optional token for alert-worker ingestion or escalation handoff. | Credential-gated / secret |
+| `ALERT_EMAIL_PROVIDER` | Optional alert email provider selector for readiness/escalation plans. | Deployment-gated / runtime-read |
+| `ALERT_ON_CALL_OWNER` | Optional non-secret owner label for escalation routing and readiness evidence. | Deployment-gated / runtime-read |
+| `PAGERDUTY_ROUTING_KEY` | PagerDuty routing key for critical alert escalation. | Credential-gated / secret |
+| `SLACK_WEBHOOK_URL` | Slack webhook for sanitized alert notifications. | Credential-gated / secret |
+| `INCIDENT_PROVIDER_WEBHOOK_URL` | Optional incident-provider webhook endpoint for release incident linkage. | Credential-gated / secret |
+| `RELEASE_INCIDENT_OWNER` | Optional non-secret owner label for release incident linkage. | Deployment-gated / runtime-read |
 
-Phase 11 does not consume these in production code yet. They are documented for Codex/Jules/local setup when wiring Sentry, OpenTelemetry, fallback persistence, alerts, and GitHub issue automation.
+Phase 11 includes a mix of scaffolded and runtime-read values. Runtime-read values are still not proof that providers are configured; credentialed values must live only in provider secret stores and all alert/issue artifacts must remain redacted.
 
 ## Phase 12 release/deployment variables
 
@@ -151,6 +175,7 @@ These are scaffolded placeholders only and must not be treated as configured sec
 | `RELEASE_CHANNEL` | Release channel used by release helpers and deployment metadata. | Scaffolded |
 | `RELEASE_RECORD_WRITE_TOKEN` | Future internal token for release automation to write ReleaseRecord results. | Not implemented |
 | `FEATURE_FLAG_ADMIN_TOKEN` | Future internal token for trusted flag automation. | Not implemented |
+| `RELEASE_GOVERNANCE_DISPATCH_ENABLED` | Non-secret feature gate for release-governance dispatch automation; defaults disabled. | Scaffolded / runtime-read |
 | `VERCEL_TOKEN` | Vercel deployment token for web/dashboard deploy automation. | Credential-gated |
 | `VERCEL_ORG_ID` | Vercel organization/team id. | Credential-gated |
 | `VERCEL_WEB_PROJECT_ID` | Public web Vercel project id. | Credential-gated |
@@ -159,16 +184,19 @@ These are scaffolded placeholders only and must not be treated as configured sec
 | `EAS_UPDATE_CHANNEL_PRODUCTION` | Production EAS Update channel name. | Deployment-gated |
 | `RELEASE_APPROVAL_WEBHOOK_URL` | Future internal release approval/notification webhook. | Not implemented |
 
-Phase 12 added these variables to `.env.example`, but no code reads live values yet except static helper previews. Codex must wire them through CI/CD and server-side runtime configuration with secret redaction and audit logging.
+Phase 12 added these variables to `.env.example`. Some governance gates are runtime-read but default disabled; provider-backed CI/CD execution still requires secret-backed environments, redaction, and audit logging before production use.
 
 ## Phase 13 security/privacy/trust variables
 
-These variables are placeholders for the Phase 13 security scaffold. Do not treat them as configured until provisioned in the relevant secret manager/provider and tested in staging.
+These variables are placeholders unless explicitly configured in a secret manager/provider and tested in staging. The encryption helper now reads the primary/secondary key variables below for sensitive booking persistence and provider-token readiness checks, but committed values must remain blank or non-secret labels.
 
 | Variable | Purpose | Status |
 | --- | --- | --- |
-| `SECURITY_ENCRYPTION_PRIMARY_KEY` | Future application-level encryption key or key reference for sensitive fields and private provider tokens. Prefer managed KMS/Vault references over raw keys when possible. | Credential-gated / not implemented |
-| `SECURITY_KEY_VERSION` | Key version label for encrypted fields and rotation planning. | Scaffolded |
+| `SECURITY_ENCRYPTION_PRIMARY_KEY` | Primary application-level encryption key or managed KMS/Vault reference for sensitive fields and private provider tokens. Server-only secret. | Credential-gated / runtime-read |
+| `SECURITY_ENCRYPTION_KEY_ID` | Non-secret primary key version label stored with encrypted envelopes and readiness metadata. | Runtime-read label |
+| `SECURITY_ENCRYPTION_SECONDARY_KEY` | Optional secondary application-level encryption key for explicit rotation/decryption fallback. Server-only secret. | Credential-gated / runtime-read |
+| `SECURITY_ENCRYPTION_SECONDARY_KEY_ID` | Non-secret secondary key version label used during rotation. | Runtime-read label |
+| `BOOKING_SUBMISSION_BOT_SECRET` | HMAC/secret used to verify public booking anti-bot proof before DB persistence. Server-only secret. | Credential-gated / runtime-read |
 | `RATE_LIMIT_REDIS_URL` | Redis/Upstash-compatible rate-limit store URL for public and dashboard abuse controls. | Credential-gated / not implemented |
 | `RATE_LIMIT_REDIS_TOKEN` | Rate-limit store credential. Server-only secret. | Credential-gated / not implemented |
 | `CSRF_SECRET` | HMAC/signing secret for signed double-submit CSRF token strategy where needed. | Credential-gated / not implemented |
@@ -178,7 +206,7 @@ These variables are placeholders for the Phase 13 security scaffold. Do not trea
 | `PRIVACY_REQUEST_INTAKE_SECRET` | Internal secret for privacy request workflow automation and spam-resistant intake. | Credential-gated / not implemented |
 | `LEGAL_REVIEW_STATUS` | Non-secret marker showing whether legal documents are still scaffolded or reviewed. | Scaffolded only |
 
-Phase 13 code does not read these values yet for production behavior. Codex/Jules must wire them through server-only configuration, tests, secret redaction, and audit logs before enabling live security workflows.
+Phase 13 security workflows are still provider-gated, but GAP-021 encryption policy code reads the `SECURITY_ENCRYPTION_*` variables for local/runtime key readiness, rotation metadata, decryption fallback, and provider-token encryption readiness. Configure real key material only in server-side secret stores; retain only redacted key-readiness evidence through `buildRedactedEncryptionKeyEvidenceArtifact`.
 
 ## Phase 15 deployment/handoff variables
 

@@ -127,6 +127,8 @@ describe("availability persistence runtime contract", () => {
     expect(availabilityRoute).toContain("persistedOverlapGuardApplied: true");
     expect(availabilityRoute).toContain("concurrentHoldProtectionConfigured: true");
     expect(availabilityRoute).toContain("concurrentHoldProtectionVerified: false");
+    expect(availabilityRoute).toContain("availabilityWindowResponseAllowlisted: true");
+    expect(availabilityRoute).not.toContain("...result.availabilityWindow");
     expect(availabilityRoute).toContain("idempotencyKeyId");
     expect(availabilityRoute).toContain("idempotencyReplay");
     expect(holdRoute).toContain("AVAILABILITY_HOLD_BLOCKED");
@@ -261,6 +263,10 @@ describe("availability persistence runtime contract", () => {
         calendarAuditPayload: "audit_private",
         publicSummary: "availability persistence evidence captured",
       },
+      safeNote:
+        "evidence_availability_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/availability/private-proof.json",
+      safeHoldPath: "test-results/availability-persistence-runtime/private-hold.json",
+      safeRaceRun: "availability_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedAvailabilityPersistenceArtifact(artifact);
@@ -270,6 +276,9 @@ describe("availability persistence runtime contract", () => {
       "availabilityHoldToken",
       "artistCalendarEmail",
       "nested.calendarAuditPayload",
+      "safeNote",
+      "safeHoldPath",
+      "safeRaceRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       tenantId: "[REDACTED]",
@@ -280,7 +289,21 @@ describe("availability persistence runtime contract", () => {
         calendarAuditPayload: "[REDACTED]",
         publicSummary: "availability persistence evidence captured",
       },
+      safeHoldPath: "[REDACTED]",
+      safeRaceRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_availability_persistence_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/availability/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/availability-persistence-runtime/private-hold.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "availability_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildAvailabilityPersistenceArtifactReview({
       publicSummary: "safe availability persistence evidence",

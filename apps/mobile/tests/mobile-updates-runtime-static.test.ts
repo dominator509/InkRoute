@@ -166,6 +166,10 @@ describe("mobile OTA updates runtime contract", () => {
         rollbackUpdateId: "rollback_private",
         publicSummary: "mobile OTA evidence captured",
       },
+      safeNote:
+        "evidence_mobile_ota_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/mobile-ota/private-proof.json",
+      safeUpdatePath: "test-results/mobile-updates-runtime/private-rollback.json",
+      safeEasRun: "eas_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedMobileUpdatesArtifact(artifact);
@@ -175,6 +179,9 @@ describe("mobile OTA updates runtime contract", () => {
       "updateUrl",
       "deviceReceiptId",
       "nested.rollbackUpdateId",
+      "safeNote",
+      "safeUpdatePath",
+      "safeEasRun",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       easProjectId: "[REDACTED]",
@@ -185,7 +192,21 @@ describe("mobile OTA updates runtime contract", () => {
         rollbackUpdateId: "[REDACTED]",
         publicSummary: "mobile OTA evidence captured",
       },
+      safeUpdatePath: "[REDACTED]",
+      safeEasRun: "[REDACTED]",
     });
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "evidence_mobile_ota_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "artifacts/mobile-ota/private-proof.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "test-results/mobile-updates-runtime/private-rollback.json",
+    );
+    expect(JSON.stringify(redacted.redactedArtifact)).not.toContain(
+      "eas_run_01HZYXZYXZYXZYXZYXZYXZYXZ",
+    );
 
     const review = buildMobileUpdatesArtifactReview({
       publicSummary: "safe mobile OTA evidence",

@@ -381,12 +381,26 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
     const rawArtifact = {
       sessionToken: "session-secret-123",
       csrf_token: "csrf-secret-123",
+      tenantId: "tenant_auth_private",
+      actorUserId: "actor_auth_private",
+      userId: "user_auth_private",
+      tenantMemberId: "tenant_member_auth_private",
+      membershipId: "membership_auth_private",
+      customRoleId: "custom_role_auth_private",
+      providerUserId: "provider_user_auth_private",
+      providerAccountId: "provider_account_auth_private",
+      revocationId: "revocation_auth_private",
+      auditId: "audit_auth_private",
+      idempotencyKey: "idempotency_auth_private",
       providerPayload: {
         accessToken: "provider-access-token",
         rawBody: "{\"email\":\"owner@example.com\",\"phone\":\"+1 555 888 9999\"}",
       },
       headers: ["Authorization: Bearer auth-secret-token", "Cookie: session=private-cookie"],
       stack: "Error: auth provider failed",
+      safeNote: "provider_session_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/auth-session/private-proof.json",
+      safeDatabaseTrace: "postgresql://tenant_demo:secret@db.example.com/inkroute",
+      safeCallbackTrace: "https://auth.example.com/callback/session_01HZYXZYXZYXZYXZYXZYXZYXZ",
     };
 
     const redacted = buildRedactedAuthSessionTenantGuardArtifact(rawArtifact);
@@ -395,11 +409,26 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
 
     expect(serialized).not.toContain("session-secret-123");
     expect(serialized).not.toContain("csrf-secret-123");
+    expect(serialized).not.toContain("tenant_auth_private");
+    expect(serialized).not.toContain("actor_auth_private");
+    expect(serialized).not.toContain("user_auth_private");
+    expect(serialized).not.toContain("tenant_member_auth_private");
+    expect(serialized).not.toContain("membership_auth_private");
+    expect(serialized).not.toContain("custom_role_auth_private");
+    expect(serialized).not.toContain("provider_user_auth_private");
+    expect(serialized).not.toContain("provider_account_auth_private");
+    expect(serialized).not.toContain("revocation_auth_private");
+    expect(serialized).not.toContain("audit_auth_private");
+    expect(serialized).not.toContain("idempotency_auth_private");
     expect(serialized).not.toContain("provider-access-token");
     expect(serialized).not.toContain("owner@example.com");
     expect(serialized).not.toContain("+1 555 888 9999");
     expect(serialized).not.toContain("auth-secret-token");
     expect(serialized).not.toContain("private-cookie");
+    expect(serialized).not.toContain("provider_session_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(serialized).not.toContain("artifacts/auth-session/private-proof.json");
+    expect(serialized).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
+    expect(serialized).not.toContain("auth.example.com/callback");
     expect(serialized).toContain("[REDACTED]");
     expect(review.requiredArtifacts).toBe(authSessionTenantGuardArtifactPaths);
     expect(review.retainedExternalGates).toEqual(expect.arrayContaining([

@@ -315,6 +315,19 @@ describe("semantic documentation runtime contract", () => {
       legalReview: {
         clientId: "client_01HZYXZYXZYXZYXZYXZYXZYXZ",
       },
+      documentationInventoryOutput: "docs/ai/API_CONTRACTS.md references tenant-runtime-client route",
+      consistencyAuditPayload: {
+        markdownBody: "Production-ready claim from attorney-reviewed consent copy",
+        ciWorkflowRunUrl: "https://github.com/example/inkroute/actions/runs/123456789",
+      },
+      legalBoundaryReport: {
+        counselApprovalEmail: "lawyer@example.com",
+        privilegedReviewTranscript: "approved client consent wording",
+      },
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr-2742",
+      reviewerHandle: "reviewer_backend_owner",
+      codeownerSelector: "CODEOWNER:docs-platform-team",
     };
 
     expect(buildRedactedSemanticDocumentationArtifact(artifact)).toEqual({
@@ -323,6 +336,13 @@ describe("semantic documentation runtime contract", () => {
       claimLog: "provider proof from [REDACTED] and [REDACTED]",
       providerEvidence: "[REDACTED]",
       legalReview: "[REDACTED]",
+      documentationInventoryOutput: "[REDACTED]",
+      consistencyAuditPayload: "[REDACTED]",
+      legalBoundaryReport: "[REDACTED]",
+      repositorySelector: "[REDACTED]",
+      pullRequestSelector: "[REDACTED]",
+      reviewerHandle: "[REDACTED]",
+      codeownerSelector: "[REDACTED]",
     });
 
     const review = buildSemanticDocumentationRuntimeArtifactReview(artifact);
@@ -330,7 +350,20 @@ describe("semantic documentation runtime contract", () => {
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
     expect(review.redactions).toEqual(
-      expect.arrayContaining(["runId", "ciUrl", "claimLog", "providerEvidence", "legalReview"]),
+      expect.arrayContaining([
+        "runId",
+        "ciUrl",
+        "claimLog",
+        "providerEvidence",
+        "legalReview",
+        "documentationInventoryOutput",
+        "consistencyAuditPayload",
+        "legalBoundaryReport",
+        "repositorySelector",
+        "pullRequestSelector",
+        "reviewerHandle",
+        "codeownerSelector",
+      ]),
     );
     expect(review.requiredExternalEvidence).toContain("Provider readiness proof captured outside semantic documentation wording checks.");
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");

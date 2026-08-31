@@ -3,6 +3,8 @@ import { publicReadQuerySchema } from "@inkroute/validators";
 import {
   buildLocalPublicContentResponse,
   buildPublicContentProductionBoundary,
+  buildSafeLocalPublicContentRouteResponse,
+  isPublicContentDatabaseUnavailable,
   publicContentNoStoreHeaders,
   resolvePublicTenantScope,
 } from "../../../../../lib/publicContentApi";
@@ -40,33 +42,65 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     );
   }
 
-  const local = buildLocalPublicContentResponse(tenantSlug, tenant, "faqs");
-  if (!local) {
+  try {
+    const local = buildLocalPublicContentResponse(tenantSlug, tenant, "faqs");
+    if (!local) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "PUBLIC_CONTENT_FALLBACK_UNAVAILABLE",
+            message: "Public FAQ fallback is unavailable for this slug.",
+          },
+          productionBoundary: buildPublicContentProductionBoundary("faq"),
+        },
+        { status: 503, headers: publicContentNoStoreHeaders },
+      );
+    }
+
     return NextResponse.json(
       {
-        ok: false,
-        error: {
-          code: "PUBLIC_CONTENT_FALLBACK_UNAVAILABLE",
-          message: "Public FAQ fallback is unavailable for this slug.",
+        ok: true,
+        data: {
+          ...buildSafeLocalPublicContentRouteResponse(local, "faqs", query.data.limit),
+          boundary:
+            "FAQ currently serves tenant-safe public content bundle entries; durable FAQ CMS rows remain part of the SEO publication persistence gap.",
+          gapIds: ["GAP-026", "GAP-071", "GAP-076"],
         },
-        productionBoundary: buildPublicContentProductionBoundary("faq"),
       },
-      { status: 503, headers: publicContentNoStoreHeaders },
+      { headers: publicContentNoStoreHeaders },
     );
-  }
+  } catch (error) {
+    if (!isPublicContentDatabaseUnavailable(error)) throw error;
 
-  return NextResponse.json(
-    {
-      ok: true,
-      data: {
-        ...local,
-        query: { limit: query.data.limit },
-        faqs: local.faqs.slice(0, query.data.limit),
-        boundary:
-          "FAQ currently serves tenant-safe public content bundle entries; durable FAQ CMS rows remain part of the SEO publication persistence gap.",
-        gapIds: ["GAP-026", "GAP-071", "GAP-076"],
-      },
-    },
-    { headers: publicContentNoStoreHeaders },
-  );
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "PROVIDER_PUBLIC_CONTENT_NOT_CONFIGURED",
+            message: "Production public FAQ reads require database-backed content; local fallback content is disabled.",
+          },
+          productionBoundary: buildPublicContentProductionBoundary("faq"),
+        },
+        { status: 503, headers: publicContentNoStoreHeaders },
+      );
+    }
+
+    const local = buildLocalPublicContentResponse(tenantSlug, { tenantId: tenant.tenantId, source: "local-fallback" }, "faqs");
+    if (!local) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: "PUBLIC_CONTENT_FALLBACK_UNAVAILABLE",
+            message: "Public FAQ database read failed and no tenant-safe local fallback exists for this slug.",
+          },
+          productionBoundary: buildPublicContentProductionBoundary("faq"),
+        },
+        { status: 503, headers: publicContentNoStoreHeaders },
+      );
+    }
+    return NextResponse.json({ ok: true, data: local ? buildSafeLocalPublicContentRouteResponse(local, "faqs", query.data.limit) : local }, { headers: publicContentNoStoreHeaders });
+  }
 }

@@ -1,5 +1,7 @@
 ﻿import { buildMobileApiRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
+import { mobileApiRuntimeRequiredCommands as canonicalMobileApiRuntimeCommands } from "@inkroute/mobile-support";
+
 export type MobileApiRuntimeStatus =
   | "wired"
   | "auth-gated"
@@ -15,14 +17,7 @@ export interface MobileApiRuntimeMatrixEntry {
   readonly status: MobileApiRuntimeStatus;
 }
 
-export const mobileApiRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "Expo iOS/Android mobile API smoke tests",
-  "offline reconnect/replay mobile test",
-] as const;
+export const mobileApiRuntimeCommands = canonicalMobileApiRuntimeCommands;
 
 export const mobileApiDomains = [
   "bookings",
@@ -242,7 +237,7 @@ export const mobileApiRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileApiRuntimeMatrixEntry[];
 
-export const mobileApiRuntimeReadiness = buildMobileApiRuntimeReadinessPlan({
+const mobileApiRuntimeReadinessPlan = buildMobileApiRuntimeReadinessPlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   mobileSupportTestsPassed: false,
   mobileSupportTypecheckPassed: false,
@@ -263,12 +258,20 @@ export const mobileApiRuntimeReadiness = buildMobileApiRuntimeReadinessPlan({
   screensUsingApiClient: [...mobileApiDomains],
 });
 
+export const mobileApiRuntimeReadiness = {
+  ...mobileApiRuntimeReadinessPlan,
+  requiredCommands: mobileApiRuntimeCommands,
+  requiredEvidence: mobileApiEvidenceFlags,
+};
+
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileApiArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|auth|authorization|idempotency|request|replay|offline|device|api|audit|role|member|email|phone|medical|payment)/i;
+const sensitiveMobileApiArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|auth|authorization|idempotency|request|replay|offline|device|api|audit|role|member|email|phone|medical|payment|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveMobileApiArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|role|session|refresh|auth|authorization|idempotency|request|replay|offline|device|api|audit|provider|artifact|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileApiArtifactValue = (
   value: unknown,
@@ -292,6 +295,13 @@ const redactMobileApiArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileApiArtifactValue.test(value)) {
+    sensitiveMobileApiArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileApiArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileApiArtifactValue.lastIndex = 0;
   return value;
 };
 

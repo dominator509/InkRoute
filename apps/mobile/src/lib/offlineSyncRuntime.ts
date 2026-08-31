@@ -1,5 +1,7 @@
 ﻿import { buildOfflineRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
+import { offlineRuntimeRequiredCommands as canonicalOfflineSyncRuntimeCommands } from "@inkroute/mobile-support";
+
 export type OfflineSyncRuntimeStatus =
   | "wired"
   | "storage-gated"
@@ -16,14 +18,7 @@ export interface OfflineSyncRuntimeMatrixEntry {
   readonly status: OfflineSyncRuntimeStatus;
 }
 
-export const offlineSyncRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "Expo offline restart persistence smoke test",
-  "Expo airplane-mode reconnect sync smoke test",
-] as const;
+export const offlineSyncRuntimeCommands = canonicalOfflineSyncRuntimeCommands;
 
 export const offlineSyncArtifactPaths = [
   "coverage/mobile-offline-sync-runtime.json",
@@ -245,7 +240,7 @@ export const offlineSyncRuntimeMatrix = [
   },
 ] as const satisfies readonly OfflineSyncRuntimeMatrixEntry[];
 
-export const offlineSyncRuntimeReadiness = buildOfflineRuntimeReadinessPlan({
+const offlineSyncRuntimeReadinessPlan = buildOfflineRuntimeReadinessPlan({
   packageScripts: {
     test: "vitest run packages/mobile/tests/mobile-support.test.ts",
     typecheck: "tsc -p tsconfig.json --noEmit",
@@ -268,12 +263,20 @@ export const offlineSyncRuntimeReadiness = buildOfflineRuntimeReadinessPlan({
   offlineReconnectDeviceTested: false,
 });
 
+export const offlineSyncRuntimeReadiness = {
+  ...offlineSyncRuntimeReadinessPlan,
+  requiredCommands: offlineSyncRuntimeCommands,
+  requiredEvidence: offlineSyncEvidenceFlags,
+};
+
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveOfflineSyncArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|securestore|sqlite|encrypted|device|queue|payload|idempotency|offline|sync|audit|conflict|email|phone|medical|payment)/i;
+const sensitiveOfflineSyncArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|securestore|sqlite|encrypted|device|queue|payload|idempotency|offline|sync|audit|conflict|email|phone|medical|payment|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveOfflineSyncArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|securestore|sqlite|encrypted|device|queue|payload|idempotency|offline|sync|audit|conflict|provider|artifact|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|\/private\/[A-Za-z0-9_./-]{4,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactOfflineSyncArtifactValue = (
   value: unknown,
@@ -297,6 +300,13 @@ const redactOfflineSyncArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveOfflineSyncArtifactValue.test(value)) {
+    sensitiveOfflineSyncArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveOfflineSyncArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveOfflineSyncArtifactValue.lastIndex = 0;
   return value;
 };
 

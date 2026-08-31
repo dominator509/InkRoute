@@ -1,4 +1,4 @@
-﻿import { buildDomainEventAuditTransactionEvidencePlan } from "@inkroute/booking";
+﻿import { buildDomainEventAuditTransactionEvidencePlan, domainEventAuditTransactionRequiredCommands } from "@inkroute/booking";
 
 export type DomainEventAuditRuntimeStatus =
   | "wired"
@@ -158,10 +158,12 @@ export interface DomainEventAuditLifecycleTransactionInput {
 export interface DomainEventAuditLifecycleTransactionResult {
   readonly status: "committed" | "replayed";
   readonly kind: DomainEventAuditLifecycleKind;
-  readonly tenantId: string;
-  readonly subjectId: string;
-  readonly idempotencyKey: string;
   readonly nextStatus: string;
+  readonly stateMutationPersisted: boolean;
+  readonly bookingStateEventPersisted: boolean;
+  readonly paymentAuditPersisted: boolean;
+  readonly auditLogged: boolean;
+  readonly internalPersistenceIdsStored: false;
 }
 
 export interface DomainEventAuditTransactionClient {
@@ -192,7 +194,23 @@ export interface DomainEventAuditTransactionRepository {
 }
 
 function isDomainEventAuditLifecycleTransactionResult(value: unknown): value is DomainEventAuditLifecycleTransactionResult {
-  return Boolean(value && typeof value === "object" && "status" in value && "kind" in value && "subjectId" in value);
+  return Boolean(value && typeof value === "object" && "status" in value && "kind" in value && "nextStatus" in value);
+}
+
+function toDomainEventAuditLifecycleTransactionResult(
+  value: DomainEventAuditLifecycleTransactionResult,
+  status: DomainEventAuditLifecycleTransactionResult["status"],
+): DomainEventAuditLifecycleTransactionResult {
+  return {
+    status,
+    kind: value.kind,
+    nextStatus: value.nextStatus,
+    stateMutationPersisted: value.stateMutationPersisted === true,
+    bookingStateEventPersisted: value.bookingStateEventPersisted === true,
+    paymentAuditPersisted: value.paymentAuditPersisted === true,
+    auditLogged: value.auditLogged === true,
+    internalPersistenceIdsStored: false,
+  };
 }
 
 export async function executeDomainEventAuditLifecycleTransaction(
@@ -207,7 +225,7 @@ export async function executeDomainEventAuditLifecycleTransaction(
       select: { result: true },
     });
     if (existing && isDomainEventAuditLifecycleTransactionResult(existing.result)) {
-      return { ...existing.result, status: "replayed" };
+      return toDomainEventAuditLifecycleTransactionResult(existing.result, "replayed");
     }
 
     await tx.idempotencyKey.create({
@@ -218,7 +236,8 @@ export async function executeDomainEventAuditLifecycleTransaction(
         status: "claimed",
         metadata: {
           kind: input.kind,
-          subjectId: input.subjectId,
+          subjectMatched: true,
+          rawSubjectIdStored: false,
           previousStatus: input.previousStatus,
           nextStatus: input.nextStatus,
         },
@@ -238,7 +257,12 @@ export async function executeDomainEventAuditLifecycleTransaction(
           type: "status_changed",
           fromStatus: input.previousStatus,
           toStatus: input.nextStatus,
-          metadata: { idempotencyKey: input.idempotencyKey, rollbackReason: input.rollbackReason ?? null },
+          metadata: {
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
+            rollbackReason: input.rollbackReason ?? null,
+          },
         },
       });
     } else {
@@ -253,7 +277,9 @@ export async function executeDomainEventAuditLifecycleTransaction(
           actorUserId: input.actorUserId,
           action: "payment_status_changed",
           metadata: {
-            idempotencyKey: input.idempotencyKey,
+            idempotencyPersisted: true,
+            rawIdempotencyKeyStored: false,
+            internalPersistenceIdsStored: false,
             previousStatus: input.previousStatus,
             nextStatus: input.nextStatus,
             rollbackReason: input.rollbackReason ?? null,
@@ -270,7 +296,9 @@ export async function executeDomainEventAuditLifecycleTransaction(
         entityType: input.kind === "booking" ? "BookingRequest" : "Payment",
         entityId: input.subjectId,
         metadata: {
-          idempotencyKey: input.idempotencyKey,
+          idempotencyPersisted: true,
+          rawIdempotencyKeyStored: false,
+          internalPersistenceIdsStored: false,
           previousStatus: input.previousStatus,
           nextStatus: input.nextStatus,
           rollbackReason: input.rollbackReason ?? null,
@@ -281,10 +309,12 @@ export async function executeDomainEventAuditLifecycleTransaction(
     const result: DomainEventAuditLifecycleTransactionResult = {
       status: "committed",
       kind: input.kind,
-      tenantId: input.tenantId,
-      subjectId: input.subjectId,
-      idempotencyKey: input.idempotencyKey,
       nextStatus: input.nextStatus,
+      stateMutationPersisted: true,
+      bookingStateEventPersisted: input.kind === "booking",
+      paymentAuditPersisted: input.kind === "payment",
+      auditLogged: true,
+      internalPersistenceIdsStored: false,
     };
 
     await tx.idempotencyKey.update({
@@ -296,17 +326,7 @@ export async function executeDomainEventAuditLifecycleTransaction(
   });
 }
 
-export const domainEventAuditRuntimeCommands = [
-  "pnpm --filter @inkroute/booking typecheck",
-  "pnpm --filter @inkroute/booking test",
-  "pnpm --filter @inkroute/payments typecheck",
-  "pnpm --filter @inkroute/payments test",
-  "booking/payment lifecycle Prisma transaction integration tests",
-  "booking/payment idempotency replay integration tests",
-  "provider failure rollback integration tests",
-  "cross-tenant lifecycle mutation denial tests",
-  "GitHub Actions domain event/audit transaction evidence job",
-] as const;
+export const domainEventAuditRuntimeCommands = domainEventAuditTransactionRequiredCommands;
 
 export const domainEventAuditArtifactPaths = [
   "coverage/domain-event-audit-runtime.json",
@@ -553,9 +573,9 @@ const missingFrom = (actual: readonly string[] | undefined, required: readonly s
   required.filter((item) => !(actual ?? []).includes(item));
 
 const sensitiveDomainEventAuditKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|tenant|user|client|actor|provider|database|postgres|url|uri|dsn|key|id|payload|artifact|audit|event|refund|deposit|booking)/iu;
+  /(token|secret|password|authorization|cookie|email|phone|name|address|medical|payment|card|tenant|user|client|actor|provider|database|postgres|url|uri|dsn|key|id|payload|artifact|audit|event|refund|deposit|booking|repository|repo|branch|pull|pr|reviewer|codeowner)/iu;
 const sensitiveDomainEventAuditValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 
 const buildRedactedDomainEventAuditValue = (value: unknown, path: string, redactions: string[]): unknown => {
   if (Array.isArray(value)) {
@@ -645,7 +665,7 @@ export const buildDomainEventAuditEvidenceDecision = (
   };
 };
 
-export const domainEventAuditRuntimeReadiness = buildDomainEventAuditTransactionEvidencePlan({
+const domainEventAuditPackageReadiness = buildDomainEventAuditTransactionEvidencePlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   bookingTestsPassed: false,
   bookingTypecheckPassed: false,
@@ -668,5 +688,9 @@ export const domainEventAuditRuntimeReadiness = buildDomainEventAuditTransaction
   secretSafeArtifactsCaptured: false,
 });
 
-
-
+export const domainEventAuditRuntimeReadiness = {
+  ...domainEventAuditPackageReadiness,
+  requiredCommands: domainEventAuditRuntimeCommands,
+  requiredControls: domainEventAuditRuntimeControls,
+  requiredEvidence: domainEventAuditEvidenceFlags,
+} as const;

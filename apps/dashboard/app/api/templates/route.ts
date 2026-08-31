@@ -21,12 +21,24 @@ function catalogRows() {
   }));
 }
 
-function redactBodyPreview(value: string | null | undefined): string {
-  if (!value) return "[redacted-notification-body]";
-  return value.length > 0 ? "[redacted-notification-body]" : "";
-}
-
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
+
+function buildTemplateReadResponseProjection() {
+  return {
+    tenantIdEchoed: false,
+    notificationIdsEchoed: false,
+    deliveryIdsEchoed: false,
+    clientIdsEchoed: false,
+    bookingRequestIdsEchoed: false,
+    appointmentIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+    rawNotificationBodyEchoed: false,
+    destinationHashEchoed: false,
+    providerMessageIdEchoed: false,
+    providerErrorEchoed: false,
+  };
+}
 
 export async function GET(request: NextRequest) {
   const actor = resolveDashboardActor(request);
@@ -51,12 +63,12 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard template reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-040"],
           },
+          responseProjection: buildTemplateReadResponseProjection(),
           productionBoundary: { localDashboardReadFallbackDisabled: true },
         },
         { status: 503, headers: noStoreHeaders },
@@ -67,7 +79,6 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "local-fallback",
         templates,
         dashboardPreviews: dashboardTemplates,
@@ -75,6 +86,7 @@ export async function GET(request: NextRequest) {
         automationSequence: dashboardNotificationAutomationSequence.slice(0, limit),
         providerBoundaryMatrix: dashboardProviderBoundaryMatrix,
         redactedProviderSendDrafts: dashboardRedactedProviderSendDrafts,
+        responseProjection: buildTemplateReadResponseProjection(),
         gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         boundary: "Local fallback returns coded template previews and redacted provider-send drafts only; provider delivery remains credential-gated.",
       },
@@ -93,7 +105,6 @@ export async function GET(request: NextRequest) {
             id: true,
             type: true,
             title: true,
-            body: true,
             status: true,
             scheduledFor: true,
             clientId: true,
@@ -112,10 +123,7 @@ export async function GET(request: NextRequest) {
             notificationId: true,
             channel: true,
             status: true,
-            destinationHash: true,
             provider: true,
-            providerMessageId: true,
-            errorMessage: true,
             attemptedAt: true,
             deliveredAt: true,
             updatedAt: true,
@@ -147,38 +155,42 @@ export async function GET(request: NextRequest) {
       {
         ok: true,
         source: actor.source,
-        tenantId,
         persistence: "database",
         templates,
         automationSequence: dashboardNotificationAutomationSequence.slice(0, limit),
         providerBoundaryMatrix: dashboardProviderBoundaryMatrix,
         queuedNotifications: result.notifications.map((notification) => ({
-          id: notification.id,
           type: notification.type,
           title: notification.title,
-          bodyPreview: redactBodyPreview(notification.body),
+          bodyPreview: "[redacted-notification-body]",
+          bodySelectedFromDatabase: false,
           status: notification.status,
           scheduledFor: notification.scheduledFor?.toISOString() ?? null,
-          clientId: notification.clientId,
-          bookingRequestId: notification.bookingRequestId,
-          appointmentId: notification.appointmentId,
+          clientLinked: Boolean(notification.clientId),
+          bookingRequestLinked: Boolean(notification.bookingRequestId),
+          appointmentLinked: Boolean(notification.appointmentId),
           deliveryCount: notification._count.deliveries,
           updatedAt: notification.updatedAt.toISOString(),
+          responseProjection: buildTemplateReadResponseProjection(),
         })),
         deliverySummaries: result.deliveries.map((delivery) => ({
-          id: delivery.id,
-          notificationId: delivery.notificationId,
           channel: delivery.channel,
           status: delivery.status,
-          destinationHash: delivery.destinationHash ? "[redacted-dashboard-field]" : null,
+          notificationLinked: Boolean(delivery.notificationId),
+          destinationHash: "[redacted-dashboard-field]",
+          destinationHashSelectedFromDatabase: false,
           provider: delivery.provider,
-          providerMessageId: delivery.providerMessageId ? "[redacted-dashboard-field]" : null,
-          errorMessage: delivery.errorMessage ? "[redacted-dashboard-field]" : null,
+          providerMessageId: "[redacted-dashboard-field]",
+          providerMessageIdSelectedFromDatabase: false,
+          errorMessage: "[redacted-dashboard-field]",
+          errorMessageSelectedFromDatabase: false,
           attemptedAt: delivery.attemptedAt?.toISOString() ?? null,
           deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
           updatedAt: delivery.updatedAt.toISOString(),
+          responseProjection: buildTemplateReadResponseProjection(),
         })),
-        auditId: result.audit.id,
+        auditLogged: true,
+        responseProjection: buildTemplateReadResponseProjection(),
         gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         boundary: "Dashboard notification template reads expose coded template metadata plus tenant-scoped queue/delivery summaries only; message bodies, destination hashes, provider message IDs, and provider errors are redacted, and provider sends remain gated.",
       },
@@ -190,8 +202,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           source: actor.source,
-          tenantId,
           error: { code: "DATABASE_UNAVAILABLE", message: "Notification template reads require the dashboard database connection." },
+          responseProjection: buildTemplateReadResponseProjection(),
           gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         },
         { status: 503, headers: noStoreHeaders },

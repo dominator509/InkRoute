@@ -233,6 +233,10 @@ const authSessionTenantGuardSecretPatterns = [
   /(authorization:\s*bearer\s+)[A-Za-z0-9._-]+/gi,
   /(cookie:\s*)[^"\n]+/gi,
   /(secret['":=\s]+)[^"',\s}]+/gi,
+  /(https?:\/\/)[^\s"'<>]+/gi,
+  /(postgres(?:ql)?:\/\/)[^\s"'<>]+/gi,
+  /((?:coverage|artifacts|test-results|reports|docs)\/)[A-Za-z0-9_./-]{6,}/gi,
+  /((?:tenant|actor|user|member|membership|role|custom|provider|account|session|revocation|audit|idempotency|auth|guard|denial|route|workflow|ci|run|commit)[-_:/]?)[A-Za-z0-9_.-]{6,}/gi,
   /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
 ] as const;
@@ -240,7 +244,8 @@ const authSessionTenantGuardSecretPatterns = [
 export function buildRedactedAuthSessionTenantGuardArtifact(value: unknown): unknown {
   if (typeof value === "string") {
     return authSessionTenantGuardSecretPatterns.reduce(
-      (redacted, pattern) => redacted.replace(pattern, (_match, prefix: string | undefined) => `${prefix ?? ""}[REDACTED]`),
+      (redacted, pattern) =>
+        redacted.replace(pattern, (_match, prefix: string | number | undefined) => `${typeof prefix === "string" ? prefix : ""}[REDACTED]`),
       value,
     );
   }
@@ -253,7 +258,7 @@ export function buildRedactedAuthSessionTenantGuardArtifact(value: unknown): unk
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|cookie|session|providerPayload|rawBody|stack/i.test(key)
+        /actorUserId|auditId|authorization|credential|customRoleId|email|idempotencyKey|memberId|membershipId|password|phone|private|providerAccountId|providerPayload|providerUserId|rawBody|revocationId|secret|session|stack|tenantId|tenantMemberId|token|userId/i.test(key)
           ? "[REDACTED]"
           : buildRedactedAuthSessionTenantGuardArtifact(entry),
       ]),

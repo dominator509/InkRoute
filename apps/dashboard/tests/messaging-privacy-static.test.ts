@@ -185,4 +185,22 @@ describe("messaging privacy contract", () => {
     expect(pageSource).toContain("Retention workflows");
     expect(pageSource).toContain("Assistant visibility");
   });
+
+  it("does not echo raw messaging privacy plan identifiers or payloads from the dashboard API", () => {
+    expect(routeSource).toContain("plan: buildSafeMessagingPrivacyPlanResponse(plan)");
+    expect(routeSource).toContain("contract: buildSafeMessagingPrivacyContractResponse()");
+    expect(routeSource).toContain("rawContractPlansEchoed: false");
+    expect(routeSource).toContain("rawBodyEchoed: false");
+    expect(routeSource).toContain("rawAttachmentUrlEchoed: false");
+    expect(routeSource).toContain("rawThreadIdEchoed: false");
+    expect(routeSource).toContain("rawMessageIdEchoed: false");
+    expect(routeSource).toContain("rawActorIdEchoed: false");
+    expect(routeSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(routeSource).toContain("tenantIdEchoed: false");
+    expect(routeSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(routeSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(routeSource).not.toMatch(/^\s+plan,\s*$/m);
+    expect(routeSource).not.toContain("ok: true, tenantId");
+    expect(routeSource).not.toContain("ok: plan.status === \"ready\",\n      tenantId");
+  });
 });

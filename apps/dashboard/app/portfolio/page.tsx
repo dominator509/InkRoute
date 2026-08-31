@@ -9,7 +9,7 @@ export default function PortfolioManagerPage() {
       <DashboardPageHeader
         eyebrow="Portfolio CMS"
         title="Portfolio manager"
-        description="Manage portfolio metadata, style tags, freshness labels, placements, city context, attribution, and image SEO. Tenant-scoped redacted portfolio read APIs now exist; image writes and derivatives remain provider-gated."
+        description="Manage portfolio metadata, style tags, freshness labels, placements, city context, attribution, and image SEO. Tenant-scoped redacted portfolio read APIs now exist. Portfolio reads now redact storage keys; signed storage writes and derivatives remain provider-gated."
       />
 
       <section className="card table-card">

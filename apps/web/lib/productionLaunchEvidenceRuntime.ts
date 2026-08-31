@@ -1,4 +1,7 @@
-import { buildProductionLaunchEvidenceRuntimeReadinessPlan } from "@inkroute/deployment";
+import {
+  buildProductionLaunchEvidenceRuntimeReadinessPlan,
+  productionLaunchEvidenceRuntimeRequiredCommands,
+} from "@inkroute/deployment";
 import type { ProductionLaunchEvidenceBundleId } from "@inkroute/deployment";
 
 export type ProductionLaunchEvidenceRuntimeStatus =
@@ -100,21 +103,7 @@ export const productionLaunchEvidenceRuntimeProofFiles = [
   "testing/manifests/unit-test-manifest.json"
 ] as const;
 
-export const productionLaunchEvidenceRuntimeCommands = [
-  "pnpm deploy:verify-launch-evidence",
-  "pnpm quality:all",
-  "pnpm test:unit",
-  "pnpm --filter @inkroute/web build",
-  "pnpm --filter @inkroute/dashboard build",
-  "verify production launch database operations bundle",
-  "verify production launch provider readiness bundle",
-  "verify production launch secret readiness bundle",
-  "verify production launch security/privacy/trust bundle",
-  "verify production launch accessibility/SEO/performance bundle",
-  "pnpm deploy:verify-mobile",
-  "verify production launch legal approval bundle",
-  "production rollback drill"
-] as const;
+export const productionLaunchEvidenceRuntimeCommands = productionLaunchEvidenceRuntimeRequiredCommands;
 
 export const productionLaunchEvidenceRuntimeLocalCommands = ["pnpm deploy:verify-launch-evidence"] as const;
 export const productionLaunchEvidenceRuntimeExternalCommands = productionLaunchEvidenceRuntimeCommands.filter(
@@ -243,7 +232,7 @@ export interface ProductionLaunchEvidenceRuntimeArtifactReview {
 }
 
 const sensitiveProductionLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|approval|legal|reviewer|provider|projectId|databaseUrl|directUrl|ciRunUrl|deployUrl|rollback|incident|tenantId|userId|runId|email|phone|contact|payload)/i;
+  /(token|secret|password|authorization|cookie|approval|legal|reviewer|provider|projectId|databaseUrl|directUrl|ci|ciRun|ciRunUrl|workflow|run|commit|repository|branch|pr|pullrequest|codeowner|deploy|deployUrl|productionUrl|rollback|incident|tenantId|userId|runId|email|phone|contact|payload|raw|request|response|bundle|checklist|blocker|verifier|quality|build|test|database|security|privacy|trust|accessibility|seo|performance|mobile|operation|explicit|artifact|path|log|output|transcript|stack|error|url|uri|dsn)/i;
 
 const sensitiveProductionLaunchStringPatterns: readonly [RegExp, string][] = [
   [/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [REDACTED_TOKEN]"],
@@ -251,7 +240,7 @@ const sensitiveProductionLaunchStringPatterns: readonly [RegExp, string][] = [
   [/https?:\/\/[^\s"'<>]+/gi, "[REDACTED_URL]"],
   [/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]"],
   [/\+?1?[-.\s(]*\d{3}[-.\s)]*\d{3}[-.\s]*\d{4}/g, "[REDACTED_PHONE]"],
-  [/\b(?:tenant|user|project|approval|rollback|incident|run|bundle)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
+  [/\b(?:tenant|user|project|approval|rollback|incident|run|bundle|repository|branch|pr|pullrequest|reviewer|codeowner)_[A-Za-z0-9_-]+\b/g, "[REDACTED_ID]"],
 ];
 
 export function buildProductionLaunchEvidenceRuntimeEvidenceDecision(

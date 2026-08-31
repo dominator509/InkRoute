@@ -1,5 +1,7 @@
 ﻿import { buildMobileDeviceQaRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
+import { mobileDeviceQaRuntimeReadinessRequiredCommands as canonicalMobileQaRuntimeCommands } from "@inkroute/mobile-support";
+
 export type MobileQaRuntimeStatus =
   | "wired"
   | "component-gated"
@@ -17,15 +19,7 @@ export interface MobileQaRuntimeMatrixEntry {
   readonly status: MobileQaRuntimeStatus;
 }
 
-export const mobileQaRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "pnpm --filter @inkroute/mobile ios",
-  "pnpm --filter @inkroute/mobile android",
-  "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
-] as const;
+export const mobileQaRuntimeCommands = canonicalMobileQaRuntimeCommands;
 
 export const mobileQaArtifactPaths = [
   "coverage/mobile-qa-runtime.json",
@@ -282,7 +276,7 @@ export const mobileQaRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileQaRuntimeMatrixEntry[];
 
-export const mobileQaRuntimeReadiness = buildMobileDeviceQaRuntimeReadinessPlan({
+const mobileQaRuntimeReadinessPlan = buildMobileDeviceQaRuntimeReadinessPlan({
   packageScripts: {
     test: "vitest run apps/mobile/tests/**/*.test.ts",
     typecheck: "tsc --noEmit",
@@ -307,12 +301,20 @@ export const mobileQaRuntimeReadiness = buildMobileDeviceQaRuntimeReadinessPlan(
   qaArtifactsAttached: false,
 });
 
+export const mobileQaRuntimeReadiness = {
+  ...mobileQaRuntimeReadinessPlan,
+  requiredCommands: mobileQaRuntimeCommands,
+  requiredEvidence: mobileQaEvidenceFlags,
+};
+
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
   return required.filter((entry) => !actualSet.has(entry));
 };
 
-const sensitiveMobileQaArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|device|simulator|emulator|screenshot|video|artifact|receipt|push|crash|ota|auth|api|offline|accessibility|email|phone|medical|payment|tattoo)/i;
+const sensitiveMobileQaArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|device|simulator|emulator|screenshot|video|artifact|receipt|push|crash|ota|auth|api|offline|accessibility|email|phone|medical|payment|tattoo|path|ci|workflow|run|evidence|id|key)/i;
+const sensitiveMobileQaArtifactValue =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|device|simulator|emulator|screenshot|video|artifact|receipt|push|crash|ota|auth|api|offline|accessibility|provider|workflow|ci|run|evidence|mobile)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMobileQaArtifactValue = (
   value: unknown,
@@ -336,6 +338,13 @@ const redactMobileQaArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && sensitiveMobileQaArtifactValue.test(value)) {
+    sensitiveMobileQaArtifactValue.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(sensitiveMobileQaArtifactValue, "[REDACTED]");
+  }
+
+  sensitiveMobileQaArtifactValue.lastIndex = 0;
   return value;
 };
 

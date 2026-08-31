@@ -76,6 +76,10 @@ describe("provider webhook runtime contract", () => {
     expect(contractSource).toContain("buildProviderWebhookRouteBoundary");
     expect(contractSource).toContain("executeProviderWebhookReconciliation");
     expect(contractSource).toContain("alertFailedWebhook");
+    expect(contractSource).toContain("tenantResolved: Boolean(input.tenantId)");
+    expect(contractSource).toContain("providerEventIdPresent: Boolean(input.eventId)");
+    expect(contractSource).toContain("rawProviderEventIdEchoed: false");
+    expect(contractSource).toContain("rawProviderMessageIdEchoed: false");
     expect(emailRouteSource).toContain("persistProviderNotificationWebhookEvent");
     expect(smsRouteSource).toContain("persistProviderNotificationWebhookEvent");
     expect(emailRouteSource).toContain("suppressionDestination");
@@ -93,6 +97,77 @@ describe("provider webhook runtime contract", () => {
     expect(smsRouteSource).toContain("not-attempted-production-secret-gated");
     expect(emailRouteSource).toContain("providerWebhookBoundary");
     expect(smsRouteSource).toContain("providerWebhookBoundary");
+    expect(emailRouteSource).toContain("buildSafeLocalProviderWebhookReceipt");
+    expect(smsRouteSource).toContain("buildSafeLocalProviderWebhookReceipt");
+    expect(emailRouteSource).toContain("webhookIdEchoed: false");
+    expect(smsRouteSource).toContain("webhookIdEchoed: false");
+    expect(emailRouteSource).toContain("rawProviderSignatureEchoed: false");
+    expect(emailRouteSource).toContain("rawProviderSignaturePersisted: false");
+    expect(emailRouteSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(emailRouteSource).toContain("tenantSlugEchoed: false");
+    expect(emailRouteSource).toContain("rawProviderEventIdEchoed: false");
+    expect(emailRouteSource).toContain("rawProviderMessageIdEchoed: false");
+    expect(emailRouteSource).toContain("providerEventIdEchoed: false");
+    expect(emailRouteSource).toContain("auditLogIdEchoed: false");
+    expect(emailRouteSource).toContain("deliveryIdEchoed: false");
+    expect(emailRouteSource).toContain("suppressionIdEchoed: false");
+    expect(emailRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(emailRouteSource).toContain("providerEventPersisted: persistenceResult.providerEventPersisted");
+    expect(emailRouteSource).toContain("auditLogged: persistenceResult.auditLogged");
+    expect(emailRouteSource).toContain("deliveryMatched: persistenceResult.deliveryMatched");
+    expect(emailRouteSource).toContain("suppressionPersisted: persistenceResult.suppressionPersisted");
+    expect(emailRouteSource).not.toContain("providerEventId: persistenceResult.providerEventId");
+    expect(emailRouteSource).not.toContain("Boolean(persistenceResult.providerEventId)");
+    expect(emailRouteSource).not.toContain("Boolean(persistenceResult.auditLogId)");
+    expect(emailRouteSource).not.toContain("Boolean(persistenceResult.deliveryId)");
+    expect(emailRouteSource).not.toContain("Boolean(persistenceResult.suppressionId)");
+    expect(emailRouteSource).not.toContain("tenantSlug,\n        storedWebhook");
+    expect(emailRouteSource).not.toContain("storedWebhook,");
+    expect(emailRouteSource).not.toContain("tenantSlug,\n          eventId");
+    expect(emailRouteSource).not.toContain("auditLogId: persistenceResult.auditLogId");
+    expect(emailRouteSource).not.toContain("deliveryId: persistenceResult.deliveryId");
+    expect(emailRouteSource).not.toContain("suppressionId: persistenceResult.suppressionId");
+    expect(smsRouteSource).toContain("rawProviderSignatureEchoed: false");
+    expect(smsRouteSource).toContain("rawProviderSignaturePersisted: false");
+    expect(smsRouteSource).toContain("rawIdempotencyKeyEchoed: false");
+    expect(smsRouteSource).toContain("tenantSlugEchoed: false");
+    expect(smsRouteSource).toContain("rawProviderEventIdEchoed: false");
+    expect(smsRouteSource).toContain("rawProviderMessageIdEchoed: false");
+    expect(smsRouteSource).toContain("providerEventIdEchoed: false");
+    expect(smsRouteSource).toContain("auditLogIdEchoed: false");
+    expect(smsRouteSource).toContain("deliveryIdEchoed: false");
+    expect(smsRouteSource).toContain("suppressionIdEchoed: false");
+    expect(smsRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(smsRouteSource).toContain("providerEventPersisted: persistenceResult.providerEventPersisted");
+    expect(smsRouteSource).toContain("auditLogged: persistenceResult.auditLogged");
+    expect(smsRouteSource).toContain("deliveryMatched: persistenceResult.deliveryMatched");
+    expect(smsRouteSource).toContain("suppressionPersisted: persistenceResult.suppressionPersisted");
+    expect(smsRouteSource).not.toContain("providerEventId: persistenceResult.providerEventId");
+    expect(smsRouteSource).not.toContain("Boolean(persistenceResult.providerEventId)");
+    expect(smsRouteSource).not.toContain("Boolean(persistenceResult.auditLogId)");
+    expect(smsRouteSource).not.toContain("Boolean(persistenceResult.deliveryId)");
+    expect(smsRouteSource).not.toContain("Boolean(persistenceResult.suppressionId)");
+    expect(smsRouteSource).not.toContain("tenantSlug,\n        storedWebhook");
+    expect(smsRouteSource).not.toContain("storedWebhook,");
+    expect(smsRouteSource).not.toContain("tenantSlug,\n          eventId");
+    expect(smsRouteSource).not.toContain("auditLogId: persistenceResult.auditLogId");
+    expect(smsRouteSource).not.toContain("deliveryId: persistenceResult.deliveryId");
+    expect(smsRouteSource).not.toContain("suppressionId: persistenceResult.suppressionId");
+    const persistenceSource = readRepoFile("apps/web/lib/providerNotificationWebhookPersistence.ts");
+    expect(persistenceSource).toContain("internalPersistenceIdsStored: false");
+    expect(persistenceSource).toContain("rawIdempotencyKeyStored: false");
+    expect(persistenceSource).toContain("providerEventPersisted: true");
+    expect(persistenceSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(persistenceSource).toContain("idempotencyKeyEchoed: false");
+    expect(persistenceSource).toContain("deliveryMatched: Boolean(delivery)");
+    expect(persistenceSource).toContain("suppressionPersisted: Boolean(suppression)");
+    expect(persistenceSource).not.toContain("providerEventId: providerEvent.id,\n            deliveryId");
+    expect(persistenceSource).not.toContain("idempotencyKey,\n            deliveryId");
+    expect(persistenceSource).not.toContain("suppressionId: suppression?.id ?? null,\n            suppressionWritten");
+    expect(smsRouteSource).toContain("function omitRawProviderWebhookIdentifiers");
+    expect(smsRouteSource).toContain("rawInboundBodyEchoed: false");
+    expect(smsRouteSource).toContain("readiness: responseReadiness");
+    expect(smsRouteSource).toContain("reconciliation: responseReconciliation");
     expect(routeTest).toContain("rejects email provider webhooks without signature-like headers");
     expect(routeTest).toContain("fail-closes production email webhooks before parsing or local runtime persistence when the webhook secret is missing");
     expect(routeTest).toContain("fail-closes production SMS webhooks before parsing or local runtime persistence when the auth token is missing");
@@ -171,6 +246,10 @@ describe("provider webhook runtime contract", () => {
       rawProviderPayload: "private payload",
       destinationEmail: "client@example.test",
       publicSummary: "provider webhook evidence captured",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_provider_webhook",
+      reviewerHandle: "reviewer_provider_webhook_owner",
+      codeownerSelector: "CODEOWNER:notifications-platform-team",
       nested: {
         pushReceiptToken: "push_private",
         publicStatus: "reconciled",
@@ -183,6 +262,10 @@ describe("provider webhook runtime contract", () => {
       "webhookSignature",
       "rawProviderPayload",
       "destinationEmail",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
       "nested.pushReceiptToken",
     ]);
     expect(redacted.artifact).toEqual({
@@ -191,6 +274,10 @@ describe("provider webhook runtime contract", () => {
       rawProviderPayload: "[redacted]",
       destinationEmail: "[redacted]",
       publicSummary: "provider webhook evidence captured",
+      repositorySelector: "[redacted]",
+      pullRequestSelector: "[redacted]",
+      reviewerHandle: "[redacted]",
+      codeownerSelector: "[redacted]",
       nested: {
         pushReceiptToken: "[redacted]",
         publicStatus: "reconciled",

@@ -17,6 +17,44 @@ function toNumber(value: unknown): number | null {
 
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
 
+function buildTravelDetailResponseProjection() {
+  return {
+    travelScheduleIdEchoed: false,
+    tenantIdEchoed: false,
+    artistIdEchoed: false,
+    travelCityIdEchoed: false,
+    availabilityWindowIdsEchoed: false,
+    bookingRequestIdsEchoed: false,
+    appointmentIdsEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeLocalTravelStop(travel: unknown) {
+  const {
+    id: _id,
+    tenantId: _tenantId,
+    artistId: _artistId,
+    travelCityId: _travelCityId,
+    cityId: _cityId,
+    availabilityWindowIds: _availabilityWindowIds,
+    bookingRequestIds: _bookingRequestIds,
+    appointmentIds: _appointmentIds,
+    ...safeTravel
+  } = travel as Record<string, unknown>;
+
+  return {
+    ...safeTravel,
+    linked: {
+      travelScheduleLinked: Boolean(_id),
+      artistLinked: Boolean(_artistId),
+      travelCityLinked: Boolean(_travelCityId ?? _cityId),
+    },
+    responseProjection: buildTravelDetailResponseProjection(),
+  };
+}
+
 export async function GET(request: NextRequest, context: TravelDetailRouteContext) {
   const actor = resolveDashboardActor(request);
   try {
@@ -38,13 +76,14 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
         {
           ok: false,
           source: actor.source,
-          tenantId,
+          tenantScope: { actorTenantMatched: true },
           error: {
             code: "PROVIDER_DASHBOARD_READS_NOT_CONFIGURED",
             message: "Production dashboard travel reads require DB-backed actor resolution and tenant-scoped repository data; local fallback demo payloads are disabled.",
             gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
           },
           productionBoundary: { localDashboardReadFallbackDisabled: true },
+          responseProjection: buildTravelDetailResponseProjection(),
         },
         { status: 503, headers: noStoreHeaders },
       );
@@ -58,9 +97,10 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "local-fallback",
-        travel,
+        travel: buildSafeLocalTravelStop(travel),
+        responseProjection: buildTravelDetailResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         boundary: "Local fallback returns a demo travel stop only; database mode is required for live travel reads.",
       },
@@ -154,11 +194,9 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
       source: "repository",
       records: [
         {
-          id: result.row.id,
-          tenantId: result.row.tenantId,
-          artistId: result.row.artistId,
+          artistLinked: Boolean(result.row.artistId),
           title: result.row.title,
-          cityId: result.row.travelCity.id,
+          cityLinked: Boolean(result.row.travelCity.id),
           city: result.row.travelCity.city,
           region: result.row.travelCity.region,
           country: result.row.travelCity.country,
@@ -176,8 +214,10 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
           studioLocation: result.row.studio ? [result.row.studio.city, result.row.studio.region].filter(Boolean).join(", ") : null,
           guestSpotUrl: result.row.guestSpotUrl,
           internalNotes: result.row.internalNotes,
+          availabilityCount: result.row.availability.length,
+          bookingRequestCount: result.row.travelCity.bookingRequests.length,
+          appointmentCount: result.row.travelCity.appointments.length,
           availability: result.row.availability.map((window) => ({
-            id: window.id,
             kind: window.kind,
             status: window.status,
             startsAt: window.startsAt.toISOString(),
@@ -187,15 +227,14 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
             bufferBeforeMinutes: window.bufferBeforeMinutes,
             bufferAfterMinutes: window.bufferAfterMinutes,
             publicLabel: window.publicLabel,
-            internalNotes: window.internalNotes,
+            internalNotes: window.internalNotes ? "[redacted-dashboard-field]" : null,
+            hasInternalNotes: Boolean(window.internalNotes),
           })),
           bookingRequests: result.row.travelCity.bookingRequests.map((booking) => ({
-            id: booking.id,
             status: booking.status,
             clientName: "[redacted-dashboard-field]",
           })),
           appointments: result.row.travelCity.appointments.map((appointment) => ({
-            id: appointment.id,
             status: appointment.status,
             startsAt: appointment.startsAt.toISOString(),
             endsAt: appointment.endsAt.toISOString(),
@@ -209,10 +248,20 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
       {
         ok: true,
         source: actor.source,
-        tenantId,
+        tenantScope: { actorTenantMatched: true },
         persistence: "database",
         travel: view.records[0],
-        auditId: result.audit.id,
+        auditLogged: true,
+        auditIdEchoed: false,
+        travelScheduleIdEchoed: false,
+        tenantIdEchoed: false,
+        artistIdEchoed: false,
+        travelCityIdEchoed: false,
+        availabilityWindowIdsEchoed: false,
+        bookingRequestIdsEchoed: false,
+        appointmentIdsEchoed: false,
+        internalPersistenceIdsEchoed: false,
+        responseProjection: buildTravelDetailResponseProjection(),
         gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         boundary: "Dashboard travel detail reads are tenant-scoped, internal-note redacted, no-store, and audited.",
       },
@@ -224,9 +273,9 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
         {
           ok: false,
           source: actor.source,
-          tenantId,
-          travelScheduleId,
+          tenantScope: { actorTenantMatched: true },
           error: { code: "DATABASE_UNAVAILABLE", message: "Travel detail reads require the dashboard database connection." },
+          responseProjection: buildTravelDetailResponseProjection(),
           gapIds: ["GAP-007", "GAP-037", "GAP-046", "GAP-047"],
         },
         { status: 503, headers: noStoreHeaders },

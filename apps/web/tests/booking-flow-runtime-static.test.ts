@@ -255,6 +255,15 @@ describe("booking flow runtime evidence contract", () => {
         privateFileUrl: "https://files.example.com/private-file/reference.png",
         publicSummary: "booking flow runtime evidence captured",
       },
+      routeRuntimeSmoke: "POST /api/public/tenant_01HZYXZYXZYXZYXZYXZYXZYXZ/booking-requests returned booking_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      browserSmokeArtifact: "test-results/booking-flow-runtime/trace-tenant_01HZYXZYXZYXZYXZYXZYXZYXZ.zip",
+      dbTransactionSmokeOutput: "created BookingStateEvent state_event_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      antiBotProof: "turnstile token provider_token_01HZYXZYXZYXZYXZYXZYXZYXZ accepted",
+      ciOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed",
+      repositorySelector: "repo:dominator509/InkRoute",
+      pullRequestSelector: "pr_booking_flow",
+      reviewerHandle: "reviewer_booking_owner",
+      codeownerSelector: "CODEOWNER:booking-platform-team",
     });
     const directRedaction = buildRedactedBookingFlowRuntimeArtifact({
       publicSummary: "safe booking flow evidence",
@@ -293,11 +302,27 @@ describe("booking flow runtime evidence contract", () => {
       "clientEmail",
       "medicalNotes",
       "nested.privateFileUrl",
+      "routeRuntimeSmoke",
+      "browserSmokeArtifact",
+      "dbTransactionSmokeOutput",
+      "antiBotProof",
+      "ciOutput",
+      "repositorySelector",
+      "pullRequestSelector",
+      "reviewerHandle",
+      "codeownerSelector",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("prisma://");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("medical:");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("state_event_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider_token_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("repo:dominator509/InkRoute");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("pr_booking_flow");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("reviewer_booking_owner");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("CODEOWNER:booking-platform-team");
     expect(JSON.stringify(artifactReview.artifact)).toContain("booking flow runtime evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["bookingSessionCookie"]);

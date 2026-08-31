@@ -5,6 +5,7 @@
   type FeatureFlagContext,
   type FeatureFlagDefinition,
 } from "@inkroute/releases";
+import { createHash } from "node:crypto";
 
 export const featureFlagRuntimeArtifactPaths = [
   "coverage/feature-flag-runtime-resolver.json",
@@ -90,10 +91,12 @@ export interface FeatureFlagRuntimeArtifactReview {
 }
 
 const featureFlagSensitiveKeyPattern =
-  /(?:authorization|clientsecret|cookie|credential|email|password|phone|private|secret|token)/i;
+  /(?:authorization|artifact|cache|clientsecret|commit|context|cookie|credential|database|decision|dsn|email|error|flag|header|invalidation|killSwitch|live|log|metadata|output|password|path|payload|phone|private|provider|raw|release|request|response|rollout|route|run|secret|stack|tenant|token|url|uri|user|workflow)/i;
 const featureFlagEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const featureFlagPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
 const featureFlagTokenPattern = /\b(?:bearer|launchdarkly|split|statsig|sk|xox|ya29)[A-Za-z0-9._:/-]{8,}\b/gi;
+const featureFlagUrlPattern = /https?:\/\/[^\s"'<>]+/gi;
+const featureFlagSelectorPattern = /\b(?:tenant|user|flag|rollout|cache|release|workflow|run|artifact)_[A-Za-z0-9_-]+\b/gi;
 
 function redactFeatureFlagRuntimeArtifactValue(value: unknown, key = ""): unknown {
   if (value === null || value === undefined) {
@@ -108,7 +111,9 @@ function redactFeatureFlagRuntimeArtifactValue(value: unknown, key = ""): unknow
     return value
       .replace(featureFlagEmailPattern, "[REDACTED_EMAIL]")
       .replace(featureFlagPhonePattern, "[REDACTED_PHONE]")
-      .replace(featureFlagTokenPattern, "[REDACTED_TOKEN]");
+      .replace(featureFlagTokenPattern, "[REDACTED_TOKEN]")
+      .replace(featureFlagUrlPattern, "[REDACTED_URL]")
+      .replace(featureFlagSelectorPattern, "[REDACTED_SELECTOR]");
   }
 
   if (Array.isArray(value)) {
@@ -248,8 +253,12 @@ export function buildFeatureFlagRuntimeEvidenceDecision(input: FeatureFlagRuntim
   };
 }
 
-const resolverCache = new Map<string, { expiresAt: number; value: ReturnType<typeof buildTenantSafeFeatureFlagSnapshot> }>();
+const resolverCache = new Map<string, { tenantId: string; expiresAt: number; value: ReturnType<typeof buildTenantSafeFeatureFlagSnapshot> }>();
 const cacheTtlMs = 60_000;
+
+function featureFlagSelectorHash(parts: readonly string[]): string {
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+}
 
 export function buildFeatureFlagContextFromRequest(input: {
   readonly tenantId: string;
@@ -273,7 +282,7 @@ export function buildFeatureFlagContextFromRequest(input: {
 }
 
 export function buildFeatureFlagCacheKey(input: { tenantId: string; role: string; environment: string; stableIdentifier: string }) {
-  return `feature-flags:${input.tenantId}:${input.role}:${input.environment}:${input.stableIdentifier}`;
+  return `feature-flags:${featureFlagSelectorHash([input.tenantId, input.role, input.environment, input.stableIdentifier])}`;
 }
 
 export function buildStableRolloutBucket(stableIdentifier: string): number {
@@ -308,11 +317,14 @@ export function buildTenantSafeFeatureFlagSnapshot(definitions: readonly Feature
     cache: {
       cacheKey: buildFeatureFlagCacheKey(context),
       ttlSeconds: cacheTtlMs / 1000,
-      invalidationTag: `feature-flags:${context.tenantId}`,
+      invalidationTag: `feature-flags:${featureFlagSelectorHash([context.tenantId])}`,
+      tenantIdEchoed: false,
+      stableIdentifierEchoed: false,
       revalidationRequiredAfterWrite: true,
     },
     rollout: {
-      stableIdentifier: context.stableIdentifier,
+      stableIdentifierHash: featureFlagSelectorHash([context.stableIdentifier]),
+      rawStableIdentifierEchoed: false,
       bucket: rolloutBucket,
       bucketRange: "0-99",
     },
@@ -330,19 +342,24 @@ export function resolveCachedFeatureFlagSnapshot(definitions: readonly FeatureFl
   }
 
   const value = buildTenantSafeFeatureFlagSnapshot(definitions, context);
-  resolverCache.set(cacheKey, { expiresAt: now + cacheTtlMs, value });
+  resolverCache.set(cacheKey, { tenantId: context.tenantId, expiresAt: now + cacheTtlMs, value });
   return { ...value, cache: { ...value.cache, cacheHit: false } };
 }
 
 export function invalidateFeatureFlagRuntimeCache(tenantId: string) {
   let invalidatedEntries = 0;
-  for (const key of resolverCache.keys()) {
-    if (key.startsWith(`feature-flags:${tenantId}:`)) {
+  for (const [key, cached] of resolverCache.entries()) {
+    if (cached.tenantId === tenantId) {
       resolverCache.delete(key);
       invalidatedEntries += 1;
     }
   }
-  return { tenantId, invalidated: invalidatedEntries > 0, invalidatedEntries, invalidationTag: `feature-flags:${tenantId}` };
+  return {
+    tenantScope: { tenantMatched: true, tenantIdEchoed: false },
+    invalidated: invalidatedEntries > 0,
+    invalidatedEntries,
+    invalidationTag: `feature-flags:${featureFlagSelectorHash([tenantId])}`,
+  };
 }
 
 export function buildFeatureFlagRuntimeIntegrationContract() {

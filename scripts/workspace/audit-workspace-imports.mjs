@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { builtinModules } from "node:module";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,6 +8,12 @@ const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const outputPath = join(root, "docs/workspace/manifests/workspace-import-audit.json");
 const ignoredDirs = new Set(["node_modules", ".git", ".next", "dist", "build", "coverage", ".expo"]);
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
+const nodeBuiltinModules = new Set(
+  builtinModules.flatMap((moduleName) => [
+    moduleName,
+    moduleName.startsWith("node:") ? moduleName.slice("node:".length) : `node:${moduleName}`,
+  ]),
+);
 
 function walk(dir) {
   const files = [];
@@ -79,6 +86,8 @@ function workspacePackageNameFromSpecifier(specifier) {
 }
 
 function externalPackageNameFromSpecifier(specifier) {
+  const normalizedSpecifier = specifier.startsWith("node:") ? specifier.slice("node:".length) : specifier;
+  if (nodeBuiltinModules.has(specifier) || nodeBuiltinModules.has(normalizedSpecifier)) return null;
   if (
     specifier.startsWith(".") ||
     specifier.startsWith("/") ||

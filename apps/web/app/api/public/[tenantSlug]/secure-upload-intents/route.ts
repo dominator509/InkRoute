@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import { prisma } from "@inkroute/db";
 import { NextResponse, type NextRequest } from "next/server";
 import {
@@ -9,7 +9,7 @@ import {
   validateUploadDraft,
   type UploadAssetKind,
 } from "@inkroute/security";
-import { checkRateLimit, getClientIp, persistUploadIntent, resolveTenant } from "../../../../../lib/localRuntimeState";
+import { checkRateLimit, getClientIpFromHeaders, persistUploadIntent, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 const uploadKinds: UploadAssetKind[] = ["portfolio_public", "reference_private", "consent_signature", "healed_follow_up", "document_private"];
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -67,6 +67,83 @@ function hashGrant(input: { tenantId: string; bucket: string; objectKey: string;
   return createHash("sha256").update(`${input.tenantId}:${input.bucket}:${input.objectKey}:${input.operation}:${input.expiresAt.toISOString()}`).digest("hex");
 }
 
+function buildUploadIntentResponseProjection() {
+  return {
+    rawStorageFieldsEchoed: false,
+    bucketEchoed: false,
+    objectKeyEchoed: false,
+    uploadUrlEchoed: false,
+    signedUploadUrlEchoed: false,
+    signedUrlHashEchoed: false,
+    rawPlanObjectsEchoed: false,
+    localDraftEchoed: false,
+    tenantIdEchoed: false,
+    fileAssetIdEchoed: false,
+    signedUrlGrantIdEchoed: false,
+    referenceImageIdEchoed: false,
+    auditIdEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
+}
+
+function buildSafeUploadDatabaseResponse(result: {
+  fileAsset: { kind: string; visibility: string; scanStatus: string; createdAt: Date };
+  grant: { operation: string; scope: string; expiresAt: Date; createdAt: Date };
+  referenceImagePersisted: boolean;
+  auditLogged: boolean;
+}) {
+  return {
+    uploadIntent: {
+      kind: result.fileAsset.kind,
+      visibility: result.fileAsset.visibility,
+      scanStatus: result.fileAsset.scanStatus,
+      providerUrlMinted: false,
+      uploadUrlEchoed: false,
+      requiredNextStep: "provider-backed signed upload URL minting",
+      createdAt: result.fileAsset.createdAt.toISOString(),
+    },
+    signedUrlGrant: {
+      operation: result.grant.operation,
+      scope: result.grant.scope,
+      expiresAt: result.grant.expiresAt.toISOString(),
+      createdAt: result.grant.createdAt.toISOString(),
+    },
+    persistenceReceipt: {
+      fileAssetPersisted: true,
+      signedUrlGrantPersisted: true,
+      referenceImagePersisted: result.referenceImagePersisted,
+      auditPersisted: result.auditLogged,
+    },
+    responseProjection: buildUploadIntentResponseProjection(),
+  };
+}
+
+function buildSafeUploadLocalResponse(input: {
+  kind: UploadAssetKind;
+  visibility: string;
+  createdAt: string;
+  expiresAt: string;
+  providerEvidenceStatus: string;
+}) {
+  return {
+    uploadIntent: {
+      kind: input.kind,
+      visibility: input.visibility,
+      providerUrlMinted: false,
+      uploadUrlEchoed: false,
+      createdAt: input.createdAt,
+      expiresAt: input.expiresAt,
+    },
+    evidenceReceipt: {
+      signedIntentStatus: "provider_gated",
+      privateStorageStatus: "provider_gated",
+      fileAssetPersistenceStatus: "blocked",
+      referenceUploadProviderStatus: input.providerEvidenceStatus,
+    },
+    responseProjection: buildUploadIntentResponseProjection(),
+  };
+}
+
 export async function POST(request: NextRequest, context: { params: Promise<{ tenantSlug: string }> }) {
   const { tenantSlug } = await context.params;
   let body: unknown;
@@ -111,7 +188,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     );
   }
 
-  const rateLimit = checkRateLimit("public-upload-intent", tenantSlug, `${getClientIp(Object.fromEntries(request.headers.entries()))}:${resolvedTenant.tenantId}`);
+  const rateLimit = checkRateLimit("public-upload-intent", tenantSlug, `${getClientIpFromHeaders(request.headers)}:${resolvedTenant.tenantId}`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {
@@ -150,7 +227,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     } else {
       try {
         const now = new Date();
-        const subjectId = `${bookingRequestId}-${now.getTime()}`;
+        const subjectId = randomUUID();
         const signedIntentPlan = buildSignedUploadIntentPlan({
           kind: input.kind,
           filename: input.filename,
@@ -199,7 +276,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
                 rawPayloadStored: false,
               }),
             },
-            select: { id: true, bucket: true, objectKey: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
+            select: { id: true, kind: true, visibility: true, scanStatus: true, createdAt: true },
           });
 
           const grant = await tx.signedUrlGrant.create({
@@ -258,7 +335,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             select: { id: true },
           });
 
-          return { status: "created" as const, fileAsset, grant, referenceImage, audit };
+          return { status: "created" as const, fileAsset, grant, referenceImagePersisted: Boolean(referenceImage?.id), auditLogged: Boolean(audit.id) };
         });
 
         if (result.status === "created") {
@@ -266,16 +343,10 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
             {
               ok: true,
               data: {
-                tenantSlug,
-                tenantId: resolvedTenant.tenantId,
+                tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
                 persistence: "database",
                 validation,
-                fileAsset: { ...result.fileAsset, createdAt: result.fileAsset.createdAt.toISOString() },
-                signedUrlGrant: { ...result.grant, expiresAt: result.grant.expiresAt.toISOString(), createdAt: result.grant.createdAt.toISOString() },
-                referenceImageId: result.referenceImage?.id ?? null,
-                upload: { providerUrlMinted: false, uploadUrl: null, requiredNextStep: "provider-backed signed upload URL minting" },
-                auditId: result.audit.id,
-                signedIntentPlan,
+                ...buildSafeUploadDatabaseResponse(result),
                 localRuntime: { status: "not-used", gapIds: ["GAP-005", "GAP-033", "GAP-096", "GAP-097"] },
                 nextWork: [
                   "Mint provider signed upload URLs after storage credentials are configured.",
@@ -410,14 +481,15 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     {
       ok: true,
       data: {
-        tenantSlug,
-        tenantId: resolvedTenant.tenantId,
+        tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
         validation,
-        draft,
-        signedIntentPlan,
-        privateStoragePlan,
-        fileAssetPersistencePlan,
-        referenceUploadProviderEvidencePlan,
+        ...buildSafeUploadLocalResponse({
+          kind: input.kind,
+          visibility: validation.storageVisibility,
+          createdAt: draft.createdAt,
+          expiresAt: draft.expiresAt,
+          providerEvidenceStatus: referenceUploadProviderEvidencePlan?.status ?? "not_applicable",
+        }),
         nextWork: [
           "Persist FileAsset record and link to booking/message context.",
           "Use provider-signed upload URL and verify multipart boundaries.",

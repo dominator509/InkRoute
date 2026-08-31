@@ -145,7 +145,9 @@ export const buildMessagingPrivacyExecutionPlan = (): MessagingPrivacyExecutionP
 });
 
 const messagingPrivacyPrivateArtifactKeyPattern =
-  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|message|body|payload|attachment|signed|export|delete|retention|audit|idempotency|moderation|rate.?limit|email|phone|medical|payment|customer|pii)/i;
+  /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|message|body|payload|attachment|signed|export|delete|retention|audit|idempotency|moderation|rate.?limit|email|phone|medical|payment|customer|pii|artifact|path|ci|workflow|run|evidence|id|key)/i;
+const messagingPrivacyPrivateArtifactValuePattern =
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:sk|pk|gh[psuor]|github_pat|provider-token)[A-Za-z0-9_-]*|(?:tenant|client|user|member|session|refresh|message|body|payload|attachment|signed|export|delete|retention|audit|idempotency|moderation|artifact|workflow|ci|run|evidence|dashboard)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactMessagingPrivacyArtifactValue = (
   value: unknown,
@@ -170,6 +172,13 @@ const redactMessagingPrivacyArtifactValue = (
     );
   }
 
+  if (typeof value === "string" && messagingPrivacyPrivateArtifactValuePattern.test(value)) {
+    messagingPrivacyPrivateArtifactValuePattern.lastIndex = 0;
+    redactedPaths.push(path);
+    return value.replace(messagingPrivacyPrivateArtifactValuePattern, "[redacted]");
+  }
+
+  messagingPrivacyPrivateArtifactValuePattern.lastIndex = 0;
   return value;
 };
 

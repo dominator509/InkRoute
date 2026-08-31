@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { prisma } from "@inkroute/db";
-import { buildPreferenceTokenHash, type PreferenceMutationAction } from "@inkroute/notifications";
+import { buildPreferenceTokenHash, type PreferenceMutationAction, type PreferenceMutationPlan } from "@inkroute/notifications";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildPreferencePlanFromRequest, preferenceCenterContract } from "../../../../../lib/preferenceCenter";
 
@@ -33,6 +33,66 @@ function tokenValidationResponse(reason: string) {
     },
     { status: 401, headers: noStoreHeaders },
   );
+}
+
+function buildSafePreferencePlanResponse(plan: PreferenceMutationPlan) {
+  return {
+    status: plan.status,
+    action: plan.action,
+    tokenHashPresent: Boolean(plan.tokenHash),
+    rawTokenEchoed: false,
+    tokenHashEchoed: false,
+    idempotencyKeyRecorded: Boolean(plan.idempotencyKey),
+    idempotencyKeyEchoed: false,
+    writeModels: plan.writes.map((write) => write.model),
+    writePayloadsEchoed: false,
+    blockers: plan.blockers,
+  };
+}
+
+function buildSafePreferenceContractResponse() {
+  return {
+    runtimeReadiness: preferenceCenterContract.runtimeReadiness,
+    listUnsubscribeHeadersConfigured: Boolean(preferenceCenterContract.listUnsubscribeHeaders),
+    requiredRepositoryMethods: preferenceCenterContract.requiredRepositoryMethods,
+    plans: {
+      issueTokenPlan: buildSafePreferencePlanResponse(preferenceCenterContract.issueTokenPlan),
+      updateEmailPlan: buildSafePreferencePlanResponse(preferenceCenterContract.updateEmailPlan),
+      unsubscribeEmailPlan: buildSafePreferencePlanResponse(preferenceCenterContract.unsubscribeEmailPlan),
+      smsStopPlan: buildSafePreferencePlanResponse(preferenceCenterContract.smsStopPlan),
+      smsStartPlan: buildSafePreferencePlanResponse(preferenceCenterContract.smsStartPlan),
+      tenantSettingsPlan: buildSafePreferencePlanResponse(preferenceCenterContract.tenantSettingsPlan),
+    },
+    rawContractPlansEchoed: false,
+    rawTokenEchoed: false,
+    tokenHashEchoed: false,
+    rawEmailEchoed: false,
+    rawPhoneEchoed: false,
+    idempotencyKeyEchoed: false,
+    writePayloadsEchoed: false,
+  };
+}
+
+function buildSafePreferencePersistenceResponse(persisted: Awaited<ReturnType<typeof persistPreferenceMutation>>) {
+  return {
+    clientMatchedOrCreated: Boolean(persisted.client?.id),
+    clientIdEchoed: false,
+    clientEmailSelectedFromDatabase: false,
+    preferencePersisted: true,
+    preferenceIdEchoed: false,
+    suppressionPersisted: Boolean(persisted.suppression),
+    suppressionIdEchoed: false,
+    idempotencyPersisted: true,
+    idempotencyKeyIdEchoed: false,
+    auditPersisted: true,
+    auditIdEchoed: false,
+    tenantIdEchoed: false,
+    rawTokenStored: false,
+    rawTokenEchoed: false,
+    tokenHashEchoed: false,
+    rawPreferenceWritePayloadsEchoed: false,
+    internalPersistenceIdsEchoed: false,
+  };
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -97,27 +157,30 @@ async function persistPreferenceMutation(input: {
   return prisma.$transaction(async (tx) => {
     const txRuntime = tx as unknown as {
       client: {
-        upsert: (options: Record<string, unknown>) => Promise<{ id: string; email: string }>;
-        findFirst: (options: Record<string, unknown>) => Promise<{ id: string; email: string } | null>;
+        upsert: (options: Record<string, unknown>) => Promise<{ id: string }>;
+        findFirst: (options: Record<string, unknown>) => Promise<{ id: string } | null>;
       };
       preferenceToken: {
         create: (options: Record<string, unknown>) => Promise<{ id: string }>;
         findFirst: (options: Record<string, unknown>) => Promise<{ id: string; clientId: string; expiresAt: Date; usedAt: Date | null; revokedAt: Date | null } | null>;
       };
-      idempotencyKey: { upsert: (options: Record<string, unknown>) => Promise<{ id: string; key: string; status: string }> };
+      idempotencyKey: {
+        upsert: (options: Record<string, unknown>) => Promise<{ id: string; key: string; status: string }>;
+        update: (options: Record<string, unknown>) => Promise<{ id: string }>;
+      };
       notificationChannelPreference: { upsert: (options: Record<string, unknown>) => Promise<{ id: string; optedIn: boolean }> };
       notificationSuppression: { upsert: (options: Record<string, unknown>) => Promise<{ id: string; active: boolean }> };
       auditLog: { create: (options: Record<string, unknown>) => Promise<{ id: string }> };
     };
 
     const client = clientIdFromBody
-      ? await txRuntime.client.findFirst({ where: { id: clientIdFromBody, tenantId: input.tenantId }, select: { id: true, email: true } })
+      ? await txRuntime.client.findFirst({ where: { id: clientIdFromBody, tenantId: input.tenantId }, select: { id: true } })
       : email
         ? await txRuntime.client.upsert({
           where: { tenantId_email: { tenantId: input.tenantId, email } },
           create: { tenantId: input.tenantId, email, preferredName: "Preference subscriber", marketingOptIn: optedIn, smsOptIn: channel === "sms" ? optedIn : false },
           update: { ...(channel === "email" ? { marketingOptIn: optedIn } : {}), ...(channel === "sms" ? { smsOptIn: optedIn } : {}) },
-          select: { id: true, email: true },
+          select: { id: true },
         })
         : null;
 
@@ -217,15 +280,32 @@ async function persistPreferenceMutation(input: {
         metadata: toJsonValue({
           action: input.action,
           channel,
-          clientId: client?.id ?? null,
-          preferenceId: preference.id,
-          suppressionId: suppression?.id ?? null,
-          idempotencyKeyId: idempotency.id,
+          clientMatched: Boolean(client),
+          preferencePersisted: true,
+          suppressionPersisted: Boolean(suppression),
+          idempotencyPersisted: true,
+          internalPersistenceIdsStored: false,
           planStatus: input.planStatus,
           tokenHashPresent: Boolean(tokenHash),
           rawTokenStored: false,
           redactedFields: ["email", "phone", "token"],
           gapIds: ["GAP-010", "GAP-061", "GAP-067", "GAP-069"],
+        }),
+      },
+      select: { id: true },
+    });
+
+    await txRuntime.idempotencyKey.update({
+      where: { tenantId_scope_key: { tenantId: input.tenantId, scope: "preference-center", key: idempotency.key } },
+      data: {
+        status: "completed",
+        result: toJsonValue({
+          preferencePersisted: true,
+          suppressionPersisted: Boolean(suppression),
+          auditPersisted: Boolean(audit.id),
+          tokenHashPresent: Boolean(tokenHash),
+          rawTokenStored: false,
+          internalPersistenceIdsStored: false,
         }),
       },
       select: { id: true },
@@ -241,7 +321,7 @@ export async function GET(_request: NextRequest, context: { params: Promise<{ te
     {
       ok: true,
       tenantSlug,
-      contract: preferenceCenterContract,
+      contract: buildSafePreferenceContractResponse(),
       gapIds: ["GAP-067"],
       boundary: "Preference center route exposes token, unsubscribe, STOP/START, tenant settings, List-Unsubscribe, and legal-copy gates. POST persists DB rows when tenant scope is available.",
     },
@@ -296,21 +376,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
       return NextResponse.json(
         {
           ok: plan.status === "ready",
-          tenantSlug: tenant.tenantSlug,
-          tenantId: tenant.tenantId,
+          tenantScope: { routeTenantSlugReceived: true, tenantSlugEchoed: false },
           persistence: "database",
-          plan,
-          persisted: {
-            clientId: persisted.client?.id ?? null,
-            preferenceId: persisted.preference.id,
-            suppressionId: persisted.suppression?.id ?? null,
-            idempotencyKeyId: persisted.idempotency.id,
-            auditId: persisted.audit.id,
-            rawTokenStored: false,
-          },
+          plan: buildSafePreferencePlanResponse(plan),
+          persisted: buildSafePreferencePersistenceResponse(persisted),
           requiredRepositoryMethods: preferenceCenterContract.requiredRepositoryMethods,
           gapIds: ["GAP-067"],
-          boundary: "Preference POST persists hash-only preference/suppression/idempotency/audit rows when DB tenant scope is available; provider List-Unsubscribe evidence remains gated.",
+          boundary: "Preference POST persists hash-only preference/suppression/idempotency/audit rows when DB tenant scope is available and returns a safe persistence receipt without client, preference, suppression, idempotency, audit, token, or write-payload internals; provider List-Unsubscribe evidence remains gated.",
         },
         { status: plan.status === "ready" ? 202 : 409, headers: noStoreHeaders },
       );
@@ -361,7 +433,23 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     {
       ok: plan.status === "ready",
       tenantSlug,
-      plan,
+      persistence: "local-contract",
+      plan: buildSafePreferencePlanResponse(plan),
+      rawTokenEchoed: false,
+      tokenHashEchoed: false,
+      rawPreferenceWritePayloadsEchoed: false,
+      responseProjection: {
+        tenantIdEchoed: false,
+        clientIdEchoed: false,
+        preferenceIdEchoed: false,
+        suppressionIdEchoed: false,
+        idempotencyKeyIdEchoed: false,
+        auditIdEchoed: false,
+        rawTokenEchoed: false,
+        tokenHashEchoed: false,
+        rawPreferenceWritePayloadsEchoed: false,
+        internalPersistenceIdsEchoed: false,
+      },
       requiredRepositoryMethods: preferenceCenterContract.requiredRepositoryMethods,
       gapIds: ["GAP-067"],
       boundary: "Preference POST returns the local mutation contract; durable token, suppression, preference, settings, audit, and idempotency repositories remain required for live mutations.",

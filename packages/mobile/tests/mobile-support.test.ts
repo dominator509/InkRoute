@@ -201,7 +201,7 @@ describe("mobile support helpers", () => {
       redactedAdoptionOnly: true,
       rollbackTargetUpdateId: "update_previous_001",
       blockers: [],
-      requiredEvidence: [],
+      requiredEvidence: ["redacted OTA adoption and failure proof"],
     });
   });
 
@@ -342,7 +342,9 @@ describe("mobile support helpers", () => {
       encryptedStoreAvailable: false,
     });
 
-    expect(buildOfflineIdempotencyKey(items[0]!)).toBe("tenant_001:client_note:client_001:2026-06-08T00:00:00.000Z");
+    const idempotencyKey = buildOfflineIdempotencyKey(items[0]!);
+    expect(idempotencyKey).toMatch(/^offline:[a-f0-9]{64}$/);
+    expect(idempotencyKey).not.toContain("tenant_001");
     expect(calculateOfflineRetryDelayMinutes(3)).toBe(8);
     expect(blocked.productionReady).toBe(false);
     expect(blocked.warning).toBe(
@@ -409,7 +411,11 @@ describe("mobile support helpers", () => {
       "device restart and airplane-mode reconnect evidence",
     ]);
     expect(buildOfflineSyncAuditEvent(item, decision!, "2026-06-08T01:05:00.000Z")).toMatchObject({
+      itemIdHash: expect.any(String),
+      rawItemIdEchoed: false,
       decision: "blocked_unencrypted",
+      idempotencyKeyHash: expect.any(String),
+      rawIdempotencyKeyEchoed: false,
       sensitive: true,
       redactedDetail: "Sensitive offline payload redacted.",
     });
@@ -470,6 +476,17 @@ describe("mobile support helpers", () => {
       "X-InkRoute-Tenant": "tenant_001",
       "X-Request-Id": "req_001",
       "Idempotency-Key": "mobile_booking_patch_001",
+    });
+    expect(plan.headerProof).toMatchObject({
+      authorizationHeaderAttached: true,
+      tenantHeaderAttached: true,
+      requestIdHeaderAttached: true,
+      idempotencyHeaderAttached: true,
+      rawAuthorizationHeaderEchoed: false,
+      rawAccessTokenEchoed: false,
+      rawTenantIdEchoed: false,
+      rawRequestIdEchoed: false,
+      rawIdempotencyKeyEchoed: false,
     });
   });
 
@@ -577,6 +594,20 @@ describe("mobile support helpers", () => {
       requiredEvidence: ["provider-backed booking lifecycle execution proof"],
     });
     expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+    expect(contract.metadata).toMatchObject({
+      tenantScopeRequired: true,
+      bookingIdRequired: true,
+      requestIdRequired: true,
+      rawTenantIdEchoed: false,
+      rawBookingIdEchoed: false,
+      rawRequestIdEchoed: false,
+      idempotencyKeyRequired: true,
+      rawIdempotencyKeyEchoed: false,
+    });
+    expect(contract.metadata).not.toHaveProperty("tenantId");
+    expect(contract.metadata).not.toHaveProperty("bookingId");
+    expect(contract.metadata).not.toHaveProperty("requestId");
+    expect(contract.metadata).not.toHaveProperty("idempotencyKey");
 
     const unsafe = buildMobileBookingLifecycleActionContract({
       tenantId: "",
@@ -633,6 +664,21 @@ describe("mobile support helpers", () => {
       requiredEvidence: ["provider-backed travel publish execution proof"],
     });
     expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
+    expect(contract.metadata).toMatchObject({
+      tenantScopeRequired: true,
+      travelScheduleIdRequired: true,
+      citySlugValidated: true,
+      requestIdRequired: true,
+      rawTenantIdEchoed: false,
+      rawTravelScheduleIdEchoed: false,
+      rawRequestIdEchoed: false,
+      idempotencyKeyRequired: true,
+      rawIdempotencyKeyEchoed: false,
+    });
+    expect(contract.metadata).not.toHaveProperty("tenantId");
+    expect(contract.metadata).not.toHaveProperty("travelScheduleId");
+    expect(contract.metadata).not.toHaveProperty("requestId");
+    expect(contract.metadata).not.toHaveProperty("idempotencyKey");
 
     const unsafe = buildMobileTravelPublishContract({
       tenantId: "",
@@ -688,13 +734,18 @@ describe("mobile support helpers", () => {
       blockers: [],
     });
     expect(contract.requiredHeaders).toEqual(["Authorization", "X-InkRoute-Tenant", "X-Request-Id", "Idempotency-Key"]);
-    expect(contract.objectKey).toBe("tenant_001/mobile/portfolio_public/req_upload_001/black-sun-flash.jpg");
-    expect(buildMobileUploadObjectKey({
+    expect(contract.objectKey).toMatch(/^mobile\/portfolio_public\/[a-f0-9]{64}\/black-sun-flash\.jpg$/);
+    expect(contract.objectKey).not.toContain("tenant_001");
+    expect(contract.objectKey).not.toContain("req_upload_001");
+    const privateObjectKey = buildMobileUploadObjectKey({
       tenantId: "tenant_001",
       requestId: "req_upload_002",
       kind: "reference_private",
       filename: "../Client Reference HEIC",
-    })).toBe("tenant_001/mobile/reference_private/req_upload_002/client-reference-heic");
+    });
+    expect(privateObjectKey).toMatch(/^mobile\/reference_private\/[a-f0-9]{64}\/client-reference-heic$/);
+    expect(privateObjectKey).not.toContain("tenant_001");
+    expect(privateObjectKey).not.toContain("req_upload_002");
   });
 
   it("blocks unsafe mobile upload intent contracts before provider signing", () => {

@@ -30,6 +30,7 @@ describe("dashboard auth guard runtime contract", () => {
   const authTests = readRepoFile("packages/auth/tests/authorization.test.ts");
   const dashboardLayout = readRepoFile("apps/dashboard/app/layout.tsx");
   const dashboardAuthApi = readRepoFile("apps/dashboard/app/api/dashboardAuth.ts");
+  const dashboardAuthMembershipApi = readRepoFile("apps/dashboard/app/api/dashboardAuthMembership.ts");
   const dashboardMiddleware = readRepoFile("apps/dashboard/middleware.ts");
   const ciWorkflow = readRepoFile(".github/workflows/ci.yml");
   const unitManifest = readRepoFile("testing/manifests/unit-test-manifest.json");
@@ -42,6 +43,7 @@ describe("dashboard auth guard runtime contract", () => {
       "pnpm --filter @inkroute/dashboard typecheck",
       "pnpm --filter @inkroute/dashboard build",
       "dashboard middleware auth guard tests",
+      "dashboard route-method permission mapping contract tests",
       "dashboard protected layout auth guard tests",
       "dashboard API auth guard tests",
       "browser dashboard login/logout smoke",
@@ -108,7 +110,25 @@ describe("dashboard auth guard runtime contract", () => {
     expect(dashboardMiddleware).toContain("x-inkroute-dashboard-auth-guard");
     expect(dashboardAuthApi).toContain("export function buildDashboardAuthGuardRunRecord");
     expect(dashboardAuthApi).toContain("export async function persistDashboardAuthGuardRun");
+    expect(dashboardAuthApi).toContain("tenantIdHash: string");
+    expect(dashboardAuthApi).toContain("rawTenantIdEchoed: false");
+    expect(dashboardAuthApi).toContain("actorUserIdHash: string");
+    expect(dashboardAuthApi).toContain("rawActorUserIdEchoed: false");
+    expect(dashboardAuthApi).toContain("membershipIdHash: string | null");
+    expect(dashboardAuthApi).toContain("rawMembershipIdEchoed: false");
+    expect(dashboardAuthApi).toContain("customRoleIdHash: string | null");
+    expect(dashboardAuthApi).toContain("rawCustomRoleIdEchoed: false");
+    expect(dashboardAuthMembershipApi).toContain("hashDashboardMembershipSelector");
+    expect(dashboardAuthMembershipApi).toContain("membershipIdHash: hashDashboardMembershipSelector(membership.id)");
+    expect(dashboardAuthMembershipApi).toContain("customRoleIdHash: hashDashboardMembershipSelector(membership.customRoleId)");
     expect(dashboardAuthApi).toContain("entityType: \"DashboardAuthGuardRun\"");
+    expect(dashboardAuthApi).toContain("tenantIdHash");
+    expect(dashboardAuthApi).toContain("rawTenantIdStored: false");
+    expect(dashboardAuthApi).toContain("actorUserIdHash");
+    expect(dashboardAuthApi).toContain("rawActorUserIdStored: false");
+    expect(dashboardAuthApi).toContain("routePathHash");
+    expect(dashboardAuthApi).toContain("rawRoutePathStored: false");
+    expect(dashboardAuthApi).toContain("guardActionRoutePathHashed: true");
     expect(dashboardAuthApi).toContain("persistedTenantMemberRequired: true");
     expect(dashboardAuthApi).toContain("persistedCustomRoleRequired: true");
     expect(dashboardAuthApi).toContain("providerBackedSessionRequired: true");
@@ -119,8 +139,14 @@ describe("dashboard auth guard runtime contract", () => {
     expect(dashboardAuthApi).toContain("headers: noStoreHeaders");
     expect(dashboardAuthApi).not.toContain('headers: { "Cache-Control": "no-store" }');
     expect(dashboardAuthApi).toContain("function normalizeHeaderValue(value: string | null): string | null");
+    expect(dashboardAuthApi).toContain("function headerOnlyDashboardAuthDisabledInProduction()");
+    expect(dashboardAuthApi).toContain('process.env.NODE_ENV === "production"');
+    expect(dashboardAuthApi).toContain("headerOnlyDashboardAuthDisabledInProduction()");
+    expect(dashboardAuthApi).toContain('throw new Error("AUTH_REQUIRED")');
     expect(dashboardAuthApi).toContain("const fallbackRole = \"assistant\";");
     expect(dashboardAuthApi).toContain("role: fallbackRole");
+    expect(dashboardAuthApi).toContain("sessionIdHash");
+    expect(dashboardAuthApi).toContain("sessionId: `dashboard:${context.source}:${sessionIdHash}`");
     expect(dashboardAuthApi).toContain("actorUserId,");
     expect(dashboardAuthApi).toContain('const normalizedRole = normalizeHeaderValue(value)?.toLowerCase()');
   });
@@ -197,12 +223,25 @@ describe("dashboard auth guard runtime contract", () => {
     const artifactReview = buildDashboardAuthGuardArtifactReview({
       tenantDomain: "tenant.example.com",
       providerSessionToken: "session_private",
+      providerSubject: "oidc-sub-01HZYXZYXZYXZYXZYXZYXZYXZ",
+      principalRef: "principal_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      oauthAccessToken: "access_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      refreshToken: "refresh_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      bearerProof: "Bearer bearer_01HZYXZYXZYXZYXZYXZYXZYXZ",
       clientEmail: "client@example.com",
       authorizationHeader: "authorization: bearer provider-token",
       nested: {
         crossTenantDenialPayload: "private-tenant payload",
         publicSummary: "dashboard auth guard evidence captured",
       },
+      providerSessionEvidence: "session_01HZYXZYXZYXZYXZYXZYXZYXZ resolved tenant_member_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      customRoleLookup: "custom_role_01HZYXZYXZYXZYXZYXZYXZYXZ grants booking.read",
+      browserLoginTrace: "test-results/dashboard-auth-guard-runtime/login-tenant_01HZYXZYXZYXZYXZYXZYXZYXZ.zip",
+      tenantSwitchTranscript: "switch_01HZYXZYXZYXZYXZYXZYXZYXZ denied route_dashboard_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      authAuditRow: "audit_01HZYXZYXZYXZYXZYXZYXZYXZ persisted for provider_01HZYXZYXZYXZYXZYXZYXZYXZ",
+      ciOutput: "workflow run ci_run_01HZYXZYXZYXZYXZYXZYXZYXZ passed",
+      safeMarker: "persistence_dashboard_auth_01HZYXZYXZYXZYXZYXZYXZYXZ wrote artifacts/dashboard-auth/private-proof.json",
+      safeNote: "dashboard auth guard used postgresql://tenant_demo:secret@db.example.com/inkroute",
     });
     const directRedaction = buildRedactedDashboardAuthGuardArtifact({
       publicSummary: "safe dashboard auth evidence",
@@ -278,10 +317,14 @@ describe("dashboard auth guard runtime contract", () => {
       secretSafeArtifactsRequiredForClosure: true,
     });
     expect(executionPlan.requiredExternalEvidence).toBe(dashboardAuthGuardRequiredExternalEvidence);
-    expect(executionPlan.requiredExternalEvidence).toContain("provider-backed dashboard session evidence");
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "provider-backed dashboard session evidence with raw provider/session selectors suppressed",
+    );
     expect(executionPlan.requiredExternalEvidence).toContain("dashboard route-method permission mapping evidence");
     expect(executionPlan.requiredExternalEvidence).toContain("browser dashboard cross-tenant denial smoke");
-    expect(executionPlan.requiredExternalEvidence).toContain("secret-safe dashboard auth artifact review");
+    expect(executionPlan.requiredExternalEvidence).toContain(
+      "secret-safe dashboard auth artifact review with provider identity/session/token selectors redacted",
+    );
     expect(executionPlan.routeMethodPermissionContract).toBe(dashboardAuthGuardRouteMethodPermissionContract);
     expect(dashboardAuthGuardRouteMethodPermissionContract.safeMethods).toEqual(["GET", "HEAD", "OPTIONS"]);
     expect(dashboardAuthGuardRouteMethodPermissionContract.mutatingMethods).toEqual(["POST", "PUT", "PATCH", "DELETE"]);
@@ -318,14 +361,39 @@ describe("dashboard auth guard runtime contract", () => {
     expect(artifactReview.redactions).toEqual([
       "tenantDomain",
       "providerSessionToken",
+      "providerSubject",
+      "principalRef",
+      "oauthAccessToken",
+      "refreshToken",
+      "bearerProof",
       "clientEmail",
       "authorizationHeader",
       "nested.crossTenantDenialPayload",
+      "providerSessionEvidence",
+      "customRoleLookup",
+      "browserLoginTrace",
+      "tenantSwitchTranscript",
+      "authAuditRow",
+      "ciOutput",
+      "safeMarker",
+      "safeNote",
     ]);
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant.example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("session_private");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("oidc-sub-01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("principal_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("access_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("refresh_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("bearer_01HZYXZYXZYXZYXZYXZYXZYXZ");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("client@example.com");
     expect(JSON.stringify(artifactReview.artifact)).not.toContain("provider-token");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("session_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("tenant_member_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("custom_role_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("audit_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("persistence_dashboard_auth_01HZYXZYXZYXZYXZYXZYXZYXZ");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("artifacts/dashboard-auth/private-proof.json");
+    expect(JSON.stringify(artifactReview.artifact)).not.toContain("postgresql://tenant_demo:secret@db.example.com/inkroute");
     expect(JSON.stringify(artifactReview.artifact)).toContain("dashboard auth guard evidence captured");
     expect(artifactReview.secretSafe).toBe(true);
     expect(directRedaction.redactions).toEqual(["tenantMemberRole"]);

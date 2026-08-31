@@ -39,12 +39,58 @@ describe("dashboard portfolio read route contract", () => {
       expect(source).toContain('redaction: "buildTenantDashboardView"');
       expect(source).toContain("redactsAssetKeys");
     }
+    expect(detailRouteSource).toContain("function buildPortfolioDetailResponseProjection");
+    expect(detailRouteSource).toContain("function buildSafePortfolioDetailRecord");
+    expect(detailRouteSource).toContain("auditIdEchoed: false");
+    expect(detailRouteSource).toContain("internalPersistenceIdsEchoed: false");
+    expect(detailRouteSource).toContain("portfolioItemIdEchoed: false");
+    expect(detailRouteSource).toContain("tenantIdEchoed: false");
+    expect(detailRouteSource).toContain("attributedBookingIdsEchoed: false");
+    expect(detailRouteSource).toContain("portfolioImageIdsEchoed: false");
+    expect(detailRouteSource).toContain("fileAssetIdsEchoed: false");
+    expect(detailRouteSource).toContain("tenantScope: { actorTenantMatched: true");
+    expect(detailRouteSource).toContain("portfolioTenantMatched: true");
+    expect(listRouteSource).toContain("buildSafePortfolioListRecord");
+    expect(listRouteSource).toContain("portfolioItemIdsEchoed: false");
+    expect(listRouteSource).toContain("tenantIdEchoed: false");
+    expect(listRouteSource).toContain("attributedBookingIdsEchoed: false");
+    expect(listRouteSource).toContain("portfolioImageIdsEchoed: false");
+    expect(listRouteSource).toContain("fileAssetIdsEchoed: false");
+    expect(listRouteSource).toContain("tenantScope: { actorTenantMatched: true }");
+    expect(listRouteSource).toContain("attributedBookingLinked: Boolean");
+    expect(listRouteSource).toContain("fileAssetLinked: Boolean");
+    expect(listRouteSource).not.toContain("id: row.id");
+    expect(listRouteSource).not.toContain("tenantId: row.tenantId");
+    expect(listRouteSource).not.toContain("id: image.id");
+    expect(listRouteSource).not.toContain("fileAssetId: image.fileAsset?.id");
+    expect(listRouteSource).not.toContain("tenantId,\n          error:");
+    expect(detailRouteSource).not.toContain("auditId: result.audit.id");
+    expect(detailRouteSource).not.toContain("id: result.row.id");
+    expect(detailRouteSource).not.toContain("tenantId: result.row.tenantId");
+    expect(detailRouteSource).not.toContain("id: booking.id");
+    expect(detailRouteSource).not.toContain("id: image.id");
+    expect(detailRouteSource).not.toContain("fileAssetId: image.fileAsset?.id");
+    expect(detailRouteSource).not.toContain("tenantId,\n          portfolioId");
+    expect(detailRouteSource).not.toContain("tenantId,\n        persistence");
+    expect(detailRouteSource).toContain("fileAssetLinked: Boolean(image.fileAsset?.id)");
   });
 
   it("redacts private file URLs and asset metadata while allowing public image URLs", () => {
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain("redactAssetMetadata");
       expect(source).toContain('visibility === "public" ? image.imageUrl : "[redacted-dashboard-field]"');
+      expect(source).not.toContain("objectKey: true");
+      expect(source).not.toContain("bucket: true");
+      expect(source).not.toContain("checksumSha256: true");
+      expect(source).not.toContain("signedUrlExpiresAt: true");
+      expect(source).toContain('objectKey: "[redacted-dashboard-field]"');
+      expect(source).toContain('bucket: "[redacted-dashboard-field]"');
+      expect(source).toContain('checksumSha256: "[redacted-dashboard-field]"');
+      expect(source).toContain('signedUrlExpiresAt: "[redacted-dashboard-field]"');
+      expect(source).toContain("objectKeySelectedFromDatabase: false");
+      expect(source).toContain("bucketSelectedFromDatabase: false");
+      expect(source).toContain("checksumSelectedFromDatabase: false");
+      expect(source).toContain("signedUrlExpirySelectedFromDatabase: false");
       expect(source).toContain("/key|bucket|checksum|signed|url|token|client|private/i");
     }
   });
@@ -78,6 +124,8 @@ describe("dashboard portfolio read route contract", () => {
     expect(listRouteSource).toContain("tx.idempotencyKey.update");
     expect(listRouteSource).toContain("imageUrlStoredInResult: false");
     expect(listRouteSource).toContain("providerUrlMinted: false");
+    expect(listRouteSource).toContain("portfolioItemResponseAllowlisted: true");
+    expect(listRouteSource).not.toContain("...result.item");
     expect(listRouteSource).toContain("idempotencyKeyId");
     expect(listRouteSource).toContain("idempotencyReplay");
     expect(listRouteSource).toContain("idempotency-backed");
@@ -96,6 +144,8 @@ describe("dashboard portfolio read route contract", () => {
     expect(imageAttachRouteSource).toContain("providerUrlMinted: false");
     expect(imageAttachRouteSource).toContain("malwareScanExecuted: false");
     expect(imageAttachRouteSource).toContain("derivativesGenerated: false");
+    expect(imageAttachRouteSource).toContain("portfolioImageResponseAllowlisted: true");
+    expect(imageAttachRouteSource).not.toContain("...result.image");
     expect(imageAttachRouteSource).toContain("idempotencyKeyId");
     expect(imageAttachRouteSource).toContain("idempotencyReplay");
     expect(imageAttachRouteSource).toContain("idempotency-backed");
