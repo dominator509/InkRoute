@@ -1,5 +1,7 @@
 ﻿import { buildMobileAuthRuntimeReadinessPlan } from "@inkroute/auth";
 
+import { mobileAuthRuntimeReadinessRequiredCommands } from "@inkroute/auth";
+
 export type MobileAuthRuntimeStatus =
   | "wired"
   | "provider-gated"
@@ -34,14 +36,7 @@ export const mobileAuthSecureSessionLifecycleContract = {
   auditDecisionRequiredForEveryTransition: true,
 } as const satisfies MobileAuthSecureSessionLifecycleContract;
 
-export const mobileAuthRuntimeCommands = [
-  "pnpm --filter @inkroute/auth typecheck",
-  "pnpm --filter @inkroute/auth test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "Expo iOS/Android auth smoke tests",
-  "Expo device biometric unlock test",
-] as const;
+export const mobileAuthRuntimeCommands = mobileAuthRuntimeReadinessRequiredCommands;
 
 export const mobileAuthArtifactPaths = [
   "coverage/mobile-auth-runtime.json",
@@ -364,7 +359,7 @@ export const mobileAuthSurfaceContract = [
   },
 ] as const satisfies readonly MobileAuthSurfaceContractEntry[];
 
-export const mobileAuthRuntimeReadiness = buildMobileAuthRuntimeReadinessPlan({
+const mobileAuthRuntimeReadinessInput = {
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   authTestsPassed: false,
   authTypecheckPassed: false,
@@ -383,7 +378,13 @@ export const mobileAuthRuntimeReadiness = buildMobileAuthRuntimeReadinessPlan({
   crossTenantDenialTested: false,
   secureTokenStorageVerified: false,
   auditLogPersistenceConfigured: false,
-});
+};
+
+export const mobileAuthRuntimeReadiness = {
+  ...buildMobileAuthRuntimeReadinessPlan(mobileAuthRuntimeReadinessInput),
+  requiredCommands: mobileAuthRuntimeCommands,
+  requiredEvidence: mobileAuthEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
