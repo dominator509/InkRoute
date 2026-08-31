@@ -94,7 +94,7 @@ describe("mobile offline sync runtime contract", () => {
     expect(offlineSyncSource).toContain("retryCount: item.retryCount + 1");
     expect(offlineStaticTest).toContain("redacted offline sync audit events");
     expect(offlineScreen).toContain("Sync worker contract");
-    expect(offlineScreen).toContain("encrypted-storage");
+    expect(offlineScreen).toContain("encrypted device storage");
   });
 
   it("keeps encrypted persistence, worker, conflict, audit, and reconnect blockers explicit", () => {

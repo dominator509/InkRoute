@@ -240,7 +240,7 @@ export const offlineSyncRuntimeMatrix = [
   },
 ] as const satisfies readonly OfflineSyncRuntimeMatrixEntry[];
 
-export const offlineSyncRuntimeReadiness = buildOfflineRuntimeReadinessPlan({
+const offlineSyncRuntimeReadinessPlan = buildOfflineRuntimeReadinessPlan({
   packageScripts: {
     test: "vitest run packages/mobile/tests/mobile-support.test.ts",
     typecheck: "tsc -p tsconfig.json --noEmit",
@@ -262,6 +262,12 @@ export const offlineSyncRuntimeReadiness = buildOfflineRuntimeReadinessPlan({
   auditTrailPersistenceConfigured: false,
   offlineReconnectDeviceTested: false,
 });
+
+export const offlineSyncRuntimeReadiness = {
+  ...offlineSyncRuntimeReadinessPlan,
+  requiredCommands: offlineSyncRuntimeCommands,
+  requiredEvidence: offlineSyncEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
