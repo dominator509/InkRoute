@@ -1,6 +1,7 @@
 ﻿import { buildNotificationLaunchEvidencePlan, buildNotificationPreferenceSuppressionPlan, buildNotificationProviderHandoffWorkerPlan } from "@inkroute/notifications";
 import { buildNotificationRedactionPrivacyDecision } from "./notificationRedactionPrivacyContract";
 import { notificationLaunchEvidenceRequiredCommands } from "@inkroute/notifications";
+import { notificationLaunchEvidenceRequiredControls } from "@inkroute/notifications";
 import { buildNotificationTenantIsolationDecision } from "./notificationTenantIsolationContract";
 import { buildNotificationWebhookReplayDecision } from "./notificationWebhookReplayContract";
 
@@ -129,13 +130,7 @@ export const notificationLaunchRunPersistenceContract: NotificationLaunchRunPers
 
 export const notificationLaunchRuntimeCommands = notificationLaunchEvidenceRequiredCommands;
 
-export const notificationLaunchRuntimeControls = [
-  "pre-send-consent-preference-suppression-quiet-hours-rate-limit-resolution",
-  "tenant-scoped-delivery-provider-thread-message-audit-idempotency-persistence",
-  "raw-body-provider-webhook-signature-and-replay-rejection",
-  "unsubscribe-stop-help-bounce-complaint-invalid-push-retry-dead-letter-processing",
-  "redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts",
-] as const;
+export const notificationLaunchRuntimeControls = notificationLaunchEvidenceRequiredControls;
 
 export const notificationLaunchArtifactPaths = [
   "coverage/notification-launch-runtime.json",

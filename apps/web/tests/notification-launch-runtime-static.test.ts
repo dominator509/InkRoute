@@ -70,8 +70,8 @@ describe("notification launch runtime contract", () => {
       "Expo push device smoke",
       "GitHub Actions notification launch evidence job",
     ]);
-    expect(notificationLaunchRuntimeControls).toContain("raw-body-provider-webhook-signature-and-replay-rejection");
-    expect(notificationLaunchRuntimeControls).toContain("redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts");
+    expect(notificationLaunchRuntimeControls).toContain("Verify provider signatures against raw webhook bodies and reject replayed events before side effects.");
+    expect(notificationLaunchRuntimeControls).toContain("Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs.");
     expect(notificationLaunchRuntimeMatrix.map((entry) => entry.id)).toEqual([
       "notifications-typecheck",
       "notifications-tests",
@@ -121,7 +121,7 @@ describe("notification launch runtime contract", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
       notificationLaunchRunPersisted: false,
-      coveredControls: ["redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts"],
+      coveredControls: ["Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs."],
       capturedArtifacts: [
         "coverage/notification-launch-runtime.json",
         "coverage/notification-typecheck.txt",
@@ -195,7 +195,7 @@ describe("notification launch runtime contract", () => {
     });
     expect(runData.commandMatrix).toBe(notificationLaunchRuntimeMatrix);
     expect(runData.controlManifest).toEqual([
-      "redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts",
+      "Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs.",
     ]);
     expect(runData.providerSendManifest.resendSandboxSendPassed).toBe(false);
     expect(String(persistNotificationLaunchRun)).toContain("repository.notificationLaunchRun.upsert");
@@ -306,7 +306,7 @@ describe("notification launch runtime contract", () => {
       ciEvidenceCaptured: false,
       secretSafeArtifactsCaptured: false,
       notificationLaunchRunPersisted: false,
-      coveredControls: ["redacted-destinations-payloads-bodies-private-urls-secrets-in-artifacts"],
+       coveredControls: ["Redact raw destinations, provider payloads, message bodies, private URLs, and secrets from CI artifacts and logs."],
       capturedArtifacts: [
         "coverage/notification-launch-runtime.json",
         "coverage/notification-typecheck.txt",
@@ -327,10 +327,10 @@ describe("notification launch runtime contract", () => {
 
     expect(decision.status).toBe("blocked");
     expect(decision.missingControls).toEqual([
-      "pre-send-consent-preference-suppression-quiet-hours-rate-limit-resolution",
-      "tenant-scoped-delivery-provider-thread-message-audit-idempotency-persistence",
-      "raw-body-provider-webhook-signature-and-replay-rejection",
-      "unsubscribe-stop-help-bounce-complaint-invalid-push-retry-dead-letter-processing",
+      "Resolve consent, preference, suppression, quiet-hours, and rate-limit state immediately before every send.",
+      "Persist NotificationDelivery, ProviderEvent, MessageThread, Message, audit, and idempotency records with tenant scope.",
+      "Verify provider signatures against raw webhook bodies and reject replayed events before side effects.",
+      "Process unsubscribe, STOP/HELP, bounce/complaint, invalid push token, retry, and dead-letter flows before future delivery attempts.",
     ]);
     expect(decision.missingArtifacts).toEqual([
       "coverage/notification-provider-sandbox.json",
