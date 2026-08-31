@@ -56,7 +56,7 @@ describe("mobile QA execution static contract", () => {
     expect(mobileDemoSource).toContain("buildMobileUploadIntentContract");
     expect(mobileDemoSource).toContain("mobilePortfolioUploadContract.objectKey");
     expect(mobileDemoSource).toContain("Metadata and upload-intent contracts are wired");
-    expect(mobileDemoSource).toContain("signed provider storage remains runtime-gated");
+    expect(mobileDemoSource).toContain("signed provider storage, derivatives, moderation, and byte transfer remain runtime-gated");
     expect(portfolioUploadScreen).not.toContain("Static mobile upload flow");
     expect(mobileDemoSource).not.toContain("signed uploads are not wired");
     expect(portfolioUploadScreen).not.toContain("Storage remains scaffolded only");
