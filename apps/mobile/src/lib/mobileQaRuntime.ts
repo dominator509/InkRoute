@@ -1,5 +1,7 @@
 ﻿import { buildMobileDeviceQaRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
+import { mobileDeviceQaRuntimeReadinessRequiredCommands as canonicalMobileQaRuntimeCommands } from "@inkroute/mobile-support";
+
 export type MobileQaRuntimeStatus =
   | "wired"
   | "component-gated"
@@ -17,15 +19,7 @@ export interface MobileQaRuntimeMatrixEntry {
   readonly status: MobileQaRuntimeStatus;
 }
 
-export const mobileQaRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "pnpm --filter @inkroute/mobile ios",
-  "pnpm --filter @inkroute/mobile android",
-  "manual physical-device QA for auth/api/offline/push/crash/OTA/accessibility",
-] as const;
+export const mobileQaRuntimeCommands = canonicalMobileQaRuntimeCommands;
 
 export const mobileQaArtifactPaths = [
   "coverage/mobile-qa-runtime.json",
@@ -282,7 +276,7 @@ export const mobileQaRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileQaRuntimeMatrixEntry[];
 
-export const mobileQaRuntimeReadiness = buildMobileDeviceQaRuntimeReadinessPlan({
+const mobileQaRuntimeReadinessPlan = buildMobileDeviceQaRuntimeReadinessPlan({
   packageScripts: {
     test: "vitest run apps/mobile/tests/**/*.test.ts",
     typecheck: "tsc --noEmit",
@@ -306,6 +300,12 @@ export const mobileQaRuntimeReadiness = buildMobileDeviceQaRuntimeReadinessPlan(
   ciHooksConfigured: false,
   qaArtifactsAttached: false,
 });
+
+export const mobileQaRuntimeReadiness = {
+  ...mobileQaRuntimeReadinessPlan,
+  requiredCommands: mobileQaRuntimeCommands,
+  requiredEvidence: mobileQaEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
