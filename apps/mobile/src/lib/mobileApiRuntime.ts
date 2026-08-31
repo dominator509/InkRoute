@@ -1,5 +1,7 @@
 ﻿import { buildMobileApiRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
+import { mobileApiRuntimeRequiredCommands as canonicalMobileApiRuntimeCommands } from "@inkroute/mobile-support";
+
 export type MobileApiRuntimeStatus =
   | "wired"
   | "auth-gated"
@@ -15,14 +17,7 @@ export interface MobileApiRuntimeMatrixEntry {
   readonly status: MobileApiRuntimeStatus;
 }
 
-export const mobileApiRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "Expo iOS/Android mobile API smoke tests",
-  "offline reconnect/replay mobile test",
-] as const;
+export const mobileApiRuntimeCommands = canonicalMobileApiRuntimeCommands;
 
 export const mobileApiDomains = [
   "bookings",
