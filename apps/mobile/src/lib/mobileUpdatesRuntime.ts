@@ -1,5 +1,7 @@
 ﻿import { buildExpoEasRuntimeEvidencePlan } from "@inkroute/releases";
 
+import { expoEasRuntimeEvidenceRequiredCommands as canonicalMobileUpdatesRuntimeCommands } from "@inkroute/releases";
+
 export type MobileUpdatesRuntimeStatus =
   | "wired"
   | "project-gated"
@@ -17,15 +19,7 @@ export interface MobileUpdatesRuntimeMatrixEntry {
   readonly status: MobileUpdatesRuntimeStatus;
 }
 
-export const mobileUpdatesRuntimeCommands = [
-  "pnpm --filter @inkroute/releases typecheck",
-  "pnpm --filter @inkroute/releases test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "eas build --profile preview --platform all",
-  "eas update --channel preview",
-  "eas update:list --channel preview",
-  "eas update --channel preview --message rollback-republish-drill --non-interactive",
-] as const;
+export const mobileUpdatesRuntimeCommands = canonicalMobileUpdatesRuntimeCommands;
 
 export const mobileUpdatesArtifactPaths = [
   "coverage/mobile-updates-runtime.json",
