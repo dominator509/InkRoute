@@ -1,5 +1,7 @@
 import { buildCalendarLaunchEvidencePlan } from "@inkroute/calendar";
 
+import { calendarLaunchEvidenceRequiredCommands as canonicalCalendarLaunchRuntimeCommands } from "@inkroute/calendar";
+
 export type CalendarLaunchRuntimeStatus =
   | "wired"
   | "database-gated"
@@ -129,18 +131,7 @@ export const calendarLaunchRunPersistenceContract: CalendarLaunchRunPersistenceC
   ],
 };
 
-export const calendarLaunchRuntimeCommands = [
-  "pnpm --filter @inkroute/calendar typecheck",
-  "pnpm --filter @inkroute/calendar test",
-  "availability Postgres integration tests",
-  "concurrent slot hold race-condition tests",
-  "Google Calendar OAuth/freebusy/event-sync smoke tests",
-  "signed ICS token DB and route tests",
-  "Apple/Google/Outlook ICS import smoke tests",
-  "timezone DST and provider render matrix QA",
-  "dashboard/public travel calendar smoke tests",
-  "GitHub Actions calendar launch evidence job",
-] as const;
+export const calendarLaunchRuntimeCommands = canonicalCalendarLaunchRuntimeCommands;
 
 export const calendarLaunchReadinessAreas = [
   "calendar-typecheck-test",
@@ -630,7 +621,7 @@ export const calendarLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly CalendarLaunchRuntimeMatrixEntry[];
 
-export const calendarLaunchRuntimeReadiness = buildCalendarLaunchEvidencePlan({
+const calendarLaunchRuntimeReadinessPlan = buildCalendarLaunchEvidencePlan({
   packageScripts: {
     typecheck: "tsc --noEmit",
     test: "vitest run --passWithNoTests",
@@ -661,24 +652,38 @@ export const calendarLaunchRuntimeReadiness = buildCalendarLaunchEvidencePlan({
 });
 
 export function buildCalendarLaunchDecisionRequiredEvidence(
-  readinessEvidence: typeof calendarLaunchRuntimeReadiness.requiredEvidence,
+  readinessEvidence: typeof calendarLaunchRuntimeReadinessPlan.requiredEvidence,
 ): CalendarLaunchRequiredEvidence {
+  const existingEvidence = new Set(readinessEvidence as readonly string[]);
+  const persistenceEvidence = "CalendarLaunchRun row with command, readiness area, artifact, Google sync, signed ICS, and timezone QA matrices.";
+  const artifactEvidence = "Artifact bundle proving calendar package checks, Postgres availability integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS token/imports, timezone/provider QA, travel publish/cache smoke, CI evidence, and secret-safe artifacts.";
+
+  if (existingEvidence.has(persistenceEvidence) && existingEvidence.has(artifactEvidence)) {
+    return readinessEvidence as CalendarLaunchRequiredEvidence;
+  }
+
   return [
     ...readinessEvidence,
-    "CalendarLaunchRun row with command, readiness area, artifact, Google sync, signed ICS, and timezone QA matrices.",
-    "Artifact bundle proving calendar package checks, Postgres availability integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS token/imports, timezone/provider QA, travel publish/cache smoke, CI evidence, and secret-safe artifacts.",
-  ];
+    ...(existingEvidence.has(persistenceEvidence) ? [] : [persistenceEvidence]),
+    ...(existingEvidence.has(artifactEvidence) ? [] : [artifactEvidence]),
+  ] as CalendarLaunchRequiredEvidence;
 }
 
 export type CalendarLaunchRequiredEvidence = readonly [
-  ...typeof calendarLaunchRuntimeReadiness.requiredEvidence,
+  ...typeof calendarLaunchRuntimeReadinessPlan.requiredEvidence,
   "CalendarLaunchRun row with command, readiness area, artifact, Google sync, signed ICS, and timezone QA matrices.",
   "Artifact bundle proving calendar package checks, Postgres availability integration, concurrent hold race rejection, tenant isolation, Google OAuth/sync, signed ICS token/imports, timezone/provider QA, travel publish/cache smoke, CI evidence, and secret-safe artifacts.",
 ];
 
 export const calendarLaunchRequiredEvidence = buildCalendarLaunchDecisionRequiredEvidence(
-  calendarLaunchRuntimeReadiness.requiredEvidence,
+  calendarLaunchRuntimeReadinessPlan.requiredEvidence,
 );
+
+export const calendarLaunchRuntimeReadiness = {
+  ...calendarLaunchRuntimeReadinessPlan,
+  requiredCommands: calendarLaunchRuntimeCommands,
+  requiredEvidence: calendarLaunchRequiredEvidence,
+};
 
 export function buildCalendarLaunchEvidenceDecision(
   input: CalendarLaunchEvidenceInput,
