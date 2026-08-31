@@ -1307,7 +1307,7 @@ export function buildMessageThreadDraft(params: {
 
 export function interpretEmailWebhook(eventType: string): ProviderWebhookInterpretation {
   const normalized = eventType.toLowerCase();
-  const status: NotificationStatus = normalized.includes("delivered") ? "delivered" : normalized.includes("bounce") || normalized.includes("complaint") || normalized.includes("failed") ? "failed" : normalized.includes("sent") ? "sent" : "queued";
+  const status: NotificationStatus = normalized.includes("delivered") ? "delivered" : normalized.includes("bounce") || normalized.includes("complain") || normalized.includes("failed") ? "failed" : normalized.includes("sent") ? "sent" : "queued";
   return {
     provider: "resend",
     eventType,
@@ -1377,7 +1377,7 @@ export function buildProviderEventReconciliationPlan(input: ProviderEventReconci
   const normalizedInbound = input.inboundBody?.trim().toLowerCase();
   const shouldSuppressDestination =
     (input.provider === "twilio" && (normalizedInbound === "stop" || normalizedInbound === "unsubscribe")) ||
-    (input.provider === "resend" && /bounce|complaint|unsubscribe/i.test(input.eventType));
+    (input.provider === "resend" && /bounce|complain|unsubscribe/i.test(input.eventType));
   const shouldMarkPushTokenInactive = input.provider === "expo" && /DeviceNotRegistered|invalid|notregistered/i.test(input.eventType);
 
   if (!input.eventId.trim()) {
@@ -1490,7 +1490,7 @@ export function buildSmsWebhookRuntimeReadinessPlan(input: SmsWebhookRuntimeRead
   if (!input.deliveryLogPersistenceAvailable) blockers.push("NotificationDelivery persistence must be available before SMS callback reconciliation.");
   if (!input.providerEventPersistenceAvailable) blockers.push("ProviderEvent persistence must be available for SMS callback replay protection.");
   if (reconciliation.shouldSuppressDestination && !input.suppressionPersistenceAvailable) blockers.push("Suppression persistence must be available for STOP or unsubscribe SMS events.");
-  if (reconciliation.shouldCreateInboundThread && !input.inboundThreadPersistenceAvailable) blockers.push("Inbound message thread persistence must be available for HELP or client replies.");
+  if (interpretation.requiresInboundMessageHandling && !reconciliation.shouldSuppressDestination && !input.inboundThreadPersistenceAvailable) blockers.push("Inbound message thread persistence must be available for HELP or client replies.");
   if (!input.idempotencyStoreAvailable) blockers.push("Idempotency store must be available before applying SMS callback side effects.");
   if (!input.payloadRedacted) blockers.push("SMS webhook payload must be redacted before audit logging or previews.");
 
