@@ -256,7 +256,7 @@ describe("notification launch runtime contract", () => {
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "preference center, unsubscribe, STOP, quiet-hours, and rate-limit evidence",
     );
-    expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain("redacted artifact and privacy review evidence");
+    expect(notificationLaunchRuntimeReadiness.requiredEvidence).toContain("redacted artifact and privacy review evidence");
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "tenant-scoped NotificationDelivery, ProviderEvent, and MessageThread persistence evidence",
     );
