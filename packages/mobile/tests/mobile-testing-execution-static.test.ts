@@ -115,8 +115,8 @@ describe("GAP-108 mobile testing execution wiring", () => {
     );
     expect(mobileTestingExecutionReadiness.blockers).toEqual(
       expect.arrayContaining([
-        "Expo dependencies must install before mobile runtime testing.",
-        "Expo runtime must start for simulator and device QA.",
+        "Expo dependencies must install before simulator or device QA evidence is meaningful.",
+        "Expo runtime must start locally or in a preview build before device QA evidence is meaningful.",
         "Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.",
         "EAS update rollback QA must prove preview adoption and rollback republish on the same runtime."
       ])
