@@ -268,7 +268,7 @@ export const mobileUpdatesRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileUpdatesRuntimeMatrixEntry[];
 
-export const mobileUpdatesRuntimeEvidence = buildExpoEasRuntimeEvidencePlan({
+const mobileUpdatesRuntimeEvidencePlan = buildExpoEasRuntimeEvidencePlan({
   packageScripts: ["test", "typecheck"],
   releasesTestsPassed: false,
   releasesTypecheckPassed: false,
@@ -290,6 +290,12 @@ export const mobileUpdatesRuntimeEvidence = buildExpoEasRuntimeEvidencePlan({
   adoptionMonitoringVerified: false,
   releaseHealthMonitoringConfigured: false,
 });
+
+export const mobileUpdatesRuntimeEvidence = {
+  ...mobileUpdatesRuntimeEvidencePlan,
+  requiredCommands: mobileUpdatesRuntimeCommands,
+  requiredEvidence: mobileUpdatesEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
