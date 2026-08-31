@@ -129,7 +129,9 @@ export function buildOfflineSyncTransportFailureAuditEvent(
     rawIdempotencyKeyEchoed: false,
     sensitive: item.sensitive,
     occurredAt,
-    redactedDetail: "Offline sync transport failed. Payload, response body, and credentials redacted.",
+    redactedDetail: item.sensitive
+      ? "Sensitive offline payload redacted."
+      : "Offline sync transport failed. Payload, response body, and credentials redacted.",
   };
 }
 

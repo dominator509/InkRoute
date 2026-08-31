@@ -1,5 +1,7 @@
 ﻿import { buildOfflineRuntimeReadinessPlan } from "@inkroute/mobile-support";
 
+import { offlineRuntimeRequiredCommands as canonicalOfflineSyncRuntimeCommands } from "@inkroute/mobile-support";
+
 export type OfflineSyncRuntimeStatus =
   | "wired"
   | "storage-gated"
@@ -16,14 +18,7 @@ export interface OfflineSyncRuntimeMatrixEntry {
   readonly status: OfflineSyncRuntimeStatus;
 }
 
-export const offlineSyncRuntimeCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "Expo offline restart persistence smoke test",
-  "Expo airplane-mode reconnect sync smoke test",
-] as const;
+export const offlineSyncRuntimeCommands = canonicalOfflineSyncRuntimeCommands;
 
 export const offlineSyncArtifactPaths = [
   "coverage/mobile-offline-sync-runtime.json",

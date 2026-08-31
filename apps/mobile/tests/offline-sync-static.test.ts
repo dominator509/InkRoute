@@ -46,7 +46,7 @@ describe("mobile offline sync static contract", () => {
     expect(offlineSource).toContain("/api/mobile/offline/");
   });
 
-  it("records redacted audit events instead of leaking sensitive offline payloads", () => {
+  it("records redacted offline sync audit events instead of leaking sensitive offline payloads", () => {
     expect(offlineSource).toContain("buildOfflineSyncAuditEvent");
     expect(offlineSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
     expect(offlineSource).toContain("idempotencyKeyHash");
