@@ -545,14 +545,27 @@ export const dashboardLaunchRuntimeReadiness = {
   ...dashboardLaunchRuntimeReadinessInput,
 };
 
+const dashboardLaunchDecisionRequiredEvidenceSuffix = [
+  "DashboardLaunchRun row with command, control, artifact, tenant API, and launch state matrices.",
+  "Artifact bundle proving dashboard typecheck/build/tests, Playwright smoke, seeded tenant data, provider auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts.",
+] as const;
+
+const dashboardLaunchDecisionRequiredEvidence: DashboardLaunchRequiredEvidence = [
+  ...dashboardLaunchRuntimeReadiness.requiredEvidence,
+  ...dashboardLaunchDecisionRequiredEvidenceSuffix,
+];
+
 export function buildDashboardLaunchDecisionRequiredEvidence(
   readinessEvidence: typeof dashboardLaunchRuntimeReadiness.requiredEvidence,
 ): DashboardLaunchRequiredEvidence {
+  if (readinessEvidence === dashboardLaunchRuntimeReadiness.requiredEvidence) {
+    return dashboardLaunchDecisionRequiredEvidence;
+  }
+
   return [
     ...readinessEvidence,
-    "DashboardLaunchRun row with command, control, artifact, tenant API, and launch state matrices.",
-    "Artifact bundle proving dashboard typecheck/build/tests, Playwright smoke, seeded tenant data, provider auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts.",
-  ];
+    ...dashboardLaunchDecisionRequiredEvidenceSuffix,
+  ] as DashboardLaunchRequiredEvidence;
 }
 
 export type DashboardLaunchRequiredEvidence = readonly [
@@ -561,9 +574,7 @@ export type DashboardLaunchRequiredEvidence = readonly [
   "Artifact bundle proving dashboard typecheck/build/tests, Playwright smoke, seeded tenant data, provider auth, tenant-scoped APIs, Prisma repositories, real mutations, AuditLog persistence, provider actions, RBAC/cross-tenant denial, field redaction, launch states, CI evidence, and secret-safe artifacts.",
 ];
 
-export const dashboardLaunchRequiredEvidence = buildDashboardLaunchDecisionRequiredEvidence(
-  dashboardLaunchRuntimeReadiness.requiredEvidence,
-);
+export const dashboardLaunchRequiredEvidence = dashboardLaunchDecisionRequiredEvidence;
 
 export function buildDashboardLaunchEvidenceDecision(
   input: DashboardLaunchEvidenceInput,
