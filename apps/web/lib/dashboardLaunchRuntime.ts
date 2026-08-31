@@ -1,7 +1,6 @@
 ﻿import { buildDashboardLaunchEvidencePlan } from "@inkroute/auth";
 
 import {
-  buildDashboardLaunchEvidencePlan,
   dashboardLaunchEvidenceRequiredCommands,
 } from "@inkroute/auth";
 
@@ -516,7 +515,7 @@ export const dashboardLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly DashboardLaunchRuntimeMatrixEntry[];
 
-export const dashboardLaunchRuntimeReadiness = buildDashboardLaunchEvidencePlan({
+const dashboardLaunchRuntimeReadinessInput = {
   packageScripts: {
     typecheck: "next typegen && tsc --noEmit",
     build: "next build",
@@ -539,7 +538,12 @@ export const dashboardLaunchRuntimeReadiness = buildDashboardLaunchEvidencePlan(
   loadingEmptyErrorStatesVerified: false,
   ciEvidenceCaptured: false,
   dashboardArtifactsSecretSafe: false,
-});
+};
+
+export const dashboardLaunchRuntimeReadiness = {
+  ...buildDashboardLaunchEvidencePlan(dashboardLaunchRuntimeReadinessInput),
+  ...dashboardLaunchRuntimeReadinessInput,
+};
 
 export function buildDashboardLaunchDecisionRequiredEvidence(
   readinessEvidence: typeof dashboardLaunchRuntimeReadiness.requiredEvidence,
@@ -623,9 +627,9 @@ export function buildDashboardLaunchEvidenceDecision(
 }
 
 const sensitiveDashboardLaunchKeyPattern =
-  /(token|secret|password|authorization|cookie|csrf|email|phone|tenant|user|account|database|url|uri|dsn|key|id|client|customer|payment|medical|consent|provider|repository|repo|branch|pullRequest|pr|reviewer|codeowner|session|member|role|rbac|audit|mutation|payload|body|route|path|artifact|screenshot|screenshots|video|playwright|browser|html|dom|seed|seeded|seededTenantData|field|redaction|loading|empty|error|state|command|build|typecheck|test|output|stdout|stderr|log|ci|workflow|run|commit|prisma|persistence)$/iu;
+  /(token|secret|password|authorization|cookie|csrf|email|phone|tenant|user|account|database|url|uri|dsn|key|id|client|customer|payment|medical|consent|provider|repository|repo|branch|pullRequest|pr|reviewer|codeowner|session|member|role|rbac|audit|mutation|payload|body|route|path|artifact|screenshot|screenshots|video|playwright|browser|html|dom|seed|seeded|seededTenantData|field|redaction|loading|empty|error|state|command|build|typecheck|test|output|stdout|stderr|log|ci|workflow|run|commit|prisma)$/iu;
 const sensitiveDashboardLaunchValuePattern =
-  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|(?:tenant|user|client|customer|account|session|member|role|audit|mutation|booking|payment|provider|route|artifact|trace|screenshot|seed|dashboard|workflow|ci|run|commit|branch|database|prisma|persistence|medical|consent)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
+  /(https?:\/\/[^\s"']+|postgres(?:ql)?:\/\/[^\s"']+|repo:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+|branch:[A-Za-z0-9_./-]+|pr[_:#-]?[A-Za-z0-9_.-]+|reviewer[_:@-]?[A-Za-z0-9_.-]+|CODEOWNER:[A-Za-z0-9_.@/-]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|denied\s+(?:tenant|user|client|customer|account|session|member|role|audit|mutation|booking|payment|provider|route|artifact|trace|screenshot|seed|dashboard|workflow|ci|run|commit|branch|database|prisma|persistence|medical|consent)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:tenant|user|client|customer|account|session|member|role|audit|mutation|booking|payment|provider|route|artifact|trace|screenshot|seed|dashboard|workflow|ci|run|commit|branch|database|prisma|persistence|medical|consent)[-_:/]?[A-Za-z0-9_.-]{6,}|(?:coverage|artifacts|test-results|reports|docs)\/[A-Za-z0-9_./-]{6,}|[A-Za-z0-9_-]{24,})/giu;
 
 const redactDashboardLaunchString = (value: string): string =>
   value.replace(sensitiveDashboardLaunchValuePattern, "[REDACTED]");
