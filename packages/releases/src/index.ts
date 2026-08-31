@@ -1752,11 +1752,16 @@ export function buildReleaseLaunchControlEvidencePlan(input: ReleaseLaunchContro
     requiredEvidence.push("provider-backed route, CI artifact, and secret-safe launch evidence");
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === releaseLaunchControlEvidenceRequiredEvidence.length
+      ? releaseLaunchControlEvidenceRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: releaseLaunchControlEvidenceRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
