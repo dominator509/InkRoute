@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { mobileTestingExecutionCommands as canonicalMobileTestingExecutionCommands } from "./mobile-testing-commands";
 
 export type MobileScreenId =
   | "auth"
@@ -1247,17 +1248,7 @@ export interface MobileTestingExecutionReadinessInput {
   ciMobileChecksPassed: boolean;
 }
 
-export const mobileTestingExecutionReadinessRequiredCommands = [
-  "pnpm --filter @inkroute/mobile-support typecheck",
-  "pnpm --filter @inkroute/mobile-support test",
-  "pnpm --filter @inkroute/mobile typecheck",
-  "pnpm --filter @inkroute/mobile test",
-  "pnpm --filter @inkroute/mobile ios",
-  "pnpm --filter @inkroute/mobile android",
-  "eas build --profile preview --platform all",
-  "eas update --channel preview",
-  "eas update --channel preview --message rollback-republish-drill --non-interactive",
-] as const;
+export const mobileTestingExecutionReadinessRequiredCommands = canonicalMobileTestingExecutionCommands;
 
 export const mobileTestingExecutionReadinessRequiredEvidence = [
   "Expo dependency install, runtime start, mobile typecheck, and static/security test output",
