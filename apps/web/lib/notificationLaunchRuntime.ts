@@ -699,7 +699,7 @@ export const notificationLaunchRuntimeMatrix = [
   },
 ] as const satisfies readonly NotificationLaunchRuntimeMatrixEntry[];
 
-export const notificationLaunchRuntimeReadiness = buildNotificationLaunchEvidencePlan({
+const notificationLaunchPackageReadiness = buildNotificationLaunchEvidencePlan({
   packageScripts: ["typecheck", "test"],
   notificationsTypecheckPassed: false,
   notificationsTestsPassed: false,
@@ -723,24 +723,32 @@ export const notificationLaunchRuntimeReadiness = buildNotificationLaunchEvidenc
 });
 
 export function buildNotificationLaunchDecisionRequiredEvidence(
-  readinessEvidence: typeof notificationLaunchRuntimeReadiness.requiredEvidence,
+  readinessEvidence: readonly string[],
 ): NotificationLaunchRequiredEvidence {
-  return [
-    ...readinessEvidence,
-    "NotificationLaunchRun row with command, control, artifact, provider send, suppression, and webhook replay matrices.",
-    "Artifact bundle proving notification package checks, provider sandbox/device sends, queue worker, delivery/provider/thread/message persistence, preference suppression, webhook signatures, retry/dead-letter, tenant isolation, privacy redaction, CI evidence, and secret-safe artifacts.",
-  ];
+  const launchRunEvidence = "NotificationLaunchRun row with command, control, artifact, provider send, suppression, and webhook replay matrices.";
+  const artifactBundleEvidence = "Artifact bundle proving notification package checks, provider sandbox/device sends, queue worker, delivery/provider/thread/message persistence, preference suppression, webhook signatures, retry/dead-letter, tenant isolation, privacy redaction, CI evidence, and secret-safe artifacts.";
+  if (readinessEvidence.includes(launchRunEvidence) && readinessEvidence.includes(artifactBundleEvidence)) {
+    return readinessEvidence as NotificationLaunchRequiredEvidence;
+  }
+  return [...readinessEvidence, launchRunEvidence, artifactBundleEvidence] as NotificationLaunchRequiredEvidence;
 }
 
 export type NotificationLaunchRequiredEvidence = readonly [
-  ...typeof notificationLaunchRuntimeReadiness.requiredEvidence,
+  ...typeof notificationLaunchPackageReadiness.requiredEvidence,
   "NotificationLaunchRun row with command, control, artifact, provider send, suppression, and webhook replay matrices.",
   "Artifact bundle proving notification package checks, provider sandbox/device sends, queue worker, delivery/provider/thread/message persistence, preference suppression, webhook signatures, retry/dead-letter, tenant isolation, privacy redaction, CI evidence, and secret-safe artifacts.",
 ];
 
 export const notificationLaunchRequiredEvidence = buildNotificationLaunchDecisionRequiredEvidence(
-  notificationLaunchRuntimeReadiness.requiredEvidence,
+  notificationLaunchPackageReadiness.requiredEvidence,
 );
+
+export const notificationLaunchRuntimeReadiness = {
+  ...notificationLaunchPackageReadiness,
+  requiredCommands: notificationLaunchRuntimeCommands,
+  requiredControls: notificationLaunchRuntimeControls,
+  requiredEvidence: notificationLaunchRequiredEvidence,
+};
 
 export function buildNotificationLaunchEvidenceDecision(
   input: NotificationLaunchEvidenceInput,
