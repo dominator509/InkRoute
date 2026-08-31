@@ -1,5 +1,6 @@
 ﻿import { buildNotificationLaunchEvidencePlan, buildNotificationPreferenceSuppressionPlan, buildNotificationProviderHandoffWorkerPlan } from "@inkroute/notifications";
 import { buildNotificationRedactionPrivacyDecision } from "./notificationRedactionPrivacyContract";
+import { notificationLaunchEvidenceRequiredCommands } from "@inkroute/notifications";
 import { buildNotificationTenantIsolationDecision } from "./notificationTenantIsolationContract";
 import { buildNotificationWebhookReplayDecision } from "./notificationWebhookReplayContract";
 
@@ -126,16 +127,7 @@ export const notificationLaunchRunPersistenceContract: NotificationLaunchRunPers
   ],
 };
 
-export const notificationLaunchRuntimeCommands = [
-  "pnpm --filter @inkroute/notifications typecheck",
-  "pnpm --filter @inkroute/notifications test",
-  "notification provider sandbox tests",
-  "notification queue worker source contract tests",
-  "provider webhook signature/replay tests",
-  "preference suppression source contract tests",
-  "Expo push device smoke",
-  "GitHub Actions notification launch evidence job",
-] as const;
+export const notificationLaunchRuntimeCommands = notificationLaunchEvidenceRequiredCommands;
 
 export const notificationLaunchRuntimeControls = [
   "pre-send-consent-preference-suppression-quiet-hours-rate-limit-resolution",
@@ -478,8 +470,8 @@ export const notificationLaunchRequiredExternalEvidence = [
 export const notificationLaunchLocalCommands = [
   "pnpm --filter @inkroute/notifications typecheck",
   "pnpm --filter @inkroute/notifications test",
-  "notification queue worker source contract tests",
-  "preference suppression source contract tests",
+  "notification queue worker integration tests",
+  "message thread/preference suppression integration tests",
 ] as const;
 
 export const notificationLaunchExternalCommands = [
@@ -676,7 +668,7 @@ export const notificationLaunchRuntimeMatrix = [
   },
   {
     id: "queue-worker-retry-dead-letter",
-    command: "notification queue worker source contract tests",
+    command: "notification queue worker integration tests",
     artifact: "coverage/notification-queue-worker.json",
     status: "wired",
   },
@@ -688,7 +680,7 @@ export const notificationLaunchRuntimeMatrix = [
   },
   {
     id: "preference-suppression-quiet-hours",
-    command: "preference suppression source contract tests",
+    command: "message thread/preference suppression integration tests",
     artifact: "coverage/notification-preference-suppression.json",
     status: "wired",
   },
