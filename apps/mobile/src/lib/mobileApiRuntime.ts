@@ -237,7 +237,7 @@ export const mobileApiRuntimeMatrix = [
   },
 ] as const satisfies readonly MobileApiRuntimeMatrixEntry[];
 
-export const mobileApiRuntimeReadiness = buildMobileApiRuntimeReadinessPlan({
+const mobileApiRuntimeReadinessPlan = buildMobileApiRuntimeReadinessPlan({
   packageScripts: { test: "vitest run", typecheck: "tsc --noEmit" },
   mobileSupportTestsPassed: false,
   mobileSupportTypecheckPassed: false,
@@ -257,6 +257,12 @@ export const mobileApiRuntimeReadiness = buildMobileApiRuntimeReadinessPlan({
   offlineReplayTested: false,
   screensUsingApiClient: [...mobileApiDomains],
 });
+
+export const mobileApiRuntimeReadiness = {
+  ...mobileApiRuntimeReadinessPlan,
+  requiredCommands: mobileApiRuntimeCommands,
+  requiredEvidence: mobileApiEvidenceFlags,
+};
 
 const missingFrom = (actual: readonly string[] | undefined, required: readonly string[]) => {
   const actualSet = new Set(actual ?? []);
