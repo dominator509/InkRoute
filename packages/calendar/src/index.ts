@@ -841,11 +841,16 @@ export function buildTimezoneRuntimeReadinessPlan(input: TimezoneRuntimeReadines
     requiredEvidence.push(timezoneRuntimeReadinessRequiredEvidence[4]);
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === timezoneRuntimeReadinessRequiredEvidence.length
+      ? timezoneRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: timezoneRuntimeReadinessRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1382,11 +1387,16 @@ export function buildGoogleCalendarRuntimeReadinessPlan(input: GoogleCalendarRun
     requiredEvidence.push(googleCalendarRuntimeReadinessRequiredEvidence[5]);
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === googleCalendarRuntimeReadinessRequiredEvidence.length
+      ? googleCalendarRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: googleCalendarRuntimeReadinessRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
@@ -1591,11 +1601,16 @@ export function buildTravelPublishRuntimeReadinessPlan(input: TravelPublishRunti
     requiredEvidence.push(travelPublishRuntimeReadinessRequiredEvidence[5]);
   }
 
+  const requiredEvidenceResult =
+    requiredEvidence.length === travelPublishRuntimeReadinessRequiredEvidence.length
+      ? travelPublishRuntimeReadinessRequiredEvidence
+      : requiredEvidence;
+
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     missingScripts,
     requiredCommands: travelPublishRuntimeReadinessRequiredCommands,
-    requiredEvidence,
+    requiredEvidence: requiredEvidenceResult,
     blockers,
   };
 }
