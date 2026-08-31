@@ -1,5 +1,7 @@
 ﻿import { buildDashboardTestExecutionEvidencePlan } from "@inkroute/testing";
 
+import { dashboardTestExecutionEvidenceRequiredCommands } from "@inkroute/testing";
+
 export type DashboardTestRuntimeStatus =
   | "wired"
   | "fixture-gated"
@@ -14,22 +16,7 @@ export interface DashboardTestRuntimeMatrixEntry {
   readonly status: DashboardTestRuntimeStatus;
 }
 
-export const dashboardTestRuntimeCommands = [
-  "pnpm --filter @inkroute/testing typecheck",
-  "pnpm --filter @inkroute/testing test",
-  "pnpm --filter @inkroute/dashboard typecheck",
-  "pnpm --filter @inkroute/dashboard build",
-  "pnpm --filter @inkroute/dashboard test",
-  "dashboard route rendering tests",
-  "dashboard auth/RBAC/tenant-isolation tests",
-  "dashboard booking mutation lifecycle tests",
-  "dashboard provider-safe state tests",
-  "dashboard axe accessibility checks",
-  "dashboard keyboard navigation checks",
-  "Playwright dashboard critical-flow suite",
-  "GitHub Actions dashboard test artifact upload",
-  "branch protection dashboard required-check proof",
-] as const;
+export const dashboardTestRuntimeCommands = dashboardTestExecutionEvidenceRequiredCommands;
 
 export const dashboardTestArtifactPaths = [
   "coverage/dashboard-test-runtime.json",
