@@ -41,10 +41,21 @@ import {
 
 describe("deployment readiness helpers", () => {
   it("masks secret values without hiding public values", () => {
-    expect(maskEnvValue("AUTH_SECRET", "super-secret-value")).toBe("su***ue");
+    expect(maskEnvValue("AUTH_SECRET", "super-secret-value")).toBe("******");
     expect(maskEnvValue("AUTH_SECRET", "short")).toBe("******");
     expect(maskEnvValue("NEXT_PUBLIC_APP_URL", "https://artist.example.com")).toBe("https://artist.example.com");
     expect(maskEnvValue("DATABASE_URL", undefined)).toBe("<missing>");
+  });
+
+  it("never leaks secret characters through partial masking", () => {
+    const secretValue = "sk_live_9f8e7d6c5b4a3f2e1d0c";
+    for (const name of ["AUTH_SECRET", "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "SENTRY_AUTH_TOKEN", "VERCEL_TOKEN", "CSRF_SECRET"]) {
+      const masked = maskEnvValue(name, secretValue);
+      expect(masked).not.toContain(secretValue);
+      expect(masked).not.toContain(secretValue.slice(0, 2));
+      expect(masked).not.toContain(secretValue.slice(-2));
+      expect(masked).toBe("******");
+    }
   });
 
   it("blocks production when required secrets are placeholders", () => {
