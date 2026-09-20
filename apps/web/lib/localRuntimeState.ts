@@ -231,12 +231,15 @@ export function resolveTenant(tenantSlug: string): { tenantId: string } | undefi
 export function checkRateLimit(ruleId: string, tenantSlug: string, identifier: string): LocalRateLimitDecision {
   const rule = rateLimitRules.find((candidate) => candidate.id === ruleId);
   if (!rule) {
+    // Fail closed: an unknown/misspelled rule must never silently disable
+    // rate limiting on a public route. Denying here surfaces the
+    // misconfiguration immediately instead of leaving the route unmetered.
     return {
-      allowed: true,
+      allowed: false,
       remaining: 0,
-      retryAfterSeconds: 0,
+      retryAfterSeconds: 60,
       status: "rule_not_found",
-      warning: "No local-contract rate-limit rule found; route is unmetered in local fallback.",
+      warning: "No local-contract rate-limit rule matched; request denied fail-closed until a rule is configured.",
       maxRequests: 0,
       windowSeconds: 0,
     };

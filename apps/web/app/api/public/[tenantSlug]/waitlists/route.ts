@@ -290,7 +290,7 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
   }
 
   const clientIp = getClientIp(Object.fromEntries(request.headers.entries()));
-  const rateLimit = checkRateLimit("public-message-submit", normalizedTenantSlug, `${clientIp}:${tenant.tenantId}:waitlist`);
+  const rateLimit = checkRateLimit("public-waitlist-submit", normalizedTenantSlug, `${clientIp}:${tenant.tenantId}:waitlist`);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       {

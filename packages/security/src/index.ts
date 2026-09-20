@@ -1576,6 +1576,8 @@ export const rateLimitRules: RateLimitRule[] = [
   { id: "public-booking-submit", routePattern: "/api/public/:tenantSlug/booking-requests", windowSeconds: 3600, maxRequests: 8, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-032", "GAP-095"] },
   { id: "public-upload-intent", routePattern: "/api/public/:tenantSlug/secure-upload-intents", windowSeconds: 3600, maxRequests: 20, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-096", "GAP-097"] },
   { id: "public-privacy-request", routePattern: "/api/public/:tenantSlug/privacy-requests", windowSeconds: 3600, maxRequests: 6, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-098", "GAP-101"] },
+  { id: "public-deposit-session", routePattern: "/api/public/:tenantSlug/deposit-sessions", windowSeconds: 3600, maxRequests: 6, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-004", "GAP-101"] },
+  { id: "public-waitlist-submit", routePattern: "/api/public/:tenantSlug/waitlists", windowSeconds: 3600, maxRequests: 10, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-031", "GAP-101"] },
   { id: "public-message", routePattern: "/api/public/:tenantSlug/messages", windowSeconds: 3600, maxRequests: 10, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-064", "GAP-068"] },
   { id: "fallback-error-report", routePattern: "/api/public/:tenantSlug/error-reports", windowSeconds: 900, maxRequests: 20, keyStrategy: "ip_tenant", status: "local_contract", gapIds: ["GAP-081", "GAP-101"] },
   { id: "provider-webhook", routePattern: "/api/webhooks/:provider", windowSeconds: 60, maxRequests: 1000, keyStrategy: "provider_signature", status: "local_contract", gapIds: ["GAP-061", "GAP-079", "GAP-101"] },
