@@ -433,8 +433,9 @@ export function maskEnvValue(name: string, value: string | undefined): string {
   if (value === undefined || value.trim().length === 0) return "<missing>";
   const isSecret = deploymentEnvironmentRequirements.some((requirement) => requirement.name === name && requirement.secret);
   if (!isSecret) return value;
-  if (value.length <= 6) return "******";
-  return `${value.slice(0, 2)}***${value.slice(-2)}`;
+  // Secrets are fully redacted: partial masking leaks the first/last characters of
+  // key material (key prefixes, checksum suffixes), which aids offline guessing.
+  return "******";
 }
 
 export function evaluateEnvironmentReadiness(
