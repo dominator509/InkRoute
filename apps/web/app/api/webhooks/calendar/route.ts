@@ -37,14 +37,18 @@ export async function POST(request: NextRequest) {
     artistId: artistId ?? "",
     calendarId: resourceId,
     action: "incremental_sync",
+    occurredAt: new Date().toISOString(),
     oauthClientConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
     requiredScopesGranted: false,
-    encryptedTokenRepositoryConfigured: false,
+    // The package input names this `refreshTokenEncrypted`; false here records
+    // that no encrypted token repository is configured, which blocks provider sync.
+    refreshTokenEncrypted: false,
     providerWorkerEnabled: false,
     idempotencyKey: `google-calendar-webhook:${channelId}:${messageNumber}`,
     pushChannelId: channelId,
     pushResourceId: resourceId,
-    syncToken: channelToken ?? undefined,
+    // Conditional spread: exactOptionalPropertyTypes rejects an explicit `undefined` syncToken.
+    ...(channelToken ? { syncToken: channelToken } : {}),
   });
 
   const responsePayload = {

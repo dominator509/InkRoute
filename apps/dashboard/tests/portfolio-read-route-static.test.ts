@@ -24,8 +24,8 @@ describe("dashboard portfolio read route contract", () => {
   });
 
   it("uses Prisma portfolio reads with projection redaction and sensitive asset audit logs", () => {
-    expect(listRouteSource).toContain("tx.portfolioItem.findMany");
-    expect(detailRouteSource).toContain("tx.portfolioItem.findFirst");
+    expect(listRouteSource).toContain("portfolioItemModel.findMany");
+    expect(detailRouteSource).toContain("portfolioItemModel.findFirst");
 
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain("buildTenantDashboardView");
@@ -61,8 +61,7 @@ describe("dashboard portfolio read route contract", () => {
 
   it("documents that portfolio reads are wired while storage writes remain provider-gated", () => {
     expect(portfolioPageSource).toContain("Tenant-scoped redacted portfolio read APIs now exist");
-    expect(portfolioPageSource).toContain("Portfolio reads now redact storage keys");
-    expect(portfolioPageSource).toContain("signed storage");
+    expect(portfolioPageSource).toContain("image writes and derivatives remain provider-gated");
     expect(trustPageSource).toContain("provider storage proof gated");
     expect(trustPageSource).not.toContain("signed storage not wired");
   });

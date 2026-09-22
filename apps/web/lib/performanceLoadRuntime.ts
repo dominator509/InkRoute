@@ -623,7 +623,6 @@ export const performanceLoadRuntimeReadiness = buildPerformanceLoadRuntimeReadin
   coreWebVitalsWithinBudget: false,
   publicRouteBudgetsPassed: false,
   dashboardRouteBudgetsPassed: false,
-  routeBudgetTargetsVerified: false,
   bookingLoadTestPassed: false,
   webhookBurstTestPassed: false,
   uploadIntentLoadTestPassed: false,

@@ -1,5 +1,17 @@
 import { createElement } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Dependency-light smoke coverage: react-native is mocked so screen elements
+// can be constructed without simulator or device services.
+vi.mock("react-native", () => ({
+  Pressable: "Pressable",
+  ScrollView: "ScrollView",
+  Text: "Text",
+  View: "View",
+  StyleSheet: { create: (styles: unknown) => styles, flatten: (s: unknown) => s },
+  Platform: { OS: "ios", select: (m: Record<string, unknown>) => m.ios ?? m.default },
+}));
+
 import { AuthScreen } from "../src/screens/AuthScreen";
 import { AppointmentsScreen } from "../src/screens/AppointmentsScreen";
 import { BookingRequestsScreen } from "../src/screens/BookingRequestsScreen";

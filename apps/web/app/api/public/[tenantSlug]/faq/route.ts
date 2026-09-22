@@ -61,7 +61,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
       data: {
         ...local,
         query: { limit: query.data.limit },
-        faqs: local.faqs.slice(0, query.data.limit),
+        faqs: local.data.slice(0, query.data.limit),
         boundary:
           "FAQ currently serves tenant-safe public content bundle entries; durable FAQ CMS rows remain part of the SEO publication persistence gap.",
         gapIds: ["GAP-026", "GAP-071", "GAP-076"],

@@ -171,8 +171,16 @@ describe("dashboard notification persistence runtime contract", () => {
   it("keeps worker, Postgres, tenant, CI, and artifact blockers explicit", () => {
     expect(notificationPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(notificationPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(notificationPersistenceRuntimeReadiness.requiredCommands).toBe(notificationPersistenceRuntimeCommands);
-    expect(notificationPersistenceRuntimeReadiness.requiredEvidence).toBe(notificationPersistenceDecisionRequiredEvidence);
+    expect(notificationPersistenceRuntimeReadiness.requiredCommands).toEqual([
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "notification repository Postgres integration tests",
+      "cross-tenant notification/message isolation tests",
+      "delivery status transition and read/unread state integration tests",
+    ]);
+    expect(notificationPersistenceRuntimeReadiness.requiredEvidence).toEqual([
+      "Postgres tenant-isolation and persistence integration test evidence",
+    ]);
     expect(notificationPersistenceRuntimeReadiness.blockers).not.toContain("Delivery status transition persistence must be available.");
     expect(notificationPersistenceRuntimeReadiness.blockers).not.toContain("NotificationReadState persistence must be available.");
     expect(notificationPersistenceRuntimeReadiness.blockers).not.toContain("NotificationProviderHandoff persistence must be available.");

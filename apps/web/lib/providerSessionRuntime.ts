@@ -1,4 +1,4 @@
-import { buildProviderSessionStoreReadinessPlan } from "@inkroute/auth";
+import { buildProviderSessionStoreReadinessPlan, providerSessionCallbackContract } from "@inkroute/auth";
 
 export type ProviderSessionRuntimeStatus =
   | "wired"

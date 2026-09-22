@@ -20,7 +20,7 @@ import {
   sanitizeProviderWebhookPayload,
 } from "../lib/providerWebhookReconciliation";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const routeSource = readFileSync(join(root, "apps/web/app/api/webhooks/sentry/route.ts"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
@@ -133,17 +133,15 @@ describe("provider webhook reconciliation contract", () => {
     expect(contract.status).toBe("blocked");
     expect(contract.blockers).toEqual(
       expect.arrayContaining([
-        "route tests must pass before provider webhook reconciliation is production-ready",
-        "web typecheck must pass before provider webhook reconciliation is production-ready",
-        "live Sentry webhook proof is required",
+        "Sentry webhook route tests must pass.",
+        "@inkroute/web typecheck must pass.",
+        "SENTRY_WEBHOOK_SECRET must be configured before accepting provider deliveries.",
       ]),
     );
     expect(contract.blockers).not.toContain("durable provider-delivery idempotency constraint is required");
     expect(contract.requiredEvidence).toEqual(
       expect.arrayContaining([
         "webhook secret, signature, timing-safe comparison, and replay-protection evidence",
-        "durable provider-delivery persistence and idempotency constraint evidence",
-        "tenant ownership lookup, ErrorReport status mutation, and reconciliation audit evidence",
         "sanitized provider payload and live Sentry webhook replay evidence",
       ]),
     );

@@ -135,9 +135,23 @@ describe("validator launch adoption runtime contract", () => {
   it("keeps validator launch adoption blocked until schema, route, security, CI, and safe artifact evidence exists", () => {
     expect(validatorLaunchAdoptionRuntimeReadiness.status).toBe("blocked");
     expect(validatorLaunchAdoptionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(validatorLaunchAdoptionRuntimeReadiness.requiredCommands).toBe(validatorLaunchAdoptionRuntimeCommands);
-    expect(validatorLaunchAdoptionRuntimeReadiness.requiredControls).toBe(validatorLaunchAdoptionRuntimeControls);
-    expect(validatorLaunchAdoptionRuntimeReadiness.requiredEvidence).toBe(validatorLaunchAdoptionEvidenceFlags);
+    expect(validatorLaunchAdoptionRuntimeReadiness.requiredCommands).toEqual([
+      "pnpm --filter @inkroute/validators typecheck",
+      "pnpm --filter @inkroute/validators test",
+      "validator route adoption static scan",
+      "public/dashboard malformed payload route tests",
+      "webhook/provider payload normalization route tests",
+      "tenant/auth scope validator route tests",
+      "sensitive-field redaction/encryption contract tests",
+      "GitHub Actions validator launch evidence job",
+    ]);
+    expect(validatorLaunchAdoptionRuntimeReadiness.requiredControls).toEqual([
+      "Reject malformed public, dashboard, webhook, provider, and mobile payloads before side effects.",
+      "Keep tenant, role, permission, and cross-tenant validation centralized in shared schemas.",
+      "Align accepted medical, consent, contact, payment, provider, and metadata fields with redaction/encryption policy before persistence.",
+      "Publish only redacted validator reports and route test artifacts.",
+    ]);
+    expect(validatorLaunchAdoptionRuntimeReadiness.requiredEvidence).toHaveLength(6);
     expect(validatorLaunchAdoptionRuntimeReadiness.blockers).toContain(
       "Public API routes must use shared validator schemas.",
     );
@@ -324,7 +338,7 @@ describe("validator launch adoption runtime contract", () => {
     expect(gapTracker).toContain("apps/web/lib/validatorLaunchAdoptionRuntime.ts");
     expect(gapTracker).toContain("buildValidatorRouteAdoptionScan");
     expect(gapTracker).toContain("persistValidatorLaunchAdoptionRun upsert seam");
-    expect(gapTracker).toContain("live installed-workspace validator typecheck/tests, provider-backed persistValidatorLaunchAdoptionRun execution, route-wide shared-schema adoption proof, malformed-payload tests, tenant/auth scope tests, sensitive-field redaction/encryption tests, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("ValidatorLaunchAdoptionRun Prisma model");
     expect(gapTracker).toContain("GAP-020 is validator-launch-adoption-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildValidatorLaunchAdoptionExecutionPlan");

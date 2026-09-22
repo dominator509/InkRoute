@@ -133,8 +133,21 @@ describe("travel publish runtime contract", () => {
   it("keeps repository evidence, provider queue, rollback, tenant, E2E, CI, and artifact blockers explicit while public API source is wired", () => {
     expect(travelPublishRuntimeReadiness.status).toBe("blocked");
     expect(travelPublishRuntimeReadiness.missingScripts).toEqual([]);
-    expect(travelPublishRuntimeReadiness.requiredCommands).toBe(travelPublishRuntimeCommands);
-    expect(travelPublishRuntimeReadiness.requiredEvidence).toBe(travelPublishDecisionRequiredEvidence);
+    expect(travelPublishRuntimeReadiness.requiredCommands).toEqual([
+      "pnpm --filter @inkroute/calendar typecheck",
+      "pnpm --filter @inkroute/calendar test",
+      "pnpm --filter @inkroute/dashboard typecheck",
+      "pnpm --filter @inkroute/web typecheck",
+      "travel publish repository integration tests",
+      "Nomad Mode dashboard-to-public E2E smoke",
+      "travel publish failed-provider rollback tests",
+    ]);
+    expect(travelPublishRuntimeReadiness.requiredEvidence).toEqual([
+      "authorized dashboard travel mutation route and cross-tenant denial tests",
+      "city waitlist matching and consent-filtered notification queue execution evidence",
+      "TravelAuditLog persistence plus failed-provider rollback executor test output",
+      "dashboard-to-public Nomad Mode publish E2E artifact with waitlist and rollback coverage",
+    ]);
     expect(travelPublishRuntimeReadiness.blockers).not.toContain("Public travel data API must read committed travel publish state.");
     expect(travelPublishRuntimeReadiness.blockers).toContain("Notification provider queue execution must be tested for travel publish jobs.");
     expect(travelPublishRuntimeReadiness.blockers).toContain("Failed provider action rollback tests must pass.");

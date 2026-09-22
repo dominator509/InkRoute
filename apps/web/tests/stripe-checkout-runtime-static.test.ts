@@ -12,7 +12,6 @@ import {
   stripeCheckoutExecutionPolicy,
   stripeCheckoutLocalCommands,
   stripeCheckoutRequiredExternalEvidence,
-  stripeCheckoutRouteRuntimeRequiredEvidence,
   stripeCheckoutRuntimeProofFiles,
   stripeCheckoutRuntimeCommands,
   stripeCheckoutRuntimeMatrix,
@@ -114,8 +113,11 @@ describe("Stripe Checkout runtime contract", () => {
   it("keeps Stripe SDK, auth, persistence, webhook, provider, and CI blockers explicit", () => {
     expect(stripeCheckoutRuntimeReadiness.status).toBe("blocked");
     expect(stripeCheckoutRuntimeReadiness.missingScripts).toEqual([]);
-    expect(stripeCheckoutRuntimeReadiness.requiredCommands).toBe(stripeCheckoutRuntimeCommands);
-    expect(stripeCheckoutRuntimeReadiness.requiredEvidence).toBe(stripeCheckoutRouteRuntimeRequiredEvidence);
+    expect(stripeCheckoutRuntimeReadiness.requiredCommands).toEqual(stripeCheckoutRuntimeCommands);
+    expect(stripeCheckoutRuntimeReadiness.requiredEvidence).toEqual([
+      "Stripe Checkout client route wiring with secret-backed test-mode configuration",
+      "Stripe test-mode Checkout and verified webhook reconciliation transcript",
+    ]);
     expect(stripeCheckoutRuntimeReadiness.requiredEvidence).not.toContain(
       "accepted-booking or signed-token authorization tests for valid, invalid, and expired deposit access",
     );

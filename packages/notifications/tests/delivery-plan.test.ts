@@ -8,6 +8,7 @@ import {
   providerWebhookRuntimeReadinessRequiredEvidence,
   preferenceMutationRequiredControls,
   preferenceCenterRuntimeReadinessRequiredCommands,
+  preferenceCenterRuntimeReadinessRequiredControls,
   preferenceCenterRuntimeReadinessRequiredEvidence,
   notificationProviderHandoffWorkerRequiredControls,
   notificationSchedulerRuntimeReadinessRequiredControls,
@@ -324,6 +325,7 @@ describe("notification delivery planning", () => {
     expect(plan.blockers).toEqual([
       "Tenant scope is required before SMS webhook reconciliation.",
       "Provider event id was already processed.",
+      "Provider message id is required to update an existing delivery log.",
       "Raw SMS webhook body must be captured before signature verification.",
       "Twilio signature header is required.",
       "Twilio webhook verifier must be configured before trusting callback payloads.",
@@ -334,7 +336,6 @@ describe("notification delivery planning", () => {
       "Quiet-hours policy must be configured before SMS callback processing is promoted.",
       "NotificationDelivery persistence must be available before SMS callback reconciliation.",
       "ProviderEvent persistence must be available for SMS callback replay protection.",
-      "Inbound message thread persistence must be available for HELP or client replies.",
       "Idempotency store must be available before applying SMS callback side effects.",
       "SMS webhook payload must be redacted before audit logging or previews.",
     ]);
@@ -904,6 +905,7 @@ describe("notification delivery planning", () => {
     expect(plan.requiredEvidence).toEqual([
       mobilePushRuntimeReadinessRequiredEvidence[0],
       mobilePushRuntimeReadinessRequiredEvidence[1],
+      mobilePushRuntimeReadinessRequiredEvidence[2],
       mobilePushRuntimeReadinessRequiredEvidence[3],
     ]);
     expect(allMissingEvidencePlan.requiredEvidence).toBe(mobilePushRuntimeReadinessRequiredEvidence);
@@ -1778,6 +1780,7 @@ describe("notification delivery planning", () => {
       auditLogPersistenceAvailable: true,
       idempotencyStoreAvailable: true,
       postgresRetentionIntegrationTestsPassed: true,
+      secretSafeArtifactsReviewed: true,
     });
 
     expect(plan).toMatchObject({

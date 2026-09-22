@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-08T14:55:02.380Z",
+  "generatedAt": "2026-09-22T12:07:41.546Z",
   "source": "Phase 18 workspace runtime readiness",
   "status": "fail",
   "level": "needs-attention",
@@ -25,6 +25,17 @@
       ]
     },
     {
+      "id": "runtime-command-evidence",
+      "title": "Runtime command evidence",
+      "status": "pass",
+      "evidence": "Runtime evidence audit exists with 0 missing required evidence item(s).",
+      "gapIds": [
+        "GAP-001",
+        "GAP-012",
+        "GAP-132"
+      ]
+    },
+    {
       "id": "pnpm-lockfile",
       "title": "pnpm lockfile",
       "status": "pass",
@@ -46,7 +57,7 @@
       "id": "production-blockers",
       "title": "Open production blockers",
       "status": "fail",
-      "evidence": "126 production-blocking gaps remain across 133 gap rows.",
+      "evidence": "133 production-blocking gaps remain across 133 gap rows.",
       "gapIds": [
         "GAP-001",
         "GAP-002",
@@ -59,6 +70,7 @@
     "corepack enable",
     "pnpm install",
     "pnpm workspace:all",
+    "pnpm workspace:runtime-evidence",
     "pnpm handoff:all",
     "pnpm quality:all",
     "pnpm typecheck",

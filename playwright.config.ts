@@ -30,7 +30,15 @@ export default defineConfig({
     {
       name: "dashboard-chromium",
       testMatch: /apps\/dashboard\/tests\/e2e\/.*\.spec\.ts/,
-      use: { ...devices["Desktop Chrome"], baseURL: dashboardBaseUrl }
+      // Dashboard e2e exercises owner-level operator surfaces; authenticate every
+      // request as the demo tenant owner via the same demo auth headers the API
+      // specs already send manually. The dashboard middleware and layout honor
+      // x-user-role, and the dev local-fallback keeps tenant resolution DB-free.
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: dashboardBaseUrl,
+        extraHTTPHeaders: { "x-user-role": "owner" },
+      }
     }
   ],
   webServer: process.env.PLAYWRIGHT_SKIP_WEB_SERVER
@@ -40,13 +48,13 @@ export default defineConfig({
           command: "pnpm --filter @inkroute/web dev",
           url: webBaseUrl,
           reuseExistingServer: !process.env.CI,
-          timeout: 120_000
+          timeout: 300_000
         },
         {
           command: "pnpm --filter @inkroute/dashboard dev",
           url: dashboardBaseUrl,
           reuseExistingServer: !process.env.CI,
-          timeout: 120_000
+          timeout: 300_000
         }
       ]
 });

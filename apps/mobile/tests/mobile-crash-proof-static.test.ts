@@ -11,7 +11,7 @@ describe("mobile crash proof coverage contract", () => {
     expect(screenSource).toContain("forced crash proof pending");
     expect(screenSource).toContain("Crash capture contract");
     expect(crashSource).toContain("fallbackReporterConfigured: true");
-    expect(crashSource).toContain("offlineQueue");
+    expect(crashSource).toContain("offlineBuffered");
     expect(crashSource).toContain("blocked_high_risk_payload");
   });
 

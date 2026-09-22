@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { expoEasRuntimeEvidenceRequiredCommands } from "@inkroute/releases";
 import {
   buildMobileUpdatesArtifactReview,
   buildMobileUpdatesEvidenceDecision,
@@ -91,9 +92,14 @@ describe("mobile OTA updates runtime contract", () => {
   it("keeps EAS project, credential, build, OTA, rollback, and monitoring blockers explicit", () => {
     expect(mobileUpdatesRuntimeEvidence.status).toBe("blocked");
     expect(mobileUpdatesRuntimeEvidence.missingScripts).toEqual([]);
-    expect(mobileUpdatesRuntimeEvidence.requiredCommands).toBe(mobileUpdatesRuntimeCommands);
-    expect(mobileUpdatesRuntimeEvidence.requiredEvidence).toBe(mobileUpdatesEvidenceFlags);
-    expect(mobileUpdatesRuntimeEvidence.requiredEvidence).toEqual(mobileUpdatesEvidenceFlags);
+    expect(mobileUpdatesRuntimeEvidence.requiredCommands).toEqual(expoEasRuntimeEvidenceRequiredCommands);
+    expect(mobileUpdatesRuntimeEvidence.requiredEvidence).toEqual([
+      "apps/mobile app config contains the real non-secret EAS project id, update URL, runtimeVersion policy, and preview/production channel mapping.",
+      "EAS credentials are configured outside source control and preview/prod native builds are linked to release evidence.",
+      "Preview OTA update id is recorded and a device running the preview binary receives the update.",
+      "Rollback republish drill confirms the previous compatible update can be restored on the preview channel.",
+      "Update adoption, error, and release-health monitoring are wired before production OTA.",
+    ]);
     expect(mobileUpdatesRuntimeEvidence.blockers).toContain("Run eas build --profile preview --platform all.");
     expect(mobileUpdatesRuntimeEvidence.blockers).toContain("Run eas update --channel preview and attach the update id.");
     expect(mobileUpdatesRuntimeEvidence.blockers).toContain("Republish the previous compatible update to preview and verify device receipt.");

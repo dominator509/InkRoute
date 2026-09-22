@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { observabilityLaunchRequiredEvidence } from "@inkroute/observability";
+import { observabilityLaunchRequiredEvidence, observabilityLaunchRequiredControls, observabilityLaunchRequiredCommands } from "@inkroute/observability";
 import {
   buildObservabilityLaunchArtifactReview,
   buildObservabilityLaunchEvidenceDecision,
@@ -179,19 +179,19 @@ describe("observability launch runtime contract", () => {
     expect(observabilitySource).toContain("buildObservabilityLaunchEvidencePlan");
     expect(observabilityTests).toContain("buildObservabilityLaunchEvidencePlan");
     expect(dashboardErrorReportRoute).toContain("error:read");
-    expect(dashboardErrorReportRoute).toContain("AuditLog");
-    expect(dashboardErrorReportTest).toContain("metadata redaction");
-    expect(webGlobalError).toContain("ErrorBoundary");
-    expect(dashboardGlobalError).toContain("ErrorBoundary");
-    expect(mobileStatusScreen).toContain("Crash reporting");
+    expect(dashboardErrorReportRoute).toContain("auditLog");
+    expect(dashboardErrorReportTest).toContain("redacts metadata");
+    expect(webGlobalError).toContain("GlobalError");
+    expect(dashboardGlobalError).toContain("GlobalError");
+    expect(mobileStatusScreen).toContain("Crash, release, and updates");
   });
 
   it("keeps observability runtime blockers explicit until provider evidence exists", () => {
     expect(observabilityLaunchRuntimeReadiness.status).toBe("blocked");
     expect(observabilityLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(observabilityLaunchRuntimeReadiness.requiredCommands).toBe(observabilityLaunchRuntimeCommands);
-    expect(observabilityLaunchRuntimeReadiness.requiredControls).toBe(observabilityLaunchRuntimeControls);
-    expect(observabilityLaunchRuntimeReadiness.requiredEvidence).toBe(observabilityLaunchRequiredEvidence);
+    expect(observabilityLaunchRuntimeReadiness.requiredCommands).toEqual(observabilityLaunchRequiredCommands);
+    expect(observabilityLaunchRuntimeReadiness.requiredControls).toEqual(observabilityLaunchRequiredControls);
+    expect(observabilityLaunchRuntimeReadiness.requiredEvidence).toEqual(observabilityLaunchRequiredEvidence);
     expect(observabilityLaunchRuntimeReadiness.blockers).toContain(
       "Sentry web SDK must be configured for public web runtime.",
     );

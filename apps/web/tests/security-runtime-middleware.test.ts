@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { middleware as webMiddleware } from "../middleware";
 import { middleware as dashboardMiddleware } from "../../dashboard/middleware";
 
-function request(url: string, init?: RequestInit): NextRequest {
+function request(url: string, init?: ConstructorParameters<typeof NextRequest>[1]): NextRequest {
   return new NextRequest(url, init);
 }
 
@@ -79,5 +79,21 @@ describe("security runtime middleware", () => {
     expect(response.headers.get("X-InkRoute-Security-Runtime")).toBe("ready");
     expect(response.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
     expect(response.headers.get("Permissions-Policy")).toContain("camera=()");
+  });
+
+  it("does not canonical-redirect loopback hosts to the public canonical domain", () => {
+    for (const url of ["http://127.0.0.1:3000/", "http://localhost:3000/cities/seattle-wa"]) {
+      const response = webMiddleware(request(url));
+
+      expect(response.status).not.toBe(308);
+      expect(response.headers.get("location") ?? "").not.toContain("inkroute.example");
+    }
+  });
+
+  it("still canonical-redirects non-loopback hosts to the public canonical domain", () => {
+    const response = webMiddleware(request("http://www.inkroute.example/cities/seattle-wa"));
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://inkroute.example/cities/seattle-wa");
   });
 });

@@ -26,7 +26,7 @@ describe("dashboard review read route contract", () => {
   });
 
   it("loads tenant-scoped reviews and writes read audit logs", () => {
-    expect(routeSource).toContain("tx.review.findMany");
+    expect(routeSource).toContain("reviewModel.findMany");
     expect(routeSource).toContain("where: {");
     expect(routeSource).toContain("tenantId");
     expect(routeSource).toContain("tx.auditLog.create");

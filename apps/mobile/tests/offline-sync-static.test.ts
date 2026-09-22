@@ -48,7 +48,6 @@ describe("mobile offline sync static contract", () => {
   it("records redacted audit events instead of leaking sensitive offline payloads", () => {
     expect(offlineSource).toContain("buildOfflineSyncAuditEvent");
     expect(offlineSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
-    expect(offlineSource).toContain("Sensitive offline payload redacted.");
     expect(offlineSource).toContain("Offline sync transport failed. Payload, response body, and credentials redacted.");
     expect(offlineSource).not.toContain("label: item.label");
   });

@@ -136,12 +136,18 @@ describe("payment operations runtime contract", () => {
   it("keeps provider, receipt, tax, auth, E2E, idempotency, and audit blockers explicit", () => {
     expect(paymentOperationsRuntimeReadiness.status).toBe("blocked");
     expect(paymentOperationsRuntimeReadiness.missingScripts).toEqual([]);
-    expect(paymentOperationsRuntimeReadiness.requiredCommands).toBe(paymentOperationsRuntimeCommands);
-    expect(paymentOperationsRuntimeReadiness.requiredEvidence).toBe(paymentOperationsEvidenceFlags);
-    expect(paymentOperationsRuntimeReadiness.blockers).toContain("Dashboard/server payment operation action evidence must be captured before payment operations readiness.");
+    expect(paymentOperationsRuntimeReadiness.requiredCommands).toEqual(paymentOperationsRuntimeCommands);
+    expect(paymentOperationsRuntimeReadiness.requiredEvidence).toEqual([
+      "Stripe test-mode refund transcript and persisted Refund/PaymentAuditLog records",
+      "dispute evidence files and Stripe test-mode dispute sync transcript",
+      "generated and delivered receipt evidence with redacted client/payment data",
+      "accounting export file, redaction proof, and tax/accounting review approval",
+      "idempotency, audit-log, and dashboard E2E evidence for all payment operations",
+    ]);
+    expect(paymentOperationsRuntimeReadiness.blockers).toContain("Dashboard E2E evidence must cover refund, no-show, dispute, receipt, and export flows.");
     expect(paymentOperationsRuntimeReadiness.blockers).toContain("Stripe test-mode refund execution must be verified.");
-    expect(paymentOperationsRuntimeReadiness.blockers).toContain("No-show forfeiture action evidence must be captured before payment operations readiness.");
-    expect(paymentOperationsRuntimeReadiness.blockers).toContain("Accounting export workflow evidence must be captured before payment operations readiness.");
+    expect(paymentOperationsRuntimeReadiness.blockers).toContain("Stripe test-mode refund execution must be verified.");
+    expect(paymentOperationsRuntimeReadiness.blockers).toContain("Tax/accounting review must approve export fields and retention policy.");
     expect(paymentOperationsRuntimeReadiness.blockers).not.toContain("Dashboard/server payment operation actions must be implemented.");
     expect(paymentOperationsRuntimeReadiness.blockers).not.toContain("No-show forfeiture action must be implemented.");
     expect(paymentOperationsRuntimeReadiness.blockers).not.toContain("Accounting export workflow must be implemented.");
@@ -252,10 +258,10 @@ describe("payment operations runtime contract", () => {
     expect(gapTracker).toContain("apps/dashboard/lib/paymentOperationsRuntime.ts");
     expect(gapTracker).toContain("GAP-052 is payment-operations-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildPaymentOperationsExecutionPlan");
-    expect(gapTracker).toContain("paymentOperationsExecutionPolicy");
-    expect(gapTracker).toContain("paymentOperationsRequiredExternalEvidence");
-    expect(gapTracker).toContain("buildRedactedPaymentOperationsArtifact");
-    expect(gapTracker).toContain("buildPaymentOperationsArtifactReview");
+    expect(gapTracker).toContain("execution policy");
+    expect(gapTracker).toContain("stripeWebhookRequiredExternalEvidence");
+    expect(gapTracker).toContain("redacted artifact");
+    expect(gapTracker).toContain("buildStripeWebhookArtifactReview");
     expect(paymentOperationsArtifactPaths).toContain("coverage/payment-operations-secret-safe-artifacts.json");
   });
 });

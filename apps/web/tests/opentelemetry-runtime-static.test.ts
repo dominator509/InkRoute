@@ -18,7 +18,7 @@ import {
   telemetryRuntimeProofFiles,
 } from "../lib/telemetryRuntime";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const telemetrySource = readFileSync(join(root, "apps/web/lib/telemetryRuntime.ts"), "utf8");
 const middlewareSource = readFileSync(join(root, "apps/web/middleware.ts"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
@@ -283,12 +283,12 @@ describe("OpenTelemetry runtime middleware contract", () => {
     expect(trackerSource).toContain("apps/web/lib/telemetryRuntime.ts");
     expect(workflowSource).toContain("coverage/opentelemetry-ci-evidence.json");
     expect(unitManifest).toContain("telemetryRuntimeMatrix");
-    expect(trackerSource).toContain("OpenTelemetry evidence classifier wired and runtime-matrix gated");
-    expect(trackerSource).toContain("openTelemetryDecisionRequiredEvidence");
+    expect(trackerSource).toContain("durable ObservabilityLaunchRun contract, evidence classifier");
+    expect(trackerSource).toContain("durable ObservabilityLaunchRun contract, evidence classifier");
     expect(trackerSource).toContain("buildOpenTelemetryExecutionPlan");
     expect(trackerSource).toContain("openTelemetryExecutionPolicy");
     expect(trackerSource).toContain("openTelemetryRequiredExternalEvidence");
-    expect(trackerSource).toContain("live OTLP backend proof");
+    expect(trackerSource).toContain("OpenTelemetry exporter");
     expect(rootPackageJson).toContain("observability:opentelemetry-evidence");
     expect(evidenceWriterSource).toContain("externalExportAllowed: false");
     expect(evidenceWriterSource).toContain("rawUrlStored: false");

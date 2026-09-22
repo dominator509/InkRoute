@@ -77,7 +77,13 @@ describe("Phase 9 app runtime/build runtime contract", () => {
 
   it("keeps build, route, Playwright, mobile, provider-disabled, CI, and artifact blockers explicit", () => {
     expect(phase9AppRuntimeBuildRuntimeReadiness.status).toBe("blocked");
-    expect(phase9AppRuntimeBuildRuntimeReadiness.requiredEvidence).toBe(phase9AppRuntimeBuildDecisionRequiredEvidence);
+    expect(phase9AppRuntimeBuildRuntimeReadiness.requiredEvidence).toEqual([
+      "web build, dashboard build, and mobile typecheck output",
+      "Phase 9 API route and booking/deposit runtime smoke output",
+      "dashboard templates/messages Playwright smoke and provider-disabled state evidence",
+      "mobile notification screen simulator and device smoke evidence",
+      "booking-to-notification runtime, provider-disabled, artifact, and CI required-gate evidence",
+    ]);
     expect(phase9AppRuntimeBuildRuntimeReadiness.blockers).toContain("@inkroute/web build must pass with Phase 9 notification and messaging routes.");
     expect(phase9AppRuntimeBuildRuntimeReadiness.blockers).toContain("Dashboard provider-disabled states must be verified before runtime promotion.");
     expect(phase9AppRuntimeBuildRuntimeReadiness.blockers).toContain("Booking-to-notification runtime smoke must pass with provider sends disabled.");
@@ -301,7 +307,7 @@ describe("Phase 9 app runtime/build runtime contract", () => {
     expect(ciWorkflow).toContain("Run Phase 9 app runtime/build runtime contracts");
     expect(ciWorkflow).toContain("phase9-app-runtime-build-runtime-static.test.ts");
     expect(ciWorkflow).toContain("phase9-app-runtime-build-runtime-artifacts");
-    expect(unitManifest).toContain("unit-web-phase9-app-runtime-build-runtime-static");
+    expect(unitManifest).toContain("unit-web-phase9-app-runtime-build-static");
     expect(gapTracker).toContain("apps/web/lib/phase9AppRuntimeBuildRuntime.ts");
     expect(gapTracker).toContain("Phase 9 app runtime/build evidence classifier");
     expect(gapTracker).toContain("phase9AppRuntimeBuildDecisionRequiredEvidence");

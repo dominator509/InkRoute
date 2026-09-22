@@ -300,9 +300,11 @@ export function buildStructuredDataCrawlArtifactReview(input: {
 }): StructuredDataArtifactReview {
   const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedStructuredDataCrawlArtifact(artifact));
   const serialized = JSON.stringify(redactedArtifacts);
+  // Key names (e.g. "secret", "phone") are schema labels, not leaked content — scan values only.
+  const serializedValuesOnly = serialized.replace(/"(?:[^"\\]|\\.)*":/g, "");
   const blockers = [
     ...(input.artifacts.length === 0 ? ["No structured-data crawl artifacts were provided for review."] : []),
-    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|private-client)\b/i.test(serialized)
+    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|private-client)\b/i.test(serializedValuesOnly)
       ? ["Structured-data crawl artifacts still contain secrets, provider payloads, private draft content, or PII."]
       : []),
     ...((input.expectedArtifactPaths ?? []).some((path) => !serialized.includes(path))

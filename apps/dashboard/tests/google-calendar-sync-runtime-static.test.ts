@@ -33,7 +33,7 @@ describe("Google Calendar sync runtime contract", () => {
   const syncStaticTest = readWorkspaceFile("apps/dashboard/tests/google-calendar-sync-static.test.ts");
   const syncRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/google-sync/route.ts");
   const webhookRoute = readWorkspaceFile("apps/web/app/api/webhooks/calendar/route.ts");
-  const calendarRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/route.ts");
+  const calendarRoute = readWorkspaceFile("apps/dashboard/app/api/calendar/google-sync/route.ts");
   const readRouteStaticTest = readWorkspaceFile("apps/dashboard/tests/calendar-read-route-static.test.ts");
   const ciWorkflow = readWorkspaceFile(".github/workflows/ci.yml");
   const unitManifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
@@ -139,8 +139,13 @@ describe("Google Calendar sync runtime contract", () => {
   it("keeps SDK, OAuth, token, provider, smoke, push, isolation, and artifact blockers explicit", () => {
     expect(googleCalendarSyncRuntimeReadiness.status).toBe("blocked");
     expect(googleCalendarSyncRuntimeReadiness.missingScripts).toEqual([]);
-    expect(googleCalendarSyncRuntimeReadiness.requiredCommands).toBe(googleCalendarSyncRuntimeCommands);
-    expect(googleCalendarSyncRuntimeReadiness.requiredEvidence).toBe(googleCalendarSyncDecisionRequiredEvidence);
+    expect(googleCalendarSyncRuntimeReadiness.requiredCommands).toEqual(googleCalendarSyncRuntimeCommands);
+    expect(googleCalendarSyncRuntimeReadiness.requiredEvidence).toEqual([
+      "Google SDK/client setup plus OAuth app, scopes, and callback route evidence",
+      "Google test calendar FreeBusy and event insert/update/delete smoke-test output",
+      "full sync, incremental sync-token persistence, and invalid-token recovery evidence",
+      "retry/idempotency, tenant-isolation, and Google test-calendar artifact evidence",
+    ]);
     expect(googleCalendarSyncRuntimeReadiness.blockers).toContain("Google Calendar SDK/client dependency must be installed and pinned.");
     expect(googleCalendarSyncRuntimeReadiness.blockers).toContain("Google FreeBusy smoke test must pass against a test calendar.");
     expect(googleCalendarSyncRuntimeReadiness.blockers).toContain("Google test calendar evidence must be attached for OAuth, freebusy, event sync, push, and recovery flows.");

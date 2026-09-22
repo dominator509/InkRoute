@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { prisma } from "@inkroute/db";
 import { buildPreferenceTokenHash, type PreferenceMutationAction } from "@inkroute/notifications";
 import { NextResponse, type NextRequest } from "next/server";

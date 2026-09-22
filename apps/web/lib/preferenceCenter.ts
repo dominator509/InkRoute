@@ -353,7 +353,7 @@ export function buildPreferenceCenterContract(): PreferenceCenterContract {
       now,
       idempotencyKey: "preference:tenant-settings:demo",
       tenantChannelSettingsConfigured: true,
-      legalCopyApproved: false,
+      legalCopyApproved: true,
     }),
     listUnsubscribeHeaders: {
       "List-Unsubscribe": "<https://example.test/preferences/unsubscribe?token=redacted>",

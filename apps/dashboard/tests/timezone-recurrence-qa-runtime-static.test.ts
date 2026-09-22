@@ -108,14 +108,18 @@ describe("timezone recurrence QA runtime contract", () => {
     expect(routeSource).toContain("TIMEZONE_RECURRENCE_RUNTIME_EVIDENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("diagnosticTimezoneQaDisabled");
     expect(calendarRoute).toContain("timezone");
-    expect(readRouteStaticTest).toContain("timezone");
+    expect(readRouteStaticTest).toContain("documents that calendar reads are wired while OAuth/provider writes remain gated");
   });
 
   it("keeps Temporal/date-library, boundary, DST, recurrence, provider, and seeded persistence blockers explicit", () => {
     expect(timezoneRecurrenceRuntimeReadiness.status).toBe("blocked");
     expect(timezoneRecurrenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(timezoneRecurrenceRuntimeReadiness.requiredCommands).toBe(timezoneRecurrenceRuntimeCommands);
-    expect(timezoneRecurrenceRuntimeReadiness.requiredEvidence).toBe(timezoneRecurrenceDecisionRequiredEvidence);
+    expect(timezoneRecurrenceRuntimeReadiness.requiredCommands).toEqual(timezoneRecurrenceRuntimeCommands);
+    expect(timezoneRecurrenceRuntimeReadiness.requiredEvidence).toEqual([
+      "DST, recurrence expansion, and all-day travel-window test output",
+      "cross-city internal, Google, and ICS provider render smoke-test artifacts",
+      "seeded persistence-boundary tests for stored availability, appointments, travel windows, and recurrence expansion",
+    ]);
     expect(timezoneRecurrenceRuntimeReadiness.blockers).not.toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
     expect(calendarSource).toContain("explicitTimezoneDateBoundaryStrategy");
     expect(calendarSource).toContain("buildExplicitTimezoneDateBoundaryEvidence");
@@ -267,7 +271,7 @@ describe("timezone recurrence QA runtime contract", () => {
     expect(gapTracker).toContain("apps/dashboard/lib/timezoneRecurrenceQaRuntime.ts");
     expect(gapTracker).toContain("timezone/provider evidence classifier");
     expect(gapTracker).toContain("local timezone recurrence evidence builder");
-    expect(gapTracker).toContain("GAP-058 is timezone-recurrence-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Phase 8 helpers use ISO instants and explicit timezone strings");
     expect(gapTracker).toContain("buildTimezoneRecurrenceExecutionPlan");
     expect(gapTracker).toContain("timezoneRecurrenceExecutionPolicy");
     expect(gapTracker).toContain("timezoneRecurrenceRequiredExternalEvidence");

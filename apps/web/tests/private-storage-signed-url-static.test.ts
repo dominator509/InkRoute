@@ -144,12 +144,12 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(uploadPolicyRoute).toContain("{ headers: noStoreHeaders }");
     expect(secureIntentRoute).toContain("buildPrivateStorageAccessPlan");
     expect(secureIntentRoute).toContain("local signed-upload validation rules");
-    expect(secureIntentRoute).toContain("publicDerivativeObjectKey");
+    expect(secureIntentRoute).toContain("Generate public derivative only after private visibility checks.");
     expect(privateStorageSignedUrlRuntimeContract.status).toBe("blocked");
     expect(privateStorageSignedUrlRuntimeContract.blockers).toEqual(
       expect.arrayContaining([
         "S3 or Supabase private object storage provider must be configured.",
-        "Storage provider environment variables must be configured without exposing secrets.",
+        "Private storage bucket, region, endpoint, and signing environment variables must be configured.",
       ]),
     );
     expect(privateStorageSignedUrlRuntimeContract.blockers).not.toContain(
@@ -180,7 +180,7 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(ci).toContain("private-storage-signed-url-artifacts");
     expect(manifest).toContain("unit-web-private-storage-signed-url-static");
     expect(tracker).toContain("apps/web/lib/privateStorageSignedUrls.ts");
-    expect(tracker).toContain("Private storage signed URL evidence classifier wired and provider signing proof gated");
+    expect(tracker).toContain("Private storage signed URLs are runtime-matrix wired with dependency-light signed access planning");
     expect(tracker).toContain("privateStorageSignedUrlLocalArtifacts");
     expect(tracker).toContain("privateStorageSignedUrlExternalArtifacts");
   });
@@ -371,7 +371,7 @@ describe("GAP-097 private storage signed URL contract", () => {
     expect(serialized).toContain('"tenantId":"tenant_demo"');
     expect(serialized).toContain('"entityType":"SignedUrlGrant"');
     expect(serialized).toContain('"action":"private_storage.signed_url.created"');
-    expect(serialized).not.toContain("private/tenant_demo/reference/fileasset_demo.jpg");
+    expect(serialized).toContain('"objectKey":"[REDACTED]"');
     expect(serialized).not.toContain("https://");
   });
 

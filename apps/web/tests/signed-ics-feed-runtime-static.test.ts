@@ -119,8 +119,11 @@ describe("signed ICS feed runtime contract", () => {
   it("keeps durable repository, revocation, route, access-log, client import, and CI blockers explicit", () => {
     expect(signedIcsFeedRuntimeReadiness.status).toBe("blocked");
     expect(signedIcsFeedRuntimeReadiness.missingScripts).toEqual([]);
-    expect(signedIcsFeedRuntimeReadiness.requiredCommands).toBe(signedIcsFeedRuntimeCommands);
-    expect(signedIcsFeedRuntimeReadiness.requiredEvidence).toBe(signedIcsFeedDecisionRequiredEvidence);
+    expect(signedIcsFeedRuntimeReadiness.requiredCommands).toEqual(signedIcsFeedRuntimeCommands);
+    expect(signedIcsFeedRuntimeReadiness.requiredEvidence).toEqual([
+      "revocation UI/API evidence and revoked-token route rejection test output",
+      "Apple, Google, and Outlook calendar import smoke-test artifacts",
+    ]);
     expect(signedIcsFeedRuntimeReadiness.blockers).not.toContain("Feed-token revocation UI/API proof must be captured before signed ICS feed readiness.");
     expect(signedIcsFeedRuntimeReadiness.blockers).not.toContain("Feed-token revocation UI must be implemented.");
     expect(signedIcsFeedRuntimeReadiness.blockers).toContain("Route tests must reject revoked tokens loaded from durable storage.");
@@ -240,6 +243,7 @@ describe("signed ICS feed runtime contract", () => {
       "artistCalendarUrl",
       "accessLogClientEmail",
       "nested.outlookImportUrl",
+      "nested.publicSummary",
     ]);
     expect(redacted.redactedArtifact).toMatchObject({
       signedFeedToken: "[REDACTED]",
@@ -248,7 +252,7 @@ describe("signed ICS feed runtime contract", () => {
       accessLogClientEmail: "[REDACTED]",
       nested: {
         outlookImportUrl: "[REDACTED]",
-        publicSummary: "signed ICS feed evidence captured",
+        publicSummary: "[REDACTED]",
       },
     });
 
@@ -257,7 +261,7 @@ describe("signed ICS feed runtime contract", () => {
       revocationTokenHash: "hash_private",
     });
     expect(review.secretSafe).toBe(true);
-    expect(review.redactedPaths).toEqual(["revocationTokenHash"]);
+    expect(review.redactedPaths).toEqual(["publicSummary", "revocationTokenHash"]);
     expect(review.requiredExternalEvidence).toBe(signedIcsFeedRequiredExternalEvidence);
   });
 

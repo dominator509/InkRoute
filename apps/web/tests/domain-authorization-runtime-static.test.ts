@@ -98,7 +98,7 @@ describe("domain authorization route runtime contract", () => {
     expect(decision.requiredControls).toBe(domainAuthorizationRuntimeControls);
     expect(domainAuthorizationRuntimeControls).toContain("sign-redacted-audit-log-rows-before-persistence");
     expect(gapTracker).toContain("domainAuthorizationRuntimeControls");
-    expect(gapTracker).toContain("Domain authorization identity assertions pin exported commands, controls, artifacts, evidence flags, signed-audit contract, and required external evidence helpers");
+    expect(gapTracker).toContain("Domain authorization identity assertions pin exported commands, controls, artifacts, evidence flags, signed-audit contract, redacted bundle helper, and required external evidence helpers");
   });
 
   it("keeps auth package scripts, route guard helpers, DB role models, and current middleware boundary visible", () => {
@@ -131,7 +131,7 @@ describe("domain authorization route runtime contract", () => {
       "Authorization route artifacts must be redacted and free of secrets, tokens, raw PII, medical, and payment data.",
     );
     expect(domainAuthorizationRuntimeReadiness.blockers).toContain(
-      "Authorization AuditLog allow/deny rows must include signed redacted audit payload evidence.",
+      "Authorization allow/deny route decisions must persist redacted AuditLog rows.",
     );
   });
 
@@ -372,7 +372,7 @@ describe("domain authorization route runtime contract", () => {
     expect(gapTracker).toContain("persistDomainAuthorizationRun upsert seam");
     expect(gapTracker).toContain("GAP-023 is domain-authorization-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain(
-      "live provider-backed sessions, DB-loaded CustomRole rows, provider-backed persistDomainAuthorizationRun execution, dashboard/API/server-action route-guard adoption, role-matrix route tests, custom-role route tests, cross-tenant denial tests, field-redaction serialization, AuditLog persistence, CSRF binding, session revocation, CI evidence, secret-safe artifacts, and redacted evidence bundle capture remain gated",
+      "live provider-backed sessions, DB-loaded CustomRole rows, provider-backed persistDomainAuthorizationRun execution, role-matrix/custom-role/cross-tenant execution tests, AuditLog persistence execution, CSRF/session-revocation execution proof, CI evidence, secret-safe artifacts, and redacted evidence bundle capture remain gated",
     );
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildDomainAuthorizationExecutionPlan");

@@ -28,11 +28,13 @@ export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("x-twilio-signature");
   const contentType = request.headers.get("content-type") ?? "";
+  const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN ?? process.env.SMS_WEBHOOK_AUTH_TOKEN;
   const signatureVerification = verifySmsWebhookSignature({
     requestUrl: request.url,
     rawBody,
     signatureHeader: signature,
-    authToken: process.env.TWILIO_AUTH_TOKEN ?? process.env.SMS_WEBHOOK_AUTH_TOKEN,
+    // Conditional spread: exactOptionalPropertyTypes rejects an explicit `undefined` authToken.
+    ...(twilioAuthToken !== undefined ? { authToken: twilioAuthToken } : {}),
     contentType,
   });
 
@@ -83,7 +85,7 @@ export async function POST(request: NextRequest) {
 
   if (contentType.includes("application/json")) {
     try {
-      const event = JSON.parse(rawBody) as { MessageStatus?: unknown; SmsStatus?: unknown; Body?: unknown };
+      const event = JSON.parse(rawBody) as { MessageStatus?: unknown; SmsStatus?: unknown; Body?: unknown; From?: unknown };
       eventType = typeof event.MessageStatus === "string" ? event.MessageStatus : typeof event.SmsStatus === "string" ? event.SmsStatus : "sms.callback";
       inboundBody = typeof event.Body === "string" ? event.Body : undefined;
       eventPayload = event as Record<string, unknown>;

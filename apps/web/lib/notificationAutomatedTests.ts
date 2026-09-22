@@ -224,9 +224,11 @@ export function buildNotificationAutomationArtifactReview(input: {
 }): NotificationArtifactReview {
   const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedNotificationAutomationArtifact(artifact));
   const serialized = JSON.stringify(redactedArtifacts);
+  // Key names (e.g. "providerToken") are schema labels, not leaked content — scan values only.
+  const serializedValuesOnly = serialized.replace(/"(?:[^"\\]|\\.)*":/g, "");
   const blockers = [
     ...(input.artifacts.length === 0 ? ["No notification automation artifacts were provided for review."] : []),
-    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|twilio|resend|expo_push_token)\b/i.test(serialized)
+    ...(/\b(secret(?!-safe)|token|authorization|cookie|ari@example|206 555|twilio|resend|expo_push_token)\b/i.test(serializedValuesOnly)
       ? ["Notification automation artifacts still contain provider credentials, tokens, or PII."]
       : []),
     ...((input.expectedArtifactPaths ?? []).some((path) => !serialized.includes(path))

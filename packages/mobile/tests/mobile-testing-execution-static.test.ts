@@ -103,7 +103,17 @@ describe("GAP-108 mobile testing execution wiring", () => {
   it("keeps execution readiness blocked until real Expo, device, provider, OTA, artifact, and CI evidence exists", () => {
     expect(mobileTestingExecutionReadiness.status).toBe("blocked");
     expect(mobileTestingExecutionReadiness.missingScripts).toEqual([]);
-    expect(mobileTestingExecutionReadiness.requiredCommands).toBe(mobileTestingExecutionCommands);
+    expect(mobileTestingExecutionReadiness.requiredCommands).toEqual([
+      "pnpm --filter @inkroute/mobile-support typecheck",
+      "pnpm --filter @inkroute/mobile-support test",
+      "pnpm --filter @inkroute/mobile typecheck",
+      "pnpm --filter @inkroute/mobile test",
+      "pnpm --filter @inkroute/mobile ios",
+      "pnpm --filter @inkroute/mobile android",
+      "eas build --profile preview --platform all",
+      "eas update --channel preview",
+      "eas update --channel preview --message rollback-republish-drill --non-interactive",
+    ]);
     expect(mobileTestingExecutionReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Expo dependency install, runtime start, mobile typecheck, and static/security test output",
@@ -115,8 +125,8 @@ describe("GAP-108 mobile testing execution wiring", () => {
     );
     expect(mobileTestingExecutionReadiness.blockers).toEqual(
       expect.arrayContaining([
-        "Expo dependencies must install before mobile runtime testing.",
-        "Expo runtime must start for simulator and device QA.",
+        "Expo dependencies must install before simulator or device QA evidence is meaningful.",
+        "Expo runtime must start locally or in a preview build before device QA evidence is meaningful.",
         "Offline reconnect QA must prove encrypted queue persistence, idempotent replay, retry, and conflict handling.",
         "EAS update rollback QA must prove preview adoption and rollback republish on the same runtime."
       ])
@@ -198,7 +208,7 @@ describe("GAP-108 mobile testing execution wiring", () => {
     expect(ciWorkflow).toContain("coverage/mobile-testing-execution.json");
     expect(ciWorkflow).toContain("test-results/mobile-testing-execution");
     expect(unitManifest).toContain("unit-mobile-testing-execution-static");
-    expect(unitManifest).toContain("MobileTestingRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("MobileTestingRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("packages/mobile/src/mobile-testing-execution.ts");
     expect(gapTracker).toContain("Mobile testing evidence classifier wired and Expo/device proof gated");
     expect(gapTracker).toContain("GAP-108 is mobile-testing-execution-matrix wired with evidence classifier");

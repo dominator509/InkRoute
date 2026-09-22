@@ -80,7 +80,7 @@ See `.env.example` for the canonical starter list.
 
 ## Phase 5 dashboard environment note
 
-The Phase 5 dashboard remains static. Production dashboard work will require auth/session secrets, database URLs, storage credentials, Stripe keys, email/SMS/push provider keys, calendar OAuth credentials, Sentry DSNs, and release/feature flag environment values before actions can be enabled.
+The Phase 5 dashboard remains static. Production dashboard work will require auth/session secrets (gated), database URLs, storage credentials, Stripe keys, email/SMS/push provider keys, calendar OAuth credentials, Sentry DSNs, and release/feature flag environment values before actions can be enabled.
 
 ## Phase 6 mobile environment note
 
@@ -88,7 +88,7 @@ The Phase 6 Expo scaffold still requires production mobile variables and secrets
 
 ## Phase 7 payment environment notes
 
-The Phase 7 payment code intentionally avoids importing the Stripe SDK or reading Stripe secrets. Before enabling live payment routes, configure test-mode credentials first, pin a Stripe API version through SDK configuration or account settings, run Stripe CLI webhook tests, and confirm no secret values are exposed to the browser.
+The Phase 7 payment code intentionally avoids importing the Stripe SDK or reading Stripe secrets. Before enabling live payments (gated)ing live payment routes, configure test-mode credentials first, pin a Stripe API version through SDK configuration or account settings, run Stripe CLI webhook tests, and confirm no secret values are exposed to the browser.
 
 ## Phase 8 calendar/travel environment notes
 

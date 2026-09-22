@@ -80,9 +80,9 @@ describe("GAP-104 security app runtime verification contract", () => {
     expect(securityAppRuntimeVerificationPlan.status).toBe("blocked");
     expect(securityAppRuntimeVerificationPlan.blockers).toEqual(
       expect.arrayContaining([
-        "Web app typecheck must pass with shared security package imports.",
-        "Web app build must pass with security middleware and route imports.",
-        "Dashboard app build must pass with security middleware and trust routes.",
+        "Web app typecheck must pass with Phase 13 security imports, routes, pages, and middleware.",
+        "Web app build must pass under real Next dependencies with security pages, public routes, and middleware.",
+        "Dashboard app build must pass under real Next dependencies with security pages, API routes, and middleware.",
         "Mobile app typecheck must pass with SystemStatus security, tenant-isolation, privacy, and upload preview surfaces.",
         "Web route smoke tests must exercise trust, privacy, legal, consent, and secure-upload surfaces.",
         "Mobile SystemStatus screen smoke must prove security posture, privacy, tenant isolation, and upload preview render under app dependencies.",
@@ -91,8 +91,8 @@ describe("GAP-104 security app runtime verification contract", () => {
     expect(securityAppRuntimeVerificationPlan.requiredEvidence).toEqual(
       expect.arrayContaining([
         "web/dashboard/mobile typecheck and build command output",
-        "web/dashboard route smoke and middleware runtime smoke transcripts",
-        "browser runtime, mobile device/emulator, and CI artifact evidence",
+        "web/dashboard route and middleware runtime smoke transcripts",
+        "browser, mobile device/emulator, and CI runtime artifact bundle",
       ]),
     );
   });
@@ -173,7 +173,7 @@ describe("GAP-104 security app runtime verification contract", () => {
     expect(ci).toContain("apps/web/tests/security-app-runtime-verification-static.test.ts");
     expect(ci).toContain("security-app-runtime-verification-artifacts");
     expect(manifest).toContain("unit-web-security-app-runtime-verification-static");
-    expect(manifest).toContain("SecurityAppRuntimeRun Prisma model and app row contract are wired");
+    expect(manifest).toContain("SecurityAppRuntimeRun Prisma model/app row contract are wired");
     expect(tracker).toContain("apps/web/lib/securityAppRuntimeVerification.ts");
     expect(tracker).toContain("Security app runtime evidence classifier wired and build/device proof gated");
     expect(tracker).toContain("GAP-104 is security-app-runtime-verification-matrix wired with evidence classifier");

@@ -93,12 +93,12 @@ describe("dashboard build/runtime verification contract", () => {
     expect(dashboardBuildRuntimeReadiness.status).toBe("blocked");
     expect(dashboardBuildRuntimeReadiness.missingScripts).toEqual([]);
     expect(dashboardBuildRuntimeReadiness.requiredCommands).toBe(dashboardBuildRuntimeReadinessRequiredCommands);
-    expect(dashboardBuildRuntimeReadiness.requiredEvidence).toBe(dashboardLaunchEvidenceRequiredEvidence);
-    expect(dashboardBuildRuntimeReadiness.tenantScopedApisImplemented).toBe(true);
-    expect(dashboardBuildRuntimeReadiness.prismaRepositoriesImplemented).toBe(true);
-    expect(dashboardBuildRuntimeReadiness.realMutationsEnabled).toBe(true);
-    expect(dashboardBuildRuntimeReadiness.mutationAuditLogsPersisted).toBe(true);
-    expect(dashboardBuildRuntimeReadiness.providerActionsImplemented).toBe(false);
+    expect(dashboardBuildRuntimeReadiness.requiredEvidence).toEqual([
+      "dashboard typecheck, build, unit/contract, and Playwright smoke output",
+      "seeded tenant data, provider-backed auth, and tenant-scoped API evidence",
+      "provider action, RBAC denial, cross-tenant denial, and field-redaction evidence",
+      "loading/empty/error state, CI, and secret-safe artifact evidence",
+    ]);
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("@inkroute/dashboard typecheck must pass.");
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("@inkroute/dashboard build must pass.");
     expect(dashboardBuildRuntimeReadiness.blockers).toContain("Dashboard Playwright smoke tests must pass with seeded tenant data.");
@@ -228,7 +228,7 @@ describe("dashboard build/runtime verification contract", () => {
     expect(gapTracker).toContain("buildRedactedDashboardBuildRuntimeArtifact");
     expect(gapTracker).toContain("buildDashboardBuildRuntimeArtifactReview");
     expect(gapTracker).toContain("GAP-039 is dashboard-build-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-039 is build-runtime-matrix wired");
+    expect(gapTracker).toContain("GAP-039 is dashboard-build-runtime-matrix wired with evidence");
     expect(dashboardBuildArtifactPaths).toContain("coverage/dashboard-build-secret-safe-artifacts.json");
   });
 });

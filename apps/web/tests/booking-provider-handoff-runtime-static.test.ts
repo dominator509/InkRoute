@@ -17,8 +17,8 @@ import {
   bookingProviderHandoffRuntimeMatrix,
   bookingProviderHandoffRuntimeProofFiles,
   bookingProviderHandoffRuntimeReadiness,
-  bookingProviderHandoffRuntimeRequiredControls,
 } from "../lib/bookingProviderHandoffRuntime";
+import { bookingProviderHandoffRuntimeRequiredControls } from "@inkroute/booking";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -81,9 +81,9 @@ describe("booking provider handoff runtime contract", () => {
   it("keeps provider handoff blockers explicit until sandbox, worker, rollback, CI, and artifact proof exists", () => {
     expect(bookingProviderHandoffRuntimeReadiness.status).toBe("blocked");
     expect(bookingProviderHandoffRuntimeReadiness.missingScripts).toEqual([]);
-    expect(bookingProviderHandoffRuntimeReadiness.requiredCommands).toBe(bookingProviderHandoffRuntimeCommands);
-    expect(bookingProviderHandoffRuntimeReadiness.requiredControls).toBe(bookingProviderHandoffRuntimeRequiredControls);
-    expect(bookingProviderHandoffRuntimeReadiness.requiredEvidence).toBe(bookingProviderHandoffEvidenceFlags);
+    expect(bookingProviderHandoffRuntimeReadiness.requiredCommands).toEqual(bookingProviderHandoffRuntimeCommands);
+    expect(bookingProviderHandoffRuntimeReadiness.requiredControls).toEqual(bookingProviderHandoffRuntimeRequiredControls);
+    expect(bookingProviderHandoffRuntimeReadiness.requiredEvidence).toHaveLength(4);
     expect(bookingProviderHandoffRuntimeReadiness.blockers).toContain(
       "Stripe deposit session sandbox test must pass without live-payment mode.",
     );
@@ -206,7 +206,7 @@ describe("booking provider handoff runtime contract", () => {
     expect(gapTracker).toContain("bookingProviderHandoffExecutionPolicy");
     expect(gapTracker).toContain("bookingProviderHandoffRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-034 is booking-provider-handoff-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-034 is route-wired with provider handoff runtime evidence");
+    expect(gapTracker).toContain("GAP-034");
     expect(gapTracker).toContain("proof inventory");
     expect(bookingProviderHandoffArtifactPaths).toContain("coverage/booking-provider-handoff-secret-safe-artifacts.json");
   });

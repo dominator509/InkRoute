@@ -180,7 +180,7 @@ export const timezoneRecurrenceExternalCommands = [
   "GitHub Actions timezone recurrence QA evidence job",
 ] as const;
 
-const sensitiveTimezoneRecurrenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|timezone|calendar|google|ics|artist|appointment|travel|recurrence|availability|email|phone|medical|payment|customer)/i;
+const sensitiveTimezoneRecurrenceArtifactKey = /(secret|token|password|private|client|tenant|domain|database|db|url|uri|provider|session|refresh|timezone|calendar|google|(?:^|_)ics|artist|appointment|travel|recurrence|availability|email|phone|medical|payment|customer)/i;
 
 const redactTimezoneRecurrenceArtifactValue = (
   value: unknown,

@@ -105,7 +105,7 @@ describe("workspace audit helpers", () => {
 
   it("allows shared root dev dependency tooling for external test imports", () => {
     const summary = auditWorkspaceDependencies({
-      projects: [baseProject],
+      projects: [baseProject, { ...baseProject, name: "@inkroute/types", path: "packages/types", dependencies: {} }],
       imports: [],
       externalImports: [
         {
@@ -115,7 +115,7 @@ describe("workspace audit helpers", () => {
           importSpecifier: "vitest",
         },
       ],
-      tsconfigPathAliases: ["@inkroute/example"],
+      tsconfigPathAliases: ["@inkroute/example", "@inkroute/types"],
       rootDevDependencies: new Set(["vitest"]),
     });
 

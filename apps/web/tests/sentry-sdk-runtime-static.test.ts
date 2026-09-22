@@ -246,7 +246,7 @@ describe("GAP-080 Sentry SDK runtime implementation", () => {
     expect(ciWorkflow).toContain("sentry-sdk-implementation-artifacts");
     expect(ciWorkflow).toContain("coverage/sentry-sdk-ci-evidence.json");
     expect(unitManifest).toContain("sentrySdkImplementationMatrix");
-    expect(gapTracker).toContain("Sentry SDK implementation evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("Sentry SDK implementation evidence classifier");
     expect(gapTracker).toContain("sentrySdkImplementationDecisionRequiredEvidence");
   });
 

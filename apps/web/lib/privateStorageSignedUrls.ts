@@ -78,7 +78,7 @@ export function createPrivateStorageProviderSigner(input: {
     request: PrivateStorageSignedUrlInput,
   ): Promise<PrivateStorageProviderSignedUrl> => {
     const contract = buildPrivateStorageSignedUrlContract({ ...request, operation });
-    if (contract.plan.status !== "ready") {
+    if (contract.plan.status !== "signed_url_ready") {
       throw new Error(contract.plan.reasons.join(" "));
     }
 
@@ -326,7 +326,7 @@ export function buildRedactedPrivateStorageSignedUrlArtifact(value: unknown): un
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|signedUrl|signedUrlHash|providerPayload|rawBody|stack|objectKey|bucket/i.test(key)
+        /token|secret|authorization|credential|password|signedUrl|signedUrlHash|providerPayload|rawBody|stack|objectKey|bucket|supabase[_-]?service[_-]?role[_-]?key/i.test(key)
           ? "[REDACTED]"
           : buildRedactedPrivateStorageSignedUrlArtifact(entry),
       ]),

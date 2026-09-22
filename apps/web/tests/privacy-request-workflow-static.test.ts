@@ -110,8 +110,8 @@ describe("GAP-098 privacy request workflow contract", () => {
     expect(privacyWorkflowRuntimeContract.status).toBe("blocked");
     expect(privacyWorkflowRuntimeContract.blockers).toEqual(
       expect.arrayContaining([
-        "Requester identity proofing must be configured before export/delete/rectification execution.",
-        "Tenant relationship proofing must prevent cross-tenant privacy request execution.",
+        "Identity verification must gate export, delete, anonymize, and rectification execution.",
+        "Tenant/member relationship proofing must bind requester claims to the tenant data being exported or deleted.",
         "Storage export/delete workflow must handle private reference, consent, healed-photo, document, and public derivative objects.",
         "Legal hold handling must retain protected consent, payment, tax, and audit data while explaining partial denial.",
       ]),
@@ -156,7 +156,7 @@ describe("GAP-098 privacy request workflow contract", () => {
     expect(ci).toContain("privacy-request-workflow-artifacts");
     expect(manifest).toContain("unit-web-privacy-request-workflow-static");
     expect(tracker).toContain("apps/web/lib/privacyRequestWorkflow.ts");
-    expect(tracker).toContain("Privacy request workflow evidence classifier wired and worker proof gated");
+    expect(tracker).toContain("privacy request workflow evidence classifier");
     expect(tracker).toContain("privacyWorkflowLocalArtifacts");
     expect(tracker).toContain("privacyWorkflowExternalArtifacts");
   });

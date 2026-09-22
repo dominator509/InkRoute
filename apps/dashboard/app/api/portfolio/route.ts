@@ -468,7 +468,7 @@ export async function POST(request: NextRequest) {
           isPublic: input.isPublic,
           publishedAt: input.isPublic ? new Date() : null,
           attributionKey: `portfolio:${tenantId}:${input.slug}`,
-          styles: { connect: styles.map((style) => ({ id: style.id })) },
+          styles: { connect: styles.map((style: { id: string }) => ({ id: style.id })) },
           images: {
             create: {
               tenantId,

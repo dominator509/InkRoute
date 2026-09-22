@@ -75,7 +75,7 @@ export function evaluateMobileAuthSession(input: {
     biometricUnlocked: input.biometricUnlocked,
     secureStoreAvailable: input.secureStoreAvailable,
     refreshTokenAvailable: input.session?.refreshTokenStored ?? false,
-    logoutRequested: input.logoutRequested,
+    ...(input.logoutRequested !== undefined ? { logoutRequested: input.logoutRequested } : {}),
   });
 }
 
@@ -87,7 +87,7 @@ export function buildMobileAuthAuditEvent(
   return {
     action: decision.auditAction,
     tenantId: decision.tenantId,
-    userId,
+    ...(userId !== undefined ? { userId } : {}),
     decision: decision.action,
     status: decision.status,
     occurredAt,
@@ -137,7 +137,7 @@ export async function resolveMobileSessionGate(input: {
     now: input.now,
     secureStoreAvailable: input.store.secureStoreAvailable,
     biometricUnlocked,
-    logoutRequested: input.logoutRequested,
+    ...(input.logoutRequested !== undefined ? { logoutRequested: input.logoutRequested } : {}),
   });
 
   if (decision.action === "logout") await input.store.clearSession("logout");

@@ -30,8 +30,8 @@ describe("Stripe webhook route static contract", () => {
   it("persists audit logs, replay ids, and transaction reconciliation in order", () => {
     expect(webhookSource).toContain("verifyStripeWebhookMoneyMatch");
     expect(webhookSource).toContain("moneyMatch.canReconcileMoney");
-    expect(webhookSource.indexOf("persistPaymentAuditLog")).toBeLessThan(webhookSource.indexOf("persistProcessedEvent"));
-    expect(webhookSource.indexOf("persistProcessedEvent")).toBeLessThan(webhookSource.indexOf("adapter.reconcile"));
+    expect(webhookSource.indexOf("await input.adapter.persistPaymentAuditLog({")).toBeLessThan(webhookSource.indexOf("await input.replayStore.persistProcessedEvent("));
+    expect(webhookSource.indexOf("await input.replayStore.persistProcessedEvent(")).toBeLessThan(webhookSource.indexOf("await input.adapter.reconcile({"));
     expect(webhookSource).toContain("shouldRunTransaction");
   });
 

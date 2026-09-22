@@ -39,6 +39,7 @@ describe("GAP-117 database operations runtime wiring", () => {
       "pnpm deploy:verify-database-ops",
       "pnpm db:generate",
       "pnpm --filter @inkroute/db db:validate",
+      "pnpm db:migrate",
       "database migration dry-run",
       "database generated SQL review",
       "database staging migration apply",
@@ -116,7 +117,7 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(databaseOperationsRuntimeReadiness.missingChecks).toEqual(
       expect.arrayContaining(["staging-branch-provisioned", "migration-dry-run", "backup-restore-drill", "branch-promotion"])
     );
-    expect(databaseOperationsRuntimeReadiness.requiredCommands).toBe(databaseOperationsRuntimeCommands);
+    expect(databaseOperationsRuntimeReadiness.requiredCommands).toEqual(databaseOperationsRuntimeCommands);
     expect(databaseOperationsRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Redacted staging database branch/provider label and secret-store reference.",
@@ -150,8 +151,9 @@ describe("GAP-117 database operations runtime wiring", () => {
     expect(ciWorkflow).toContain("test-results/database-operations-runtime");
     expect(unitManifest).toContain("unit-web-database-operations-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/databaseOperationsRuntime.ts");
-    expect(gapTracker).toContain("Database operations evidence classifier wired and provider DB proof gated");
-    expect(gapTracker).toContain("GAP-117 is database-operations-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Database operations evidence classifier wired with execution policy, redacted artifact review");
+    expect(gapTracker).toContain("provider DB proof gated");
+    expect(gapTracker).toContain("GAP-117 is database-operations-runtime-matrix wired with split migration dry-run");
     expect(gapTracker).toContain("databaseOperationsRuntimeCommands");
     expect(gapTracker).toContain("buildDatabaseOperationsRuntimeExecutionPlan");
     expect(gapTracker).toContain("databaseOperationsRuntimeExecutionPolicy");

@@ -15,6 +15,7 @@ vi.mock("@inkroute/db", () => ({
 }));
 
 import { GET as getReleaseHealth } from "../app/api/public/[tenantSlug]/release-health/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 beforeEach(() => {
   dbMocks.tenantFindUnique.mockReset();
@@ -66,7 +67,7 @@ describe("release health route", () => {
 
   it("fail-closes production release health instead of returning local fallback release data", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await getReleaseHealth(new Request("https://local.test/api/public/inkroute-demo/release-health"), {
@@ -85,13 +86,13 @@ describe("release health route", () => {
       expect(payload.error.gapIds).toContain("GAP-090");
       expect(payload.productionBoundary.localReleaseHealthDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
   it("fail-closes production release health when persisted release reads are unavailable", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
     dbMocks.tenantFindUnique.mockResolvedValue({ id: "tenant_release_test" });
 
     try {
@@ -111,7 +112,7 @@ describe("release health route", () => {
       expect(payload.error.gapIds).toContain("GAP-087");
       expect(payload.productionBoundary.localReleaseHealthFallbackDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 

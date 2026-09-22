@@ -1,5 +1,7 @@
 import type { Permission, Role } from "@inkroute/types";
 
+export type { Permission } from "@inkroute/types";
+
 export const allPermissions: Permission[] = [
   "tenant:read",
   "tenant:write",
@@ -68,6 +70,7 @@ export const rolePermissions: Record<Role, Permission[]> = {
   ],
   studio_manager: [
     "tenant:read",
+    "tenant:write",
     "booking:read",
     "booking:write",
     "client:read",

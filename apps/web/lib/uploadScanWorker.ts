@@ -39,6 +39,7 @@ export interface UploadScanWorkerPlan {
   objectKey: string;
   detectedMimeType: string | null;
   status: UploadScanPipelinePlan["status"];
+  malwareVerdict: MalwareScanVerdict;
   quarantineRequired: boolean;
   publicDerivativeAllowed: boolean;
   derivativeMetadata: ReturnType<typeof buildUploadDerivativeMetadataPlan>;
@@ -268,7 +269,7 @@ export function buildRedactedUploadScanWorkerArtifact(value: unknown): unknown {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /token|secret|authorization|credential|password|signedUrl|scannerPayload|rawBody|stack|objectKey|sourceObjectKey/i.test(key)
+        /token|secret|authorization|credential|password|signedUrl|scanner[_-]?api[_-]?key|scannerPayload|rawBody|stack|objectKey|sourceObjectKey/i.test(key)
           ? "[REDACTED]"
           : buildRedactedUploadScanWorkerArtifact(entry),
       ]),
@@ -355,7 +356,7 @@ export async function persistUploadScanWorkerOutcome(
     data: {
       scanStatus,
       detectedMimeType: input.plan.detectedMimeType,
-      malwareVerdict: input.plan.plan.malwareVerdict,
+      malwareVerdict: input.plan.malwareVerdict,
       ...(input.scanProvider ? { scanProvider: input.scanProvider } : {}),
       scanCheckedAt: checkedAt,
       quarantineReason,
@@ -469,6 +470,7 @@ export function buildUploadScanWorkerPlan(input: UploadScanWorkerInput): UploadS
     objectKey: input.objectKey,
     detectedMimeType,
     status: plan.status,
+    malwareVerdict: input.malwareVerdict,
     quarantineRequired: plan.quarantineRequired,
     publicDerivativeAllowed: plan.publicDerivativeAllowed,
     derivativeMetadata,

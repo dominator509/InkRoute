@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { dashboardRepositoryRouteRequiredCommands } from "@inkroute/config";
 import {
   buildDashboardDataLayerArtifactReview,
   buildDashboardDataLayerEvidenceDecision,
@@ -98,7 +99,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(readRepoFile("apps/dashboard/tests/booking-state-route-static.test.ts")).toContain("tx.auditLog.create");
     expect(readRepoFile("apps/dashboard/tests/client-read-route-static.test.ts")).toContain("buildTenantDashboardView");
     expect(readRepoFile("apps/dashboard/tests/payment-read-route-static.test.ts")).toContain("providerPaymentId");
-    expect(readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts")).toContain("Portfolio reads now redact storage keys");
+    expect(readRepoFile("apps/dashboard/tests/portfolio-read-route-static.test.ts")).toContain("image writes and derivatives remain provider-gated");
     expect(readRepoFile("apps/dashboard/tests/message-read-route-static.test.ts")).toContain("uses Prisma message-thread reads with body/provider/contact redaction and audit logs");
     expect(dashboardMetricsRoute).toContain("dashboardMetricsQuerySchema.safeParse");
     expect(dashboardMetricsRoute).toContain("VALIDATION_FAILED");
@@ -125,8 +126,13 @@ describe("dashboard data layer runtime contract", () => {
     expect(dashboardDataLayerRuntimeReadiness.missingPrismaLoaders).toEqual([]);
     expect(dashboardDataLayerRuntimeReadiness.missingRouteWiring).toEqual([]);
     expect(dashboardDataLayerRuntimeReadiness.remainingStaticDemoImports).toEqual([]);
-    expect(dashboardDataLayerRuntimeReadiness.requiredCommands).toBe(dashboardDataLayerRuntimeCommands);
-    expect(dashboardDataLayerRuntimeReadiness.requiredEvidence).toBe(dashboardRepositoryRouteRequiredEvidence);
+    expect(dashboardDataLayerRuntimeReadiness.requiredCommands).toEqual(dashboardRepositoryRouteRequiredCommands);
+    expect(dashboardDataLayerRuntimeReadiness.requiredEvidence).toEqual([
+      "seeded database dashboard route smoke plus repository/API test output",
+      "tenant isolation, RBAC guard, and redaction test output",
+      "no-store cache and sensitive-read AuditLog evidence",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]);
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Seeded database dashboard route smoke must pass.");
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Tenant-isolation tests must reject cross-tenant dashboard data reads.");
     expect(dashboardDataLayerRuntimeReadiness.blockers).toContain("Dashboard data artifacts must be redacted and free of secrets, raw PII, medical notes, payment data, provider tokens, and private object keys.");
@@ -263,7 +269,7 @@ describe("dashboard data layer runtime contract", () => {
     expect(gapTracker).toContain("dashboardDataLayerExecutionPolicy");
     expect(gapTracker).toContain("dashboardDataLayerRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-037 is dashboard-data-layer-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-037 is repository-route-matrix wired");
+    expect(gapTracker).toContain("GAP-037 is dashboard-data-layer-runtime-matrix wired with evidence classifier");
     expect(dashboardDataLayerArtifactPaths).toContain("coverage/dashboard-data-secret-safe-artifacts.json");
   });
 });

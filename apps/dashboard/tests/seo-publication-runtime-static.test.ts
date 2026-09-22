@@ -203,7 +203,9 @@ describe("SEO publication runtime contract", () => {
   it("keeps integration, tenant, dashboard, CI, and artifact blockers explicit after local persistence is wired", () => {
     expect(seoPublicationRuntimeReadiness.status).toBe("blocked");
     expect(seoPublicationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(seoPublicationRuntimeReadiness.requiredEvidence).toBe(seoPublicationDecisionRequiredEvidence);
+    expect(seoPublicationRuntimeReadiness.requiredEvidence).toEqual([
+      "SEO Prisma integration, tenant isolation, and dashboard publish-flow test evidence",
+    ]);
     expect(seoPublicationRuntimeReadiness.blockers).not.toContain("FAQ, review, and image SEO associations must persist tenant-safely.");
     expect(seoPublicationRuntimeReadiness.blockers).not.toContain("SEO revalidation jobs must persist after publication commits.");
     expect(seoPublicationRuntimeReadiness.blockers).not.toContain("SEO publication idempotency store must be available.");

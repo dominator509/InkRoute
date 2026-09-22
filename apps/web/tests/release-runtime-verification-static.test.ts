@@ -17,7 +17,7 @@ import {
   releaseRuntimeVerificationRequiredExternalEvidence,
 } from "../lib/releaseRuntimeVerification";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const releaseHealthRoute = readFileSync(join(root, "apps/web/app/api/public/[tenantSlug]/release-health/route.ts"), "utf8");
 const dashboardReleaseRoute = readFileSync(join(root, "apps/dashboard/app/api/releases/route.ts"), "utf8");
 const dashboardFlagRoute = readFileSync(join(root, "apps/dashboard/app/api/feature-flags/route.ts"), "utf8");
@@ -110,7 +110,12 @@ describe("release runtime verification contract", () => {
         "Release-governance GitHub Actions workflow dry-run or dispatch proof is required.",
       ]),
     );
-    expect(contract.requiredEvidence).toBe(releaseRuntimeVerificationRequiredEvidence);
+    expect(contract.requiredEvidence).toEqual([
+      "release package test/typecheck, web typecheck, and release-health route smoke evidence",
+      "web, dashboard, and mobile build/typecheck evidence",
+      "dashboard release and feature-flag route smoke evidence",
+      "GitHub release-governance workflow dry-run/dispatch evidence",
+    ]);
   });
 
   it("builds a local release execution plan without build, GitHub Actions, or mobile typecheck execution", () => {
@@ -232,7 +237,7 @@ describe("release runtime verification contract", () => {
     expect(workflowSource).toContain("release-runtime-verification-artifacts");
     expect(trackerSource).toContain("GAP-087");
     expect(trackerSource).toContain("apps/web/lib/releaseRuntimeVerification.ts");
-    expect(trackerSource).toContain("Release runtime evidence classifier wired and execution-gated");
+    expect(trackerSource).toContain("release runtime evidence classifier");
     expect(trackerSource).toContain("releaseRuntimeVerificationDecisionRequiredEvidence");
     expect(trackerSource).toContain("GitHub Actions workflow proof");
   });

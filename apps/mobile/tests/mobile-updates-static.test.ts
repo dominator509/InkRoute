@@ -54,7 +54,7 @@ describe("mobile OTA update static contract", () => {
 
   it("surfaces the OTA runtime contract in the system status screen", () => {
     expect(screenSource).toContain("mobileUpdateRuntimePreview");
-    expect(screenSource).toContain("mobileUpdateRuntimePreview.rollbackContract.status");
+    expect(screenSource).toContain("mobileUpdateRuntimePreview.rollbackContract.rollbackReady");
     expect(screenSource).toContain("Phase 12 contract");
     expect(screenSource).toContain("OTA runtime contract");
     expect(screenSource).toContain("device receipt pending");

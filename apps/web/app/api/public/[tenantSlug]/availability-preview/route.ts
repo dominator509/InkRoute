@@ -1,7 +1,7 @@
 import { buildAvailabilitySlots, detectCalendarConflicts, type CalendarTimeBlock } from "@inkroute/calendar";
 import { inkrouteDemoArtist, inkrouteDemoTenant } from "@inkroute/config";
 import { prisma } from "@inkroute/db";
-import type { AvailabilityWindow } from "@inkroute/types";
+import type { AvailabilityKind, AvailabilityStatus, AvailabilityWindow } from "@inkroute/types";
 
 const noStoreHeaders = { "Cache-Control": "private, no-store" } as const;
 
@@ -48,8 +48,8 @@ function toPublicWindow(row: {
   id: string;
   tenantId: string;
   artistId: string;
-  kind: string;
-  status: string;
+  kind: AvailabilityKind;
+  status: AvailabilityStatus;
   startsAt: Date;
   endsAt: Date;
   timezone: string;

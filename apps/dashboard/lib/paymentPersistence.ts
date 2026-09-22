@@ -364,14 +364,14 @@ const paymentLifecycleTargetStatus = {
   mark_disputed: "disputed",
 } as const satisfies Record<PaymentLifecycleAction, PaymentLifecyclePersistedStatus>;
 
-const allowedPreviousStatuses = {
+const allowedPreviousStatuses: Record<PaymentLifecycleAction, readonly PaymentLifecyclePersistedStatus[]> = {
   create_deposit: ["none"],
   record_checkout_session: ["deposit_created", "checkout_session_recorded"],
   mark_paid: ["checkout_session_recorded", "failed"],
   mark_failed: ["checkout_session_recorded"],
   mark_refunded: ["paid", "refunded"],
   mark_disputed: ["paid", "refunded", "disputed"],
-} as const satisfies Record<PaymentLifecycleAction, readonly PaymentLifecyclePersistedStatus[]>;
+};
 
 export function decidePaymentLifecycleTransition(input: {
   action: PaymentLifecycleAction;

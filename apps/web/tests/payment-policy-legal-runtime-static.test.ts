@@ -93,8 +93,14 @@ describe("payment policy legal runtime contract", () => {
   it("keeps legal/tax approval and reviewed copy blockers explicit", () => {
     expect(paymentPolicyLegalRuntimeReadiness.status).toBe("blocked");
     expect(paymentPolicyLegalRuntimeReadiness.missingScripts).toEqual([]);
-    expect(paymentPolicyLegalRuntimeReadiness.requiredCommands).toBe(paymentPolicyLegalRuntimeCommands);
-    expect(paymentPolicyLegalRuntimeReadiness.requiredEvidence).toBe(paymentPolicyLegalEvidenceFlags);
+    expect(paymentPolicyLegalRuntimeReadiness.requiredCommands).toEqual(paymentPolicyLegalRuntimeCommands);
+    expect(paymentPolicyLegalRuntimeReadiness.requiredEvidence).toEqual([
+      "signed attorney and tax/accounting approval records for payment policy language",
+      "committed reviewed copy for deposits, cancellation, no-show, refund, SMS, receipts, and tax disclosures",
+      "versioned Terms/Privacy/Consent/studio policy updates plus acceptance audit evidence",
+      "E2E screenshots or test output proving approved copy appears in booking, dashboard payment, receipt, and SMS flows",
+      "documented policy-copy correction and rollback plan",
+    ]);
     expect(paymentPolicyLegalRuntimeReadiness.blockers).toContain(
       "Attorney approval must be recorded for payment, cancellation, no-show, refund, SMS, receipt, and liability language.",
     );
@@ -263,7 +269,7 @@ describe("payment policy legal runtime contract", () => {
     expect(gapTracker).toContain("paymentPolicyLegalRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedPaymentPolicyLegalArtifact");
     expect(gapTracker).toContain("buildPaymentPolicyLegalArtifactReview");
-    expect(gapTracker).toContain("live legal/tax approval, reviewed production copy, acceptance/versioning, E2E approved-language proof, and rollback-plan proof remain open");
+    expect(gapTracker).toContain("live legal/tax approval, reviewed production copy, acceptance/versioning, E2E approved-language proof, rollback-plan proof, fresh CI, and secret-safe artifacts remain external evidence gates");
   });
 });
 

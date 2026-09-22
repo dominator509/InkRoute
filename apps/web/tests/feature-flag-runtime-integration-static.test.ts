@@ -23,7 +23,7 @@ import {
 } from "../lib/featureFlagRuntime";
 import { defaultFeatureFlags } from "@inkroute/releases";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const releaseHealthRoute = readFileSync(join(root, "apps/web/app/api/public/[tenantSlug]/release-health/route.ts"), "utf8");
 const dashboardFeatureFlagRoute = readFileSync(join(root, "apps/dashboard/app/api/feature-flags/route.ts"), "utf8");
 const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");

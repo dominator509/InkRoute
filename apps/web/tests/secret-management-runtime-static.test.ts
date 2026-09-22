@@ -88,7 +88,7 @@ describe("GAP-115 secret management runtime wiring", () => {
     expect(secretAudit).toContain("requiresDualControlForProduction");
     expect(secretAudit).toContain("requiresMaskedCiLogProof");
     expect(secretVerifier).toContain("secret-management-audit.json");
-    expect(secretVerifier).toContain("forbiddenEvidenceExamples");
+    expect(secretVerifier).toContain("forbiddenSecretPatterns");
     expect(envChecker).toContain("strict-values");
     expect(deploymentTests).toContain("buildSecretManagementRuntimeReadinessPlan");
   });
@@ -98,7 +98,7 @@ describe("GAP-115 secret management runtime wiring", () => {
     expect(secretManagementRuntimeReadiness.missingProductionSecrets).toEqual(
       expect.arrayContaining(["DATABASE_URL", "STRIPE_SECRET_KEY", "EAS_PROJECT_ID"])
     );
-    expect(secretManagementRuntimeReadiness.requiredCommands).toBe(secretManagementRuntimeCommands);
+    expect(secretManagementRuntimeReadiness.requiredCommands).toEqual(secretManagementRuntimeCommands);
     expect(secretManagementRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Secret-management audit manifest with configured_redacted or rotated_redacted status for every production secret.",

@@ -299,7 +299,7 @@ describe("booking persistence API runtime contract", () => {
     expect(gapTracker).toContain("bookingPersistenceApiExecutionPolicy");
     expect(gapTracker).toContain("bookingPersistenceApiRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-032 is booking-persistence-api-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("live generated Prisma Client, provider-backed persistBookingPersistenceApiRun execution, dev-DB transaction smoke, web typecheck/build, Next route runtime smoke, fresh CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("Booking persistence/API");
     expect(gapTracker).toContain("proof inventory");
   });
 

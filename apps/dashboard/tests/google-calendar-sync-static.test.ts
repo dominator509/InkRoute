@@ -109,8 +109,10 @@ describe("dashboard Google Calendar sync contract", () => {
     expect(first.status).toBe("ready");
     expect(duplicate.status).toBe("duplicate");
     expect(repository.state.transactions).toHaveLength(1);
-    expect(JSON.stringify(repository.state.transactions[0].providerResult)).not.toContain("ya29.secret");
-    expect(JSON.stringify(repository.state.transactions[0].providerResult)).not.toContain("client@example.com");
+    const transaction = repository.state.transactions[0];
+    if (!transaction) throw new Error("expected one google calendar transaction");
+    expect(JSON.stringify(transaction.providerResult)).not.toContain("ya29.secret");
+    expect(JSON.stringify(transaction.providerResult)).not.toContain("client@example.com");
 
     await expect(
       executeGoogleCalendarSyncMutation(

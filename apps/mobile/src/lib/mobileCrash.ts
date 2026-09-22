@@ -1,5 +1,4 @@
 import {
-  buildMobileCrashCaptureContract,
   buildMobileCrashRuntimeReadinessPlan,
   buildObservabilityReportDraft,
   buildSentrySdkConfigurationPlan,
@@ -8,6 +7,7 @@ import {
   type ObservabilityReportDraft,
   type SentrySdkConfigurationPlan,
 } from "@inkroute/observability";
+import { buildMobileCrashCaptureContract } from "@inkroute/mobile-support";
 import { inkrouteDemoTenant } from "@inkroute/config";
 
 export interface MobileCrashCaptureContext {
@@ -76,7 +76,7 @@ export function buildMobileCrashReportDraft(
     environment: context.environment,
     handled: false,
     message: error.message,
-    stack: error.stack,
+    ...(error.stack !== undefined ? { stack: error.stack } : {}),
     route: context.route,
     release: context.release,
     metadata: {
@@ -103,7 +103,7 @@ export function buildMobileSentryPlan(context: MobileCrashCaptureContext): Sentr
     orgConfigured: false,
     projectConfigured: false,
     release: context.release,
-    environment: context.environment,
+    environment: context.environment === "test" ? "development" : context.environment,
     sourceMapsEnabled: false,
     debugSymbolsEnabled: false,
     beforeSendRedactionEnabled: true,

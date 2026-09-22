@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { GET as getAvailabilityPreview } from "../app/api/public/[tenantSlug]/availability-preview/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 describe("availability preview route", () => {
   it("pins DB-first public availability read support without claiming hold persistence", () => {
@@ -68,7 +69,7 @@ describe("availability preview route", () => {
 
   it("fail-closes production availability previews instead of returning static demo slots", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await getAvailabilityPreview(new Request("https://local.test/api/public/inkroute-demo/availability-preview"), {
@@ -88,7 +89,7 @@ describe("availability preview route", () => {
       expect(payload.productionBoundary.gapIds).toContain("GAP-009");
       expect(payload.productionBoundary.gapIds).toContain("GAP-056");
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 });

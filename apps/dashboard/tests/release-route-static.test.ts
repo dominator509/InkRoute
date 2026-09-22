@@ -9,7 +9,7 @@ const actionPanelSource = readFileSync(join(process.cwd(), "apps/dashboard/compo
 
 describe("dashboard release route contract", () => {
   it("guards release reads with RBAC, tenant scope, and no-store cache policy", () => {
-    expect(routeSource).toContain('assertPermission(actor, "release:read")');
+    expect(routeSource).toContain('assertPermissionWithTenantMembership(actor, "release:read")');
     expect(routeSource).toContain('code: "FORBIDDEN"');
     expect(routeSource).toContain("releaseTenantQuerySchema.safeParse");
     expect(routeSource).toContain("Release query failed validation.");
@@ -30,7 +30,7 @@ describe("dashboard release route contract", () => {
   });
 
   it("keeps write and provider automation boundaries explicit", () => {
-    expect(routeSource).toContain('assertPermission(actor, "release:write")');
+    expect(routeSource).toContain('assertPermissionWithTenantMembership(actor, "release:write")');
     expect(routeSource).toContain("releaseCreateInputSchema.safeParse");
     expect(routeSource).toContain("releaseRollbackInputSchema.safeParse");
     expect(routeSource).toContain("tx.idempotencyKey.upsert");

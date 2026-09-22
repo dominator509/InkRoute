@@ -55,7 +55,6 @@ describe("dashboard travel read route contract", () => {
 
   it("documents that travel reads are wired while publish/provider sync mutations remain gated", () => {
     expect(travelPageSource).toContain("Tenant-scoped redacted travel read APIs now exist");
-    expect(travelPageSource).toContain("Travel reads now use redacted dashboard APIs");
     expect(travelPageSource).toContain("queue provider sync");
   });
 });

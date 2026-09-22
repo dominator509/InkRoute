@@ -13,6 +13,15 @@ export function TravelPublishActionPanel() {
   const [state, setState] = useState<TravelPublishState>({ status: "idle" });
   const stop = demoTravelStops[0];
 
+  if (!stop) {
+    return (
+      <section className="card action-panel">
+        <h2>Travel publishing actions</h2>
+        <p>Demo travel stop data is unavailable, so the publish draft action cannot run.</p>
+      </section>
+    );
+  }
+
   const submitPublishDraft = async () => {
     setState({ status: "submitting" });
     let response: Response;

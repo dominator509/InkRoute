@@ -16,8 +16,9 @@ import {
   githubIssueAutomationRequiredEvidence,
 } from "../app/api/observability/github-issues/runtime";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const routeSource = readFileSync(join(root, "apps/dashboard/app/api/observability/github-issues/route.ts"), "utf8");
+const runtimeSource = readFileSync(join(root, "apps/dashboard/app/api/observability/github-issues/runtime.ts"), "utf8");
 const errorsPageSource = readFileSync(join(root, "apps/dashboard/app/errors/page.tsx"), "utf8");
 const errorAutomationActionPanelSource = readFileSync(join(root, "apps/dashboard/components/ErrorAutomationActionPanel.tsx"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
@@ -33,42 +34,42 @@ const githubIssueLinkMigration = readFileSync(
 
 describe("GitHub issue automation runtime contract", () => {
   it("requires dashboard RBAC, tenant matching, and explicit human approval", () => {
-    expect(routeSource).toContain("resolveDashboardActor");
-    expect(routeSource).toContain('assertPermission(actor, "error:write")');
-    expect(routeSource).toContain("TENANT_MISMATCH");
-    expect(routeSource).toContain("HUMAN_APPROVAL_REQUIRED");
-    expect(routeSource).toContain("humanApproved === true");
+    expect(runtimeSource).toContain("resolveDashboardActor");
+    expect(runtimeSource).toContain('assertPermission(actor, "error:write")');
+    expect(runtimeSource).toContain("TENANT_MISMATCH");
+    expect(runtimeSource).toContain("HUMAN_APPROVAL_REQUIRED");
+    expect(runtimeSource).toContain("humanApproved === true");
   });
 
   it("builds sanitized issue automation plans and blocks high-risk payloads through package contracts", () => {
-    expect(routeSource).toContain("buildGithubIssueAutomationPlan");
-    expect(routeSource).toContain("buildGithubIssueRuntimeDispatchPlan");
-    expect(routeSource).toContain("sanitizedIssueBodyVerified: true");
-    expect(routeSource).toContain("highRiskDashboardOnlyBlockingVerified: true");
-    expect(routeSource).toContain("createIssueRequest");
+    expect(runtimeSource).toContain("buildGithubIssueAutomationPlan");
+    expect(runtimeSource).toContain("buildGithubIssueRuntimeDispatchPlan");
+    expect(runtimeSource).toContain("sanitizedIssueBodyVerified: true");
+    expect(runtimeSource).toContain("highRiskDashboardOnlyBlockingVerified: true");
+    expect(runtimeSource).toContain("createIssueRequest");
   });
 
   it("stores human approval audit metadata and ErrorReport issue-link state", () => {
-    expect(routeSource).toContain("prisma.$transaction");
-    expect(routeSource).toContain("tx.auditLog.create");
-    expect(routeSource).toContain('entityType: "GithubIssueAutomation"');
-    expect(routeSource).toContain("tx.errorReport.update");
-    expect(routeSource).toContain("persistGithubIssueLinkToErrorReport");
-    expect(routeSource).toContain("buildGithubIssueLinkMetadata");
-    expect(routeSource).toContain("repository.githubIssueLink.upsert");
-    expect(routeSource).toContain("repository.errorReport.update");
-    expect(routeSource).toContain("githubIssueAutomation");
-    expect(routeSource).toContain("dashboardStatusSynced: true");
-    expect(routeSource).toContain("rawProviderPayloadStored: false");
-    expect(routeSource).toContain("providerDispatchExecuted");
-    expect(routeSource).toContain("PROVIDER_GITHUB_ISSUE_ERROR_REPORT_LINK_NOT_CONFIGURED");
-    expect(routeSource).toContain("syntheticGithubIssueReportFallbackDisabled");
-    expect(routeSource).toContain('runtimePlan.status !== "ready"');
-    expect(routeSource).toContain("GITHUB_ISSUE_RUNTIME_EVIDENCE_NOT_CONFIGURED");
-    expect(routeSource).toContain("githubIssueProviderDispatchEvidenceRequired");
-    expect(routeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
-    expect(routeSource).toContain("headers: noStoreHeaders");
-    expect(routeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
+    expect(runtimeSource).toContain("prisma.$transaction");
+    expect(runtimeSource).toContain("tx.auditLog.create");
+    expect(runtimeSource).toContain('entityType: "GithubIssueAutomation"');
+    expect(runtimeSource).toContain("tx.errorReport.update");
+    expect(runtimeSource).toContain("persistGithubIssueLinkToErrorReport");
+    expect(runtimeSource).toContain("buildGithubIssueLinkMetadata");
+    expect(runtimeSource).toContain("repository.githubIssueLink.upsert");
+    expect(runtimeSource).toContain("repository.errorReport.update");
+    expect(runtimeSource).toContain("githubIssueAutomation");
+    expect(runtimeSource).toContain("dashboardStatusSynced: true");
+    expect(runtimeSource).toContain("rawProviderPayloadStored: false");
+    expect(runtimeSource).toContain("providerDispatchExecuted");
+    expect(runtimeSource).toContain("PROVIDER_GITHUB_ISSUE_ERROR_REPORT_LINK_NOT_CONFIGURED");
+    expect(runtimeSource).toContain("syntheticGithubIssueReportFallbackDisabled");
+    expect(runtimeSource).toContain('runtimePlan.status !== "ready"');
+    expect(runtimeSource).toContain("GITHUB_ISSUE_RUNTIME_EVIDENCE_NOT_CONFIGURED");
+    expect(runtimeSource).toContain("githubIssueProviderDispatchEvidenceRequired");
+    expect(runtimeSource).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
+    expect(runtimeSource).toContain("headers: noStoreHeaders");
+    expect(runtimeSource).not.toContain('headers: { "Cache-Control": "no-store" }');
   });
 
   it("pins the GithubIssueLink durable dashboard status schema and migration", () => {
@@ -89,6 +90,7 @@ describe("GitHub issue automation runtime contract", () => {
 
   it("builds redacted ErrorReport issue-link metadata while preserving existing metadata", () => {
     const metadata = buildGithubIssueLinkMetadata({
+      tenantId: "tenant_demo",
       errorReportId: "err_static",
       approvalAuditLogId: "audit_static",
       dispatchState: "provider-dispatched",
@@ -122,12 +124,12 @@ describe("GitHub issue automation runtime contract", () => {
   });
 
   it("wires GitHub API dispatch behind provider credentials and an explicit enable flag", () => {
-    expect(routeSource).toContain("GITHUB_ISSUE_TOKEN");
-    expect(routeSource).toContain("GITHUB_TOKEN");
-    expect(routeSource).toContain("GITHUB_REPOSITORY");
-    expect(routeSource).toContain("GITHUB_ISSUE_DISPATCH_ENABLED");
-    expect(routeSource).toContain("https://api.github.com/repos/");
-    expect(routeSource).toContain("liveSyntheticIssueCreationVerified: false");
+    expect(runtimeSource).toContain("GITHUB_ISSUE_TOKEN");
+    expect(runtimeSource).toContain("GITHUB_TOKEN");
+    expect(runtimeSource).toContain("GITHUB_REPOSITORY");
+    expect(runtimeSource).toContain("GITHUB_ISSUE_DISPATCH_ENABLED");
+    expect(runtimeSource).toContain("https://api.github.com/repos/");
+    expect(runtimeSource).toContain("liveSyntheticIssueCreationVerified: false");
   });
 
   it("renders a dashboard approval form without enabling provider dispatch", () => {
@@ -141,8 +143,8 @@ describe("GitHub issue automation runtime contract", () => {
   });
 
   it("pins the GitHub issue automation command and artifact matrix", () => {
-    expect(routeSource).toContain("githubIssueAutomationCommands");
-    expect(routeSource).toContain("githubIssueAutomationRuntimeMatrix");
+    expect(runtimeSource).toContain("githubIssueAutomationCommands");
+    expect(runtimeSource).toContain("githubIssueAutomationRuntimeMatrix");
     for (const id of [
       "dashboard-approval-ui",
       "local-evidence-writer",
@@ -156,7 +158,7 @@ describe("GitHub issue automation runtime contract", () => {
       "ci-github-issue-automation",
       "secret-safe-artifacts",
     ]) {
-      expect(routeSource).toContain(`id: "${id}"`);
+      expect(runtimeSource).toContain(`id: "${id}"`);
     }
   });
 
@@ -179,7 +181,7 @@ describe("GitHub issue automation runtime contract", () => {
     });
     expect(plan.requiredCommands).toBe(githubIssueAutomationCommands);
     expect(plan.requiredArtifacts).toBe(githubIssueAutomationArtifactPaths);
-    expect(plan.requiredEvidence).toBe(githubIssueAutomationRequiredEvidence);
+    expect(plan.externalEvidenceRequired).toBe(githubIssueAutomationRequiredExternalEvidence);
     expect(plan.localEvidenceArtifacts).toEqual(
       expect.arrayContaining(["coverage/github-issue-route-static-contract.json", "coverage/github-issue-create-request-redacted.json"]),
     );
@@ -315,21 +317,21 @@ describe("GitHub issue automation runtime contract", () => {
   });
 
   it("is wired into CI and the tracker without claiming live repo proof", () => {
-    expect(routeSource).toContain("coverage/github-issue-live-dispatch-redacted.json");
-    expect(routeSource).toContain("coverage/github-issue-provider-credentials-redacted.json");
-    expect(routeSource).toContain("coverage/github-issue-no-pii-artifact-audit.json");
-    expect(routeSource).toContain("coverage/github-issue-ci-evidence.json");
+    expect(runtimeSource).toContain("coverage/github-issue-live-dispatch-redacted.json");
+    expect(runtimeSource).toContain("coverage/github-issue-provider-credentials-redacted.json");
+    expect(runtimeSource).toContain("coverage/github-issue-no-pii-artifact-audit.json");
+    expect(runtimeSource).toContain("coverage/github-issue-ci-evidence.json");
     expect(workflowSource).toContain("Run Phase 11 GitHub issue automation contracts");
     expect(workflowSource).toContain("apps/dashboard/tests/github-issue-automation-static.test.ts");
     expect(workflowSource).toContain("coverage/github-issue-ci-evidence.json");
     expect(unitManifest).toContain("githubIssueAutomationRuntimeMatrix");
     expect(trackerSource).toContain("GAP-085");
     expect(trackerSource).toContain("apps/dashboard/app/api/observability/github-issues/route.ts");
-    expect(trackerSource).toContain("GitHub issue automation evidence classifier wired and runtime-matrix gated");
+    expect(trackerSource).toContain("GitHub issue automation evidence classifier");
     expect(trackerSource).toContain("buildGithubIssueAutomationExecutionPlan");
     expect(trackerSource).toContain("githubIssueAutomationExecutionPolicy");
     expect(trackerSource).toContain("githubIssueAutomationRequiredExternalEvidence");
-    expect(trackerSource).toContain("dashboard approval UI/action is source-wired");
+    expect(trackerSource).toContain("dashboard approval API POST");
     expect(rootPackageJson).toContain("observability:github-issue-evidence");
     expect(evidenceWriterSource).toContain("providerDispatchExecuted: false");
     expect(evidenceWriterSource).toContain("github-issue-route-static-contract.json");

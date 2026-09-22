@@ -12,8 +12,8 @@ describe("dashboard release RBAC and persistence contracts", () => {
   it("keeps release routes gated by permissions, tenant scope, persistence, and audit logs", () => {
     const source = readWorkspaceFile("apps/dashboard/app/api/releases/route.ts");
 
-    expect(source).toContain('assertPermission(actor, "release:read")');
-    expect(source).toContain('assertPermission(actor, "release:write")');
+    expect(source).toContain('assertPermissionWithTenantMembership(actor, "release:read")');
+    expect(source).toContain('assertPermissionWithTenantMembership(actor, "release:write")');
     expect(source).toContain("TENANT_MISMATCH");
     expect(source).toContain("prisma.$transaction");
     expect(source).toContain("tx.releaseRecord.create");
@@ -26,8 +26,8 @@ describe("dashboard release RBAC and persistence contracts", () => {
   it("keeps feature-flag routes gated by read/write permissions, provider credentials, and audited upserts", () => {
     const source = readWorkspaceFile("apps/dashboard/app/api/feature-flags/route.ts");
 
-    expect(source).toContain('assertPermission(actor, "release:read")');
-    expect(source).toContain('assertPermission(actor, "settings:write")');
+    expect(source).toContain('assertPermissionWithTenantMembership(actor, "release:read")');
+    expect(source).toContain('assertPermissionWithTenantMembership(actor, "settings:write")');
     expect(source).toContain("TENANT_MISMATCH");
     expect(source).toContain("PROVIDER_CREDENTIALS_REQUIRED");
     expect(source).toContain("tx.featureFlag.findUnique");
@@ -41,9 +41,12 @@ describe("dashboard release RBAC and persistence contracts", () => {
   it("keeps dashboard actor resolution header-scoped outside local fallback", () => {
     const source = readWorkspaceFile("apps/dashboard/app/api/dashboardAuth.ts");
 
-    expect(source).toContain('request.headers.get("x-tenant-id")');
-    expect(source).toContain('request.headers.get("x-user-id")');
-    expect(source).toContain('request.headers.get("x-user-role")');
+    // Actor resolution reads the demo auth headers (via the shared
+    // resolveDashboardActorFromHeaders helper used by both the middleware and
+    // the layout), and still fails closed outside the local fallback.
+    expect(source).toContain('headers.get("x-tenant-id")');
+    expect(source).toContain('headers.get("x-user-id")');
+    expect(source).toContain('headers.get("x-user-role")');
     expect(source).toContain("AUTH_REQUIRED");
     expect(source).toContain("hasPermission(context.role, permission)");
   });

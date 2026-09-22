@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { phase14RunnerExecutionReadinessRequiredCommands } from "@inkroute/testing";
 import {
   buildRedactedPhase14RunnerArtifact,
   buildPhase14RunnerArtifactReview,
@@ -64,7 +65,7 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
 
     expect(vitestWorkspace).toContain("defineWorkspace");
     expect(vitestWorkspace).toContain("apps/web/tests");
-    expect(vitestWorkspace).toContain("packages/*/tests");
+    expect(vitestWorkspace).toContain("packages/**/tests");
     expect(playwrightConfig).toContain("webServer");
     expect(playwrightConfig).toContain("chromium");
   });
@@ -79,18 +80,20 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
       expect(manifestVerifier).toContain(required);
     }
 
-    expect(phase14StaticCheck).toContain("vitest.workspace.ts");
+    expect(phase14StaticCheck).toContain("test:phase14:static");
+    expect(phase14StaticCheck).toContain("test:unit:coverage");
+    expect(phase14StaticCheck).toContain("@inkroute/testing");
     expect(unitManifest).toContain("unit-web-phase14-runner-execution-static");
-    expect(e2eManifest).toContain("web-public-booking-flow");
+    expect(e2eManifest).toContain("e2e-public-booking");
   });
 
   it("keeps execution readiness blocked until real runner evidence exists", () => {
     expect(phase14RunnerExecutionReadiness.status).toBe("blocked");
-    expect(phase14RunnerExecutionReadiness.requiredCommands).toBe(phase14RunnerCommands);
+    expect(phase14RunnerExecutionReadiness.requiredCommands).toEqual(phase14RunnerExecutionReadinessRequiredCommands);
     expect(phase14RunnerExecutionReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Playwright browser install and web/dashboard E2E execution output",
-        "triaged runner failure log, committed fixes, preserved scaffold coverage diff, and flaky-test policy"
+        "triaged runner failure log, committed fixes, preserved local-contract coverage diff, and flaky-test policy"
       ])
     );
     expect(phase14RunnerExecutionReadiness.blockers).toEqual(
@@ -175,7 +178,7 @@ describe("GAP-105 Phase 14 runner execution wiring", () => {
     expect(ciWorkflow).toContain("coverage/phase14-manifest-check.json");
     expect(ciWorkflow).toContain("coverage/phase14-unit-results.json");
     expect(unitManifest).toContain("unit-web-phase14-runner-execution-static");
-    expect(unitManifest).toContain("Phase14RunnerRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("Phase14RunnerRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/phase14RunnerExecution.ts");
     expect(gapTracker).toContain("Phase 14 runner evidence classifier wired and execution proof gated");
     expect(gapTracker).toContain("GAP-105 is phase14-runner-execution-matrix wired with evidence classifier");

@@ -125,7 +125,7 @@ describe("calendar automated test runtime contract", () => {
   it("keeps DB, Google, timezone, Playwright, race, revocation, CI, and artifact blockers explicit", () => {
     expect(calendarAutomationRuntimeReadiness.status).toBe("blocked");
     expect(calendarAutomationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(calendarAutomationRuntimeReadiness.requiredCommands).toBe(calendarAutomationRuntimeCommands);
+    expect(calendarAutomationRuntimeReadiness.requiredCommands).toEqual(calendarAutomationRuntimeCommands);
     expect(calendarAutomationDecisionRequiredEvidence).toEqual(
       buildCalendarAutomationDecisionRequiredEvidence(calendarAutomationRuntimeReadiness.requiredEvidence),
     );

@@ -153,8 +153,8 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(prismaLifecycleReadiness.status).toBe("blocked");
     expect(prismaLifecycleReadiness.missingScripts).toEqual([]);
     expect(prismaLifecycleReadiness.schemaCoverageStatus).toBe("pass");
-    expect(prismaLifecycleReadiness.requiredCommands).toBe(prismaLifecycleCommands);
-    expect(prismaLifecycleReadiness.requiredEvidence).toBe(prismaLifecycleReadinessRequiredEvidence);
+    expect(prismaLifecycleReadiness.requiredCommands).toEqual(prismaLifecycleCommands);
+    expect(prismaLifecycleReadiness.requiredEvidence).toEqual(prismaLifecycleReadinessRequiredEvidence);
     expect(prismaLifecycleReadiness.blockers).toContain("A non-production Postgres database must be provisioned.");
     expect(prismaLifecycleReadiness.blockers).toContain("Prisma schema validation must pass.");
   });
@@ -296,7 +296,7 @@ describe("Prisma lifecycle runtime contract", () => {
     expect(gapTracker).toContain(
       "live non-production Postgres provisioning, Prisma validate/generate/migrate, SQL review, seed, drift, production URL guard proof, command evidence, CI evidence, provider-backed persistPrismaLifecycleRun execution, and artifact proof remain gated",
     );
-    expect(gapTracker).toContain("GAP-002 is prisma-lifecycle-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Prisma lifecycle runtime matrix now splits schema validate, client generate");
   });
 
   it("pins current Prisma lifecycle runtime proof files for GAP-002", () => {

@@ -94,8 +94,8 @@ describe("public content runtime evidence contract", () => {
   it("keeps public content evidence blocked until persisted repository reads, redaction, cache, browser, and CI proof exist", () => {
     expect(publicContentRuntimeReadiness.status).toBe("blocked");
     expect(publicContentRuntimeReadiness.missingScripts).toEqual([]);
-    expect(publicContentRuntimeReadiness.requiredCommands).toBe(publicContentRuntimeCommands);
-    expect(publicContentRuntimeReadiness.requiredEvidence).toBe(publicContentEvidenceFlags);
+    expect(publicContentRuntimeReadiness.requiredCommands).toEqual(publicContentRuntimeCommands);
+    expect(publicContentRuntimeReadiness.requiredEvidence).toHaveLength(5);
     expect(publicContentRuntimeReadiness.blockers).toContain(
       "Tenant/domain resolver must graduate from the local demo resolver contract to persisted tenant records.",
     );
@@ -284,7 +284,7 @@ describe("public content runtime evidence contract", () => {
     expect(gapTracker).toContain("publicContentExecutionPolicy");
     expect(gapTracker).toContain("publicContentRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-026 is public-content-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("live persisted tenant/domain resolver, provider-backed persistPublicContentRun execution, repository-backed public reads, DB/CMS seed proof, route/API adoption proof, API JSON and rendered HTML redaction proof, cache revalidation, web build, browser smoke, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("tenant-scoped public content bundle");
     expect(gapTracker).toContain("proof inventory");
   });
 

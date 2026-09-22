@@ -516,7 +516,7 @@ export const abuseControlRuntimePreview = buildAbuseControlRuntimeContract({
   ruleId: "public-booking-submit",
   tenantId: "tenant_demo",
   ipHash: "ip_hash_demo",
-  observedRequests: 12,
+  observedRequests: 5,
   windowSeconds: 3600,
   userAgent: "Vitest bot fixture",
   routePath: "/api/public/inkroute-demo/booking-requests/../admin",

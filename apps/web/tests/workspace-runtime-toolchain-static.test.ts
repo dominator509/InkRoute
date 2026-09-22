@@ -108,15 +108,15 @@ describe("workspace runtime toolchain contract", () => {
     expect(workspacePackageJson).toContain('"test"');
     expect(toolchainContract).toContain("workspace-toolchain-readiness");
     expect(toolchainContract).toContain("workspace:all");
-    expect(toolchainVerifier).toContain("buildWorkspaceRuntimeToolchainReadinessPlan");
+    expect(toolchainVerifier).toContain("workspace-toolchain-readiness-contract.json");
     expect(workspaceTests).toContain("buildWorkspaceRuntimeToolchainReadinessPlan");
   });
 
   it("keeps generated reports present while runtime command evidence remains gated", () => {
     expect(workspaceRuntimeToolchainReadiness.status).toBe("blocked");
     expect(workspaceRuntimeToolchainReadiness.missingGeneratedReports).toEqual([]);
-    expect(workspaceRuntimeToolchainReadiness.requiredCommands).toBe(workspaceRuntimeToolchainCommands);
-    expect(workspaceRuntimeToolchainReadiness.requiredEvidence).toBe(workspaceRuntimeToolchainReadinessRequiredEvidence);
+    expect(workspaceRuntimeToolchainReadiness.requiredCommands).toEqual(workspaceRuntimeToolchainCommands);
+    expect(workspaceRuntimeToolchainReadiness.requiredEvidence).toEqual(workspaceRuntimeToolchainReadinessRequiredEvidence);
     expect(workspaceRuntimeToolchainReadiness.blockers).toEqual([
       "@inkroute/workspace typecheck must pass.",
       "@inkroute/workspace tests must pass.",
@@ -233,7 +233,7 @@ describe("workspace runtime toolchain contract", () => {
     expect(gapTracker).toContain("WorkspaceRuntimeToolchainRun");
     expect(gapTracker).toContain("apps/web/lib/workspaceRuntimeToolchain.ts");
     expect(gapTracker).toContain("live package typecheck/test, workspace commands, install/build, CI, and artifact proof remain open");
-    expect(gapTracker).toContain("GAP-130 is workspace-runtime-toolchain-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Workspace runtime toolchain matrix now splits workspace package typecheck");
     expect(gapTracker).toContain("buildWorkspaceRuntimeToolchainExecutionPlan");
     expect(gapTracker).toContain("workspaceRuntimeToolchainExecutionPolicy");
     expect(gapTracker).toContain("workspaceRuntimeToolchainReadinessRequiredEvidence");

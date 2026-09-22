@@ -265,7 +265,7 @@ describe("GAP-073 structured-data crawl QA contract", () => {
     expect(gapTracker).toContain("buildRedactedStructuredDataCrawlArtifact");
     expect(gapTracker).toContain("buildStructuredDataCrawlArtifactReview");
     expect(gapTracker).toContain("non-executing structured-data crawl execution policy");
-    expect(gapTracker).toContain("Structured-data crawl evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("structured-data crawl evidence classifier");
   });
 
   it("pins current structured-data crawl proof files for GAP-073", () => {

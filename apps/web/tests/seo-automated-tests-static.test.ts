@@ -195,7 +195,7 @@ describe("GAP-078 SEO automated test gate", () => {
     expect(ciWorkflow).toContain("seo-automated-test-artifacts");
     expect(ciWorkflow).toContain("coverage/seo-automated-ci-evidence.json");
     expect(unitManifest).toContain("seoAutomatedGateMatrix");
-    expect(gapTracker).toContain("SEO automated test evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("SEO automated test evidence classifier");
     expect(gapTracker).toContain("seoAutomatedDecisionRequiredEvidence");
   });
 

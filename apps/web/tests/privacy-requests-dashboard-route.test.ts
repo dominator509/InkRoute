@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { rateLimitRules } from "@inkroute/security";
 import { POST } from "../../dashboard/app/api/security/privacy-requests/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 function dashboardPrivacyRequest(
   body: unknown,
@@ -55,7 +56,7 @@ describe("dashboard privacy request route", () => {
 
     expect(response.status).toBe(201);
     expect(body.ok).toBe(true);
-    expect(body.data.tenantId).toBe("tenant_inkroute_demo");
+    expect(body.data.tenantId).toBe("tenant_demo_nomad");
     expect(body.data.persisted.requestType).toBe("access");
     expect(body.data.persisted.id).toMatch(/^pr_\d{6}$/);
     expect(body.data.persisted.receivedAt).toBeDefined();
@@ -68,7 +69,7 @@ describe("dashboard privacy request route", () => {
 
   it("fail-closes production dashboard privacy requests before non-durable persistence", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await POST(dashboardPrivacyRequest(validDashboardPrivacyBody, "203.0.113.184", "dashboard-user-production", "tenant_inkroute_demo"));
@@ -79,7 +80,7 @@ describe("dashboard privacy request route", () => {
       expect(["DATABASE_UNAVAILABLE", "DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED"]).toContain(body.error.code);
       expect(JSON.stringify(body)).not.toContain("555-0101");
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 

@@ -12,7 +12,10 @@ test.describe("observability global-error rendered coverage", () => {
 
   test("public ingest rejects malformed reports without leaking raw payloads", async ({ request }) => {
     const response = await request.post("/api/public/inkroute-demo/error-reports", {
-      data: { message: "client@example.test token=demo-token" },
+      // Genuinely malformed: message is below the schema minimum (3 chars), so the
+      // route must reject with 400. The extra field carries a token-shaped secret to
+      // keep the no-secret-echo assertion meaningful.
+      data: { message: "ab", note: "token=demo-token" },
     });
 
     expect([400, 422]).toContain(response.status());

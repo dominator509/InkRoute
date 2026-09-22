@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { rateLimitRules } from "@inkroute/security";
 import { POST } from "../app/api/public/[tenantSlug]/privacy-requests/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 function privacyRequest(body: unknown, clientIp = "203.0.113.170"): NextRequest {
   return new NextRequest("https://local.test/api/public/inkroute-demo/privacy-requests", {
@@ -60,7 +61,7 @@ describe("public privacy request route", () => {
     expect(body.data.tenantSlug).toBe("inkroute-demo");
     expect(body.data.persistence).toBe("local-fallback");
     expect(body.data.persisted.requestType).toBe("export");
-    expect(body.data.persisted).toMatchObject({ tenantId: "tenant_inkroute_demo", requestType: "export" });
+    expect(body.data.persisted).toMatchObject({ tenantId: "tenant_demo_nomad", requestType: "export" });
     expect(body.data.redactedSubmission.email).not.toBe("client@example.test");
     expect(body.data.redactedSubmission.details.phone).not.toBe("555-0100");
     expect(body.data.persisted.redactedSubmission.email).not.toBe("client@example.test");
@@ -70,7 +71,7 @@ describe("public privacy request route", () => {
 
   it("fail-closes production privacy requests instead of saving local runtime drafts", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await POST(privacyRequest(validPrivacyBody, "203.0.113.172"), {
@@ -90,7 +91,7 @@ describe("public privacy request route", () => {
       expect(body.error.gapIds).toContain("GAP-099");
       expect(body.productionBoundary.localPrivacyRequestPersistenceDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 

@@ -272,7 +272,7 @@ describe("GAP-077 image SEO pipeline boundary", () => {
     expect(ciWorkflow).toContain("image-seo-pipeline-artifacts");
     expect(unitManifest).toContain("unit-dashboard-image-seo-pipeline-static");
     expect(unitManifest).toContain("imageSeoPipelineRuntimeMatrix");
-    expect(gapTracker).toContain("Image SEO pipeline evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("image SEO pipeline evidence classifier");
     expect(gapTracker).toContain("imageSeoPipelineDecisionRequiredEvidence");
   });
 

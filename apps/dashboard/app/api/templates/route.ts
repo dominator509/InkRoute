@@ -152,32 +152,60 @@ export async function GET(request: NextRequest) {
         templates,
         automationSequence: dashboardNotificationAutomationSequence.slice(0, limit),
         providerBoundaryMatrix: dashboardProviderBoundaryMatrix,
-        queuedNotifications: result.notifications.map((notification) => ({
-          id: notification.id,
-          type: notification.type,
-          title: notification.title,
-          bodyPreview: redactBodyPreview(notification.body),
-          status: notification.status,
-          scheduledFor: notification.scheduledFor?.toISOString() ?? null,
-          clientId: notification.clientId,
-          bookingRequestId: notification.bookingRequestId,
-          appointmentId: notification.appointmentId,
-          deliveryCount: notification._count.deliveries,
-          updatedAt: notification.updatedAt.toISOString(),
-        })),
-        deliverySummaries: result.deliveries.map((delivery) => ({
-          id: delivery.id,
-          notificationId: delivery.notificationId,
-          channel: delivery.channel,
-          status: delivery.status,
-          destinationHash: delivery.destinationHash ? "[redacted-dashboard-field]" : null,
-          provider: delivery.provider,
-          providerMessageId: delivery.providerMessageId ? "[redacted-dashboard-field]" : null,
-          errorMessage: delivery.errorMessage ? "[redacted-dashboard-field]" : null,
-          attemptedAt: delivery.attemptedAt?.toISOString() ?? null,
-          deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
-          updatedAt: delivery.updatedAt.toISOString(),
-        })),
+        queuedNotifications: result.notifications.map(
+          (notification: {
+            id: string;
+            type: string;
+            title: string;
+            body: string | null;
+            status: string;
+            scheduledFor: { toISOString(): string } | null;
+            clientId: string | null;
+            bookingRequestId: string | null;
+            appointmentId: string | null;
+            _count: { deliveries: number };
+            updatedAt: { toISOString(): string };
+          }) => ({
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            bodyPreview: redactBodyPreview(notification.body),
+            status: notification.status,
+            scheduledFor: notification.scheduledFor?.toISOString() ?? null,
+            clientId: notification.clientId,
+            bookingRequestId: notification.bookingRequestId,
+            appointmentId: notification.appointmentId,
+            deliveryCount: notification._count.deliveries,
+            updatedAt: notification.updatedAt.toISOString(),
+          }),
+        ),
+        deliverySummaries: result.deliveries.map(
+          (delivery: {
+            id: string;
+            notificationId: string;
+            channel: string;
+            status: string;
+            destinationHash: string | null;
+            provider: string;
+            providerMessageId: string | null;
+            errorMessage: string | null;
+            attemptedAt: { toISOString(): string } | null;
+            deliveredAt: { toISOString(): string } | null;
+            updatedAt: { toISOString(): string };
+          }) => ({
+            id: delivery.id,
+            notificationId: delivery.notificationId,
+            channel: delivery.channel,
+            status: delivery.status,
+            destinationHash: delivery.destinationHash ? "[redacted-dashboard-field]" : null,
+            provider: delivery.provider,
+            providerMessageId: delivery.providerMessageId ? "[redacted-dashboard-field]" : null,
+            errorMessage: delivery.errorMessage ? "[redacted-dashboard-field]" : null,
+            attemptedAt: delivery.attemptedAt?.toISOString() ?? null,
+            deliveredAt: delivery.deliveredAt?.toISOString() ?? null,
+            updatedAt: delivery.updatedAt.toISOString(),
+          }),
+        ),
         auditId: result.audit.id,
         gapIds: ["GAP-010", "GAP-064", "GAP-065", "GAP-066"],
         boundary: "Dashboard notification template reads expose coded template metadata plus tenant-scoped queue/delivery summaries only; message bodies, destination hashes, provider message IDs, and provider errors are redacted, and provider sends remain gated.",

@@ -222,7 +222,10 @@ describe("GAP-110 provider contract runtime wiring", () => {
       redactedArtifactsRetained: true,
       ciProviderContractPassed: false,
       requiredCommandsRun: providerContractRuntimeCommands.filter(
-        (command) =>
+        // Typed as string: two entries are the legacy conceptual check names from
+        // requiredCommandChecks (not current command-list members), so the
+        // comparison intentionally matches nothing in the union.
+        (command: string) =>
           command !== "stripe listen --forward-to localhost:3000/api/webhooks/stripe" &&
           command !== "provider sandbox contract suite for calendar/storage/email/sms/push/sentry/auth/rate-limit" &&
           command !== "GitHub Actions provider-contract job",

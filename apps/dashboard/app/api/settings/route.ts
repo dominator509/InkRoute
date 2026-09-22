@@ -37,7 +37,7 @@ function resultString(value: unknown, key: string): string | null {
   return typeof result?.[key] === "string" ? result[key] : null;
 }
 
-function settingsGuardFailureResponse(guard: ReturnType<typeof evaluateDashboardApiGuard>) {
+function settingsGuardFailureResponse(guard: ReturnType<typeof evaluateDashboardApiGuard>["guard"]) {
   const safeReason = `${guard.status}:${guard.action}`;
   if (guard.action === "reject_401" || guard.action === "reject_419") {
     return NextResponse.json(
@@ -196,14 +196,14 @@ export async function GET(request: NextRequest) {
           defaultTimezone: result.tenant.defaultTimezone,
           updatedAt: result.tenant.updatedAt.toISOString(),
         },
-        domains: result.tenant.domains.map((domain) => ({
+        domains: result.tenant.domains.map((domain: { id: string; hostname: string; status: string; isPrimary: boolean; verifiedAt: Date | null }) => ({
           id: domain.id,
           hostname: domain.hostname,
           status: domain.status,
           isPrimary: domain.isPrimary,
           verifiedAt: domain.verifiedAt?.toISOString() ?? null,
         })),
-        members: result.tenant.members.map((member) => ({
+        members: result.tenant.members.map((member: { id: string; role: string; status: string; invitedEmail: string | null; customRole: string | null; invitedAt: Date | null; joinedAt: Date | null; user: { id: string; name: string | null; email: string; status: string; lastLoginAt: Date | null } }) => ({
           id: member.id,
           role: member.role,
           status: member.status,
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
           joinedAt: member.joinedAt?.toISOString() ?? null,
           lastLoginAt: member.user.lastLoginAt?.toISOString() ?? null,
         })),
-        customRoles: result.tenant.customRoles.map((role) => ({
+        customRoles: result.tenant.customRoles.map((role: { id: string; key: string; label: string; permissions: string[]; description: string | null; updatedAt: Date }) => ({
           id: role.id,
           key: role.key,
           label: role.label,
@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
           description: role.description,
           updatedAt: role.updatedAt.toISOString(),
         })),
-        studios: result.tenant.studios.map((studio) => ({
+        studios: result.tenant.studios.map((studio: { id: string; name: string; slug: string; city: string | null; region: string | null; country: string | null; timezone: string }) => ({
           id: studio.id,
           name: studio.name,
           slug: studio.slug,
@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
           country: studio.country,
           timezone: studio.timezone,
         })),
-        featureFlags: result.tenant.flags.map((flag) => ({
+        featureFlags: result.tenant.flags.map((flag: { id: string; key: string; scope: string; enabled: boolean; description: string | null; updatedAt: Date }) => ({
           id: flag.id,
           key: flag.key,
           scope: flag.scope,
@@ -264,6 +264,9 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: false, error: { code: "SETTINGS_READ_FAILED", message: "Tenant settings could not be loaded." } }, { status: 500, headers: noStoreHeaders });
+  }
+} catch {
+  return NextResponse.json({ ok: false, error: { code: "SETTINGS_READ_FAILED", message: "Tenant settings could not be loaded." } }, { status: 500, headers: noStoreHeaders });
   }
 }
 
@@ -486,5 +489,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: false, error: { code: "SETTINGS_WRITE_FAILED", message: "Tenant settings could not be updated." } }, { status: 500, headers: noStoreHeaders });
+  }
+} catch {
+  return NextResponse.json({ ok: false, error: { code: "SETTINGS_WRITE_FAILED", message: "Tenant settings could not be updated." } }, { status: 500, headers: noStoreHeaders });
   }
 }

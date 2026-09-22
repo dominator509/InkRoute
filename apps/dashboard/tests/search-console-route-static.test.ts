@@ -246,7 +246,7 @@ describe("GAP-075 Search Console provider boundary", () => {
     expect(unitManifest).toContain("unit-dashboard-search-console-route-static");
     expect(unitManifest).toContain("searchConsoleRuntimeMatrix");
     expect(gapTracker).toContain("local in-memory Search Console persistence repository contract");
-    expect(gapTracker).toContain("Search Console evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("Search Console runtime matrix and evidence classifier");
     expect(gapTracker).toContain("buildSearchConsoleExecutionPlan");
     expect(gapTracker).toContain("searchConsoleLocalCommands/searchConsoleExternalCommands");
     expect(gapTracker).toContain("searchConsoleExecutionPolicy");

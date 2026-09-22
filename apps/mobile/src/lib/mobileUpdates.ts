@@ -113,13 +113,13 @@ export function buildMobileUpdateRuntimeContract(config: MobileUpdateRuntimeConf
   });
 
   const readiness = buildEasOtaReadinessPlan({
-    expoProjectId: config.expoProjectId,
-    updateUrl: config.updateUrl,
-    previewChannel: config.previewChannel,
-    productionChannel: config.productionChannel,
+    ...(config.expoProjectId !== undefined ? { expoProjectId: config.expoProjectId } : {}),
+    ...(config.updateUrl !== undefined ? { updateUrl: config.updateUrl } : {}),
+    ...(config.previewChannel !== undefined ? { previewChannel: config.previewChannel } : {}),
+    ...(config.productionChannel !== undefined ? { productionChannel: config.productionChannel } : {}),
     runtimeVersionPolicy: "appVersion",
-    previewUpdateId: config.currentUpdateId,
-    rollbackDrillId: config.previousUpdateId ? `rollback-${config.previousUpdateId}` : undefined,
+    ...(config.currentUpdateId !== undefined ? { previewUpdateId: config.currentUpdateId } : {}),
+    ...(config.previousUpdateId ? { rollbackDrillId: `rollback-${config.previousUpdateId}` } : {}),
     adoptionMonitoringConfigured: Boolean(config.currentUpdateId),
   });
 
@@ -159,15 +159,15 @@ export function buildMobileUpdateRuntimeContract(config: MobileUpdateRuntimeConf
 
   const rolloutDecision = evaluateMobileUpdateRollout({
     events: [adoptionEvent],
-    previousUpdateId: config.previousUpdateId,
+    ...(config.previousUpdateId !== undefined ? { previousUpdateId: config.previousUpdateId } : {}),
     minimumReceipts: 1,
     maxFailureRate: 0,
   });
   const rollbackContract = buildMobileOtaRollbackContract({
     runtimeVersion: config.runtimeVersion,
     channel: config.channel,
-    currentUpdateId: config.currentUpdateId,
-    previousCompatibleUpdateId: config.previousUpdateId,
+    currentUpdateId: config.currentUpdateId ?? null,
+    previousCompatibleUpdateId: config.previousUpdateId ?? null,
     redactedDeviceReceipts: config.currentUpdateId ? 1 : 0,
     failedReceipts: adoptionEvent.status === "failed" ? 1 : 0,
     rollbackRepublishCommandRecorded: false,
@@ -205,8 +205,6 @@ export const mobileUpdateRuntimePreview = buildMobileUpdateRuntimeContract({
   channel: "preview",
   runtimeVersion: "1.0.0",
   nativeRuntimeVersion: "1.0.0",
-  expoProjectId: undefined,
-  updateUrl: undefined,
   previewChannel: "preview",
   productionChannel: "production",
 });

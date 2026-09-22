@@ -18,7 +18,7 @@ import {
   dashboardMutationRuntimeProofFiles,
   dashboardMutationRuntimeReadiness,
 } from "../lib/dashboardMutationRuntime";
-import { dashboardMutationExecutionRequiredEvidence } from "@inkroute/booking";
+import { dashboardMutationExecutionRequiredCommands, dashboardMutationExecutionRequiredEvidence, dashboardMutationRuntimeRequiredCommands } from "@inkroute/booking";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -163,7 +163,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(bookingStateRoute).toContain('return "create_deposit_session"');
     expect(bookingStateRoute).toContain('return "mark_deposit_paid"');
     expect(bookingStateRoute).toContain('return "confirm_appointment"');
-    expect(bookingStateRouteTest).toContain("persists booking status, state event, and audit log");
+    expect(bookingStateRouteTest).toContain("persists booking status, idempotency, state event, and audit log");
     expect(messageRoute).toContain("buildDashboardMessagePersistencePlan");
     expect(messageRoute).toContain("export async function POST");
     expect(messageActionPanel).toContain('fetch("/api/messages"');
@@ -299,10 +299,16 @@ describe("dashboard mutation runtime contract", () => {
     expect(dashboardMutationRuntimeReadiness.missingApiRoutes).not.toContain("rollback_release");
     expect(dashboardMutationRuntimeReadiness.missingServerActions).not.toContain("rollback_release");
     expect(dashboardMutationRuntimeReadiness.missingRouteTests).not.toContain("rollback_release");
-    expect(dashboardMutationRuntimeReadiness.requiredCommands).toBe(dashboardMutationRuntimeCommands);
-    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toBe(dashboardMutationExecutionRequiredEvidence);
-    expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before runtime readiness.");
-    expect(dashboardMutationRuntimeReadiness.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before runtime readiness.");
+    expect(dashboardMutationRuntimeReadiness.requiredCommands).toEqual(dashboardMutationExecutionRequiredCommands);
+    expect(dashboardMutationRuntimeReadiness.requiredEvidence).toEqual([
+      "Prisma transaction, idempotency, and AuditLog persistence evidence",
+      "tenant-isolation and RBAC-denial mutation test evidence",
+      "provider rollback/retry evidence for storage, Stripe, notification, calendar, release, and settings actions",
+      "gated mutation UI replacement plus loading/success/denial/failure/retry state evidence",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]);
+    expect(dashboardMutationRuntimeReadiness.blockers).toContain("Dashboard mutation surfaces must expose gated action UI and explicit feedback states before execution readiness.");
+    expect(dashboardMutationRuntimeReadiness.blockers).not.toContain("Dashboard mutation surfaces must expose gated actions instead of disabled placeholder copy before execution readiness.");
     expect(disabledActionPanel).toContain("disabled");
   });
 
@@ -439,7 +445,7 @@ describe("dashboard mutation runtime contract", () => {
     expect(gapTracker).toContain("dashboardMutationExecutionPolicy");
     expect(gapTracker).toContain("dashboardMutationRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-038 is dashboard-mutation-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-038 is booking-lifecycle-route wired");
+    expect(gapTracker).toContain("GAP-038 is dashboard-mutation-runtime-matrix wired with evidence classifier");
     expect(dashboardMutationArtifactPaths).toContain("coverage/dashboard-mutation-secret-safe-artifacts.json");
   });
 });

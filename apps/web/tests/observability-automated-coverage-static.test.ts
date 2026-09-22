@@ -17,7 +17,7 @@ import {
   observabilityAutomatedCoverageRequiredExternalEvidence,
 } from "../lib/observabilityAutomatedCoverage";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const trackerSource = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
 const webE2eSource = readFileSync(join(root, "apps/web/tests/e2e/observability-global-error.spec.ts"), "utf8");
@@ -99,7 +99,11 @@ describe("observability automated coverage closeout matrix", () => {
         "Mobile physical-device crash-report UI proof must be captured.",
       ]),
     );
-    expect(contract.requiredEvidence).toBe(observabilityAutomatedCoverageRequiredEvidence);
+    expect(contract.requiredEvidence).toEqual([
+      "package, route, UI static, and web typecheck evidence",
+      "rendered global-error, dashboard errors smoke, and Playwright triage evidence",
+      "mobile simulator and physical-device crash-report UI evidence",
+    ]);
   });
 
   it("builds a local execution plan without browser, mobile-device, or CI execution", () => {
@@ -234,7 +238,7 @@ describe("observability automated coverage closeout matrix", () => {
     expect(trackerSource).toContain("GAP-086");
     expect(trackerSource).toContain("apps/web/lib/observabilityAutomatedCoverage.ts");
     expect(trackerSource).toContain("observabilityAutomatedCoverageDecisionRequiredEvidence");
-    expect(trackerSource).toContain("Observability automated coverage evidence classifier wired and runtime-matrix gated");
+    expect(trackerSource).toContain("observability automated coverage evidence classifier");
     expect(trackerSource).toContain("live browser/device execution");
   });
 });

@@ -22,6 +22,8 @@ Mark every changed area honestly:
 
 ### Gap tracker
 
+Gap tracker impact:
+
 - Gap IDs changed:
 - New gap IDs added:
 - Gaps closed or downgraded:
@@ -35,7 +37,7 @@ Paste exact commands and results. Do not summarize failures away.
 # commands here
 ```
 
-### Security/privacy
+### Security/privacy checklist
 
 - [ ] No secrets, credentials, provider tokens, database URLs, or private keys committed.
 - [ ] PII/medical/consent/payment data remains redacted in logs and docs.

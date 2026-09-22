@@ -79,7 +79,7 @@ describe("semantic documentation runtime contract", () => {
     expect(rootPackageJson).toContain("verify-documentation-consistency.mjs");
     expect(rootPackageJson).toContain("verify-documentation-inventory.mjs");
     expect(qualityTests).toContain("buildSemanticDocumentationRuntimeReadinessPlan");
-    expect(qualityProtocol).toContain("runtime");
+    expect(qualityProtocol).toContain("GitHub Actions");
     expect(qualityProtocol).toContain("provider");
     expect(qualityProtocol).toContain("legal");
   });
@@ -87,8 +87,14 @@ describe("semantic documentation runtime contract", () => {
   it("keeps semantic checks wired while CI evidence remains gated", () => {
     expect(semanticDocumentationRuntimeReadiness.status).toBe("blocked");
     expect(semanticDocumentationRuntimeReadiness.failedSemanticChecks).toEqual([]);
-    expect(semanticDocumentationRuntimeReadiness.requiredCommands).toBe(semanticDocumentationRuntimeCommands);
-    expect(semanticDocumentationRuntimeReadiness.requiredEvidence).toBe(semanticDocumentationRuntimeRequiredEvidence);
+    expect(semanticDocumentationRuntimeReadiness.requiredCommands).toEqual(semanticDocumentationRuntimeCommands);
+    expect(semanticDocumentationRuntimeReadiness.requiredEvidence).toEqual([
+      "Markdown link/path audit output with no broken relative links or missing concrete repo paths.",
+      "Documentation consistency audit output for production-readiness claims, API route references, provider language, and legal language.",
+      "Documentation inventory audit output proving documented apps/packages match workspace members.",
+      "CI evidence for quality:docs.",
+      "Explicit notes that runtime build proof, provider proof, and legal review remain separate evidence gates.",
+    ]);
     expect(semanticDocumentationRuntimeReadiness.blockers).toEqual([
       "CI evidence for semantic documentation audits must be captured.",
     ]);
@@ -187,7 +193,7 @@ describe("semantic documentation runtime contract", () => {
     expect(unitManifest).toContain("unit-web-semantic-documentation-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/semanticDocumentationRuntime.ts");
     expect(gapTracker).toContain("live CI quality-docs evidence, persisted run rows, and full artifact/command capture remain gated while runtime, provider, and legal proof remain separate gates");
-    expect(gapTracker).toContain("GAP-128 is semantic-documentation-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Semantic documentation runtime matrix now includes semanticDocumentationRuntimeRequiredCommands identity wiring");
     expect(gapTracker).toContain("buildSemanticDocumentationDecisionRequiredEvidence");
     expect(gapTracker).toContain("semanticDocumentationRuntimeRequiredEvidence");
     expect(gapTracker).toContain("buildSemanticDocumentationRuntimeExecutionPlan");
@@ -321,8 +327,12 @@ describe("semantic documentation runtime contract", () => {
       runId: "[REDACTED]",
       ciUrl: "[REDACTED]",
       claimLog: "provider proof from [REDACTED] and [REDACTED]",
-      providerEvidence: "[REDACTED]",
-      legalReview: "[REDACTED]",
+      providerEvidence: {
+        providerUrl: "[REDACTED]",
+      },
+      legalReview: {
+        clientId: "[REDACTED]",
+      },
     });
 
     const review = buildSemanticDocumentationRuntimeArtifactReview(artifact);
@@ -330,7 +340,7 @@ describe("semantic documentation runtime contract", () => {
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(semanticDocumentationRuntimeRequiredExternalEvidence);
     expect(review.redactions).toEqual(
-      expect.arrayContaining(["runId", "ciUrl", "claimLog", "providerEvidence", "legalReview"]),
+      expect.arrayContaining(["runId", "ciUrl", "claimLog", "providerEvidence.providerUrl", "legalReview.clientId"]),
     );
     expect(review.requiredExternalEvidence).toContain("Provider readiness proof captured outside semantic documentation wording checks.");
     expect(bundle.status).toBe("redacted-evidence-bundle-ready");

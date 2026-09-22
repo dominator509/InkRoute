@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { mobileAuthRuntimeReadinessRequiredCommands } from "@inkroute/auth";
 import {
   buildMobileAuthArtifactReview,
   buildMobileAuthEvidenceDecision,
@@ -113,8 +114,14 @@ describe("mobile auth runtime contract", () => {
   it("keeps provider, SecureStore, biometric, tenant, audit, and device blockers explicit", () => {
     expect(mobileAuthRuntimeReadiness.status).toBe("blocked");
     expect(mobileAuthRuntimeReadiness.missingScripts).toEqual([]);
-    expect(mobileAuthRuntimeReadiness.requiredCommands).toBe(mobileAuthRuntimeCommands);
-    expect(mobileAuthRuntimeReadiness.requiredEvidence).toBe(mobileAuthEvidenceFlags);
+    expect(mobileAuthRuntimeReadiness.requiredCommands).toEqual(mobileAuthRuntimeReadinessRequiredCommands);
+    expect(mobileAuthRuntimeReadiness.requiredEvidence).toEqual([
+      "provider-backed mobile login/logout test output",
+      "Expo SecureStore token persistence/clearing evidence with no plaintext token storage",
+      "biometric unlock simulator/device evidence",
+      "refresh, logout, and revoked-session clearing test output",
+      "tenant membership, role resolution, and cross-tenant denial test output",
+    ]);
     expect(mobileAuthRuntimeReadiness.blockers).toContain("Mobile auth provider must be selected and configured before login/logout is production-ready.");
     expect(mobileAuthRuntimeReadiness.blockers).toContain("Secure token storage must be verified to avoid plaintext token persistence.");
     expect(mobileAuthRuntimeReadiness.blockers).toContain("Mobile login, refresh, logout, denial, revocation, and tenant-switch decisions must persist audit logs.");
@@ -272,14 +279,13 @@ describe("mobile auth runtime contract", () => {
     expect(unitManifest).toContain("unit-mobile-auth-runtime-static");
     expect(gapTracker).toContain("apps/mobile/src/lib/mobileAuthRuntime.ts");
     expect(gapTracker).toContain("GAP-042 is mobile-auth-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("buildMobileAuthExecutionPlan");
     expect(gapTracker).toContain("mobileAuthSurfaceContract");
     expect(gapTracker).toContain("mobileAuthSecureSessionLifecycleContract");
-    expect(gapTracker).toContain("mobileAuthExecutionPolicy");
-    expect(gapTracker).toContain("mobileAuthRequiredExternalEvidence");
+    expect(gapTracker).toContain("execution policy");
+    expect(gapTracker).toContain("required external evidence");
     expect(gapTracker).toContain("buildMobileAuthPersistedRunPayload");
-    expect(gapTracker).toContain("buildRedactedMobileAuthArtifact");
-    expect(gapTracker).toContain("buildMobileAuthArtifactReview");
+    expect(gapTracker).toContain("redacted artifact");
+    expect(gapTracker).toContain("artifact review");
     expect(mobileAuthArtifactPaths).toContain("coverage/mobile-auth-secret-safe-artifacts.json");
   });
 });

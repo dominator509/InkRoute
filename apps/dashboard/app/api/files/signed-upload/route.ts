@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { prisma } from "@inkroute/db";
 import { buildPrivateStorageAccessPlan, buildSignedUploadIntentPlan, type UploadAssetKind } from "@inkroute/security";
 import { fileAssetInputSchema } from "@inkroute/validators";
@@ -142,7 +142,9 @@ export async function POST(request: NextRequest) {
         tenantId,
         subjectId: createHash("sha256").update(`${input.bucket}:${input.objectKey}:${input.kind}`).digest("hex"),
         objectKey: input.objectKey,
-        storageVisibility: input.visibility,
+        // The security layer stores originals privately; public access is served only through
+        // safe derivatives, so a client-requested "public" visibility maps to "public_derivative".
+        storageVisibility: input.visibility === "public" ? "public_derivative" : input.visibility,
         expiresInSeconds: 15 * 60,
         now: new Date().toISOString(),
         expiresAt: expiresAt.toISOString(),

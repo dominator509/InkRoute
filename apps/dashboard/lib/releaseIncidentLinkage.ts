@@ -336,12 +336,12 @@ export function buildReleaseIncidentPlanFromReports(input: {
     rollbackRequested: input.rollbackRequested,
     sentryReleaseConfigured: Boolean(process.env.SENTRY_RELEASE),
     incidentProviderConfigured: Boolean(process.env.INCIDENT_PROVIDER_WEBHOOK_URL),
-    tenantCommunicationOwner: input.tenantCommunicationOwner,
+    ...(input.tenantCommunicationOwner !== undefined ? { tenantCommunicationOwner: input.tenantCommunicationOwner } : {}),
   });
   const tenantCommunicationOwner = buildTenantIncidentCommunicationOwner({
     tenantId: input.tenantId,
     releaseVersion: input.releaseVersion,
-    owner: input.tenantCommunicationOwner,
+    ...(input.tenantCommunicationOwner !== undefined ? { owner: input.tenantCommunicationOwner } : {}),
   });
 
   return {

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { GET } from "../../dashboard/app/api/security/trust-status/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
-function trustStatusRequest(tenantId = "demo-studio-alpha", role = "studio_manager", userId = "trust-reader-1"): NextRequest {
+function trustStatusRequest(tenantId = "tenant_demo_nomad", role = "studio_manager", userId = "trust-reader-1"): NextRequest {
   return new NextRequest("https://local.test/api/dashboard/security/trust-status", {
     method: "GET",
     headers: {
@@ -20,7 +21,7 @@ describe("dashboard trust status route", () => {
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
-    expect(body.tenantId).toBe("demo-studio-alpha");
+    expect(body.tenantId).toBe("tenant_demo_nomad");
     expect(body.actor).toMatchObject({ userId: "trust-reader-1", role: "studio_manager" });
     expect(body.summary).toBeDefined();
     expect(body.securityHeaders.length).toBeGreaterThan(0);
@@ -30,10 +31,10 @@ describe("dashboard trust status route", () => {
 
   it("fail-closes production trust previews without provider-backed session evidence", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
-      const response = await GET(trustStatusRequest("demo-studio-alpha", "studio_manager", "trust-production-reader"));
+      const response = await GET(trustStatusRequest("tenant_demo_nomad", "studio_manager", "trust-production-reader"));
       const body = await response.json();
 
       expect(response.status).toBe(503);
@@ -44,7 +45,7 @@ describe("dashboard trust status route", () => {
       expect(body.productionBoundary.requiresProviderBackedSession).toBe(true);
       expect(body.productionBoundary.requiresSecurityRuntimeEvidence).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
@@ -60,7 +61,7 @@ describe("dashboard trust status route", () => {
   });
 
   it("denies trust status reads for roles outside the security posture allowlist", async () => {
-    const response = await GET(trustStatusRequest("demo-studio-alpha", "viewer", "viewer-reader"));
+    const response = await GET(trustStatusRequest("tenant_demo_nomad", "viewer", "viewer-reader"));
     const body = await response.json();
 
     expect(response.status).toBe(403);

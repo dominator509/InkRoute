@@ -195,7 +195,7 @@ describe("validator happy/error paths", () => {
       region: "WA",
       country: "US",
       title: "Seattle guest week",
-      metaDescription: "Booking Seattle guest spot for tattoo sessions.",
+      metaDescription: "Booking Seattle guest spot for tattoo sessions today.",
       canonicalPath: "/cities/seattle-wa",
     });
 

@@ -116,7 +116,7 @@ describe("GAP-116 mobile deployment runtime wiring", () => {
     expect(mobileDeploymentRuntimeReadiness.missingQaEvidence).toEqual(
       expect.arrayContaining(["device-qa", "push-token", "crash-capture", "ota-rollback", "store-readiness"])
     );
-    expect(mobileDeploymentRuntimeReadiness.requiredCommands).toBe(mobileDeploymentRuntimeCommands);
+    expect(mobileDeploymentRuntimeReadiness.requiredCommands).toEqual(mobileDeploymentRuntimeCommands);
     expect(mobileDeploymentRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Development, preview, and production EAS build artifact labels for iOS and Android where required.",

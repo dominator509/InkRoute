@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createInMemoryTenantPaymentRepository, createPrismaTenantPaymentRepository, decidePaymentLifecycleTransition } from "../lib/paymentPersistence";
+import { paymentLifecyclePersistenceRequiredControls } from "@inkroute/payments";
 
 const root = resolve(__dirname, "../../..");
 
@@ -89,16 +90,21 @@ describe("dashboard payment persistence static contract", () => {
       requiresTransaction: true as const,
       idempotencyKey: "payment:mark_paid:demo",
       writes: [],
-      requiredControls: [],
+      requiredControls: paymentLifecyclePersistenceRequiredControls,
       blockers: [],
     };
 
     await expect(
       repository.assertTenantScope({
         tenantId: "tenant_demo",
+        bookingRequestId: "booking_req_payment_demo",
         action: "mark_paid",
-        currentStatus: "checkout_session_recorded",
+        amountCents: 25000,
+        currency: "usd",
+        provider: "stripe",
+        occurredAt: "2026-06-09T00:00:00.000Z",
         paymentId: "payment_demo",
+        idempotencyKey: "payment:mark_paid:demo",
       }),
     ).resolves.toBeUndefined();
     await expect(repository.claimIdempotencyKey("payment:mark_paid:demo", "tenant_demo", "mark_paid")).resolves.toBe("claimed");
@@ -211,7 +217,7 @@ describe("dashboard payment persistence static contract", () => {
         { model: "BookingStateEvent", tenantId: "tenant_demo", payload: { bookingRequestId: "booking_req_payment_demo", actorId: "user_demo", occurredAt: "2026-06-09T00:00:00.000Z" } },
         { model: "IdempotencyKey", tenantId: "tenant_demo", payload: { bookingRequestId: "booking_req_payment_demo" } },
       ],
-      requiredControls: [],
+      requiredControls: paymentLifecyclePersistenceRequiredControls,
       blockers: [],
     });
     await expect(prismaRepository.findDashboardPayments("tenant_demo", 1)).resolves.toEqual([{ id: "payment_demo" }]);

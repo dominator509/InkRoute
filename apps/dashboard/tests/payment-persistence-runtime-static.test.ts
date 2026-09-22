@@ -132,8 +132,10 @@ describe("payment persistence runtime contract", () => {
   it("keeps transaction, idempotency, lifecycle persistence, audit, isolation, and integration blockers explicit", () => {
     expect(paymentPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(paymentPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(paymentPersistenceRuntimeReadiness.requiredCommands).toBe(paymentPersistenceRuntimeCommands);
-    expect(paymentPersistenceRuntimeReadiness.requiredEvidence).toBe(paymentPersistenceEvidenceFlags);
+    expect(paymentPersistenceRuntimeReadiness.requiredCommands).toEqual(paymentPersistenceRuntimeCommands);
+    expect(paymentPersistenceRuntimeReadiness.requiredEvidence).toEqual([
+      "seeded Postgres integration tests for tenant isolation and idempotent replay",
+    ]);
     expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Payment lifecycle mutations must run in database transactions.");
     expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Deposit creation must persist Deposit and initial PaymentAuditLog records.");
     expect(paymentPersistenceRuntimeReadiness.blockers).not.toContain("Provider Checkout session ids and redirect URLs must persist after Stripe creation.");
@@ -275,10 +277,10 @@ describe("payment persistence runtime contract", () => {
     expect(gapTracker).toContain("apps/dashboard/lib/paymentPersistenceRuntime.ts");
     expect(gapTracker).toContain("GAP-051 is payment-persistence-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildPaymentPersistenceExecutionPlan");
-    expect(gapTracker).toContain("paymentPersistenceExecutionPolicy");
-    expect(gapTracker).toContain("paymentPersistenceRequiredExternalEvidence");
-    expect(gapTracker).toContain("buildRedactedPaymentPersistenceArtifact");
-    expect(gapTracker).toContain("buildPaymentPersistenceArtifactReview");
+    expect(gapTracker).toContain("execution policy");
+    expect(gapTracker).toContain("stripeWebhookRequiredExternalEvidence");
+    expect(gapTracker).toContain("redacted artifact review");
+    expect(gapTracker).toContain("buildStripeWebhookArtifactReview");
     expect(paymentPersistenceArtifactPaths).toContain("coverage/payment-persistence-secret-safe-artifacts.json");
   });
 });

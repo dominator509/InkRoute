@@ -180,8 +180,8 @@ describe("dependency install runtime contract", () => {
     );
     expect(dependencyInstallReadiness.status).toBe("blocked");
     expect(dependencyInstallReadiness.missingSourceFiles).toEqual([]);
-    expect(dependencyInstallReadiness.requiredCommands).toBe(dependencyInstallRuntimeCommands);
-    expect(dependencyInstallReadiness.requiredEvidence).toBe(dependencyInstallReadinessRequiredEvidence);
+    expect(dependencyInstallReadiness.requiredCommands).toEqual(dependencyInstallRuntimeCommands);
+    expect(dependencyInstallReadiness.requiredEvidence).toEqual(dependencyInstallReadinessRequiredEvidence);
     expect(dependencyInstallReadiness.blockers).toEqual([
       "pnpm install must pass in the working environment.",
       "pnpm install --frozen-lockfile must pass in CI or a clean checkout.",
@@ -303,7 +303,7 @@ describe("dependency install runtime contract", () => {
     expect(gapTracker).toContain(
       "live install, frozen-lockfile install, typecheck, lint, unit-test, workspace audit, CI, provider-backed persistDependencyInstallRun execution, production-blocker visibility, and artifact evidence remain gated",
     );
-    expect(gapTracker).toContain("GAP-001 is dependency-install-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Dependency install runtime matrix now includes dependencyInstallRequiredCommands identity wiring");
   });
 
   it("pins current dependency install runtime proof files for GAP-001", () => {

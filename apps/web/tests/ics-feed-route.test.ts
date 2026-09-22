@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GET as getTravelIcsFeed } from "../app/api/public/[tenantSlug]/calendar/[artistSlug]/travel.ics/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 const routeContext = {
   params: Promise.resolve({ tenantSlug: "inkroute-demo", artistSlug: "mara-vale" }),
@@ -67,7 +68,7 @@ describe("signed ICS feed route", () => {
 
   it("fail-closes production ICS feeds instead of serving local demo feed tokens", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await getTravelIcsFeed(
@@ -88,7 +89,7 @@ describe("signed ICS feed route", () => {
       expect(body.error.gapIds).toContain("GAP-055");
       expect(body.productionBoundary.localDemoSignedFeedDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 });

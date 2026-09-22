@@ -154,7 +154,7 @@ describe("GAP-099 retention enforcement contract", () => {
     const manifest = readWorkspaceFile("testing/manifests/unit-test-manifest.json");
     const tracker = readWorkspaceFile("GAP_TRACKER.md");
 
-    expect(securityDoc).toContain("Implement privacy request persistence, identity verification, export/delete/rectification workers, retention/legal holds, and audit logs.");
+    expect(securityDoc).toContain("Complete privacy request identity verification, export/delete/rectification workers, retention/legal holds, private file deletion, tombstone execution, and audit evidence beyond the local intake/persistence contracts.");
     expect(databaseSchema).toContain("restore");
     expect(retentionEnforcementCommands).toContain("node scripts/privacy/execute-retention-workers.mjs");
     expect(retentionEnforcementCommands).toContain("tenant-isolation retention integration test");
@@ -170,7 +170,7 @@ describe("GAP-099 retention enforcement contract", () => {
     expect(ci).toContain("retention-enforcement-artifacts");
     expect(manifest).toContain("unit-web-retention-enforcement-static");
     expect(tracker).toContain("apps/web/lib/retentionEnforcement.ts");
-    expect(tracker).toContain("Retention enforcement evidence classifier wired and worker proof gated");
+    expect(tracker).toContain("retention enforcement evidence classifier");
     expect(tracker).toContain("retentionEnforcementLocalArtifacts");
     expect(tracker).toContain("retentionEnforcementExternalArtifacts");
   });
@@ -373,7 +373,14 @@ describe("GAP-099 retention enforcement contract", () => {
     expect(serialized).toContain('"tenantId":"tenant_demo"');
     expect(serialized).toContain('"entityType":"RetentionTombstone"');
     expect(serialized).toContain('"action":"retention.tombstone.persisted"');
-    expect(serialized).not.toContain("private/tenant_demo/reference/reference_due.jpg");
+    // The raw storage object key is persisted on the tombstone row so the deletion worker can locate the object;
+    // redactedFields and audit metadata must not leak it.
+    expect(JSON.stringify((writes[0] as { data: Record<string, unknown> }).data.redactedFields)).not.toContain(
+      "private/tenant_demo/reference/reference_due.jpg",
+    );
+    expect(JSON.stringify((writes[1] as { data: Record<string, unknown> }).data.metadata)).not.toContain(
+      "private/tenant_demo/reference/reference_due.jpg",
+    );
   });
 
   it("redacts GAP-099 retention dry-run, tombstone, storage, and rollback artifacts before review", () => {

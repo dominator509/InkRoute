@@ -97,8 +97,13 @@ describe("mobile crash runtime contract", () => {
   it("keeps provider, symbolication, device, persistence, and privacy blockers explicit", () => {
     expect(mobileCrashRuntimeReadiness.status).toBe("blocked");
     expect(mobileCrashRuntimeReadiness.missingScripts).toEqual([]);
-    expect(mobileCrashRuntimeReadiness.requiredCommands).toBe(mobileCrashRuntimeCommands);
-    expect(mobileCrashRuntimeReadiness.requiredEvidence).toBe(mobileCrashEvidenceFlags);
+    expect(mobileCrashRuntimeReadiness.requiredCommands).toEqual(mobileCrashRuntimeCommands);
+    expect(mobileCrashRuntimeReadiness.requiredEvidence).toEqual([
+      "Expo source-map and React Native debug-symbol upload evidence",
+      "forced simulator and device crash capture evidence",
+      "sanitized ErrorReport persistence and dashboard triage evidence",
+      "mobile crash privacy redaction and offline buffering evidence",
+    ]);
     expect(mobileCrashRuntimeReadiness.blockers).toContain("Mobile Sentry DSN must be configured in environment/secret settings.");
     expect(mobileCrashRuntimeReadiness.blockers).toContain("Expo JavaScript source maps must upload for mobile releases.");
     expect(mobileCrashRuntimeReadiness.blockers).toContain("Provider payloads and dashboard summaries must be proven free of raw PII, medical, payment, token, and private URL values.");

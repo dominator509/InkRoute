@@ -65,8 +65,8 @@ describe("provider session runtime contract", () => {
       "cookie-mobile-security",
       "auth-audit-log",
       "tenant-isolation-smoke",
-      "mobile-revocation-smoke",
       "redacted-evidence-bundle",
+      "mobile-revocation-smoke",
     ]);
     expect(providerSessionSurfaceContract.map((entry) => entry.surfaceId)).toEqual([
       "provider-selection-env",
@@ -177,7 +177,7 @@ describe("provider session runtime contract", () => {
   it("keeps provider-backed auth blockers explicit until real provider evidence exists", () => {
     expect(providerSessionRuntimeReadiness.status).toBe("blocked");
     expect(providerSessionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(providerSessionRuntimeReadiness.requiredCommands).toBe(providerSessionRuntimeCommands);
+    expect(providerSessionRuntimeReadiness.requiredCommands).toEqual(providerSessionRuntimeCommands);
     expect(providerSessionRuntimeReadiness.requiredControls).toEqual([
       "Map provider login, logout, and session callbacks through the providerSessionCallbackContract before route authorization.",
       "Map provider identity to application User records without trusting client headers.",
@@ -391,7 +391,7 @@ describe("provider session runtime contract", () => {
     expect(gapTracker).toContain("buildProviderSessionDecisionRequiredEvidence");
     expect(gapTracker).toContain("providerSessionRequiredEvidence");
     expect(gapTracker).toContain("providerSessionExecutionPolicy");
-    expect(gapTracker).toContain("Provider session runtime identity assertions pin exported commands, controls, artifacts, proof files, required external evidence, and decision evidence helpers");
+    expect(gapTracker).toContain("Provider session runtime identity assertions pin exported commands, controls, artifacts, proof files, required external evidence, redacted bundle helper, and decision evidence helpers");
     expect(gapTracker).toContain("providerSessionRequiredExternalEvidence");
     expect(gapTracker).toContain("buildProviderSessionRedactedEvidenceBundle");
     expect(gapTracker).toContain("providerSessionSurfaceContract");

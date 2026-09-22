@@ -97,7 +97,7 @@ describe("booking flow runtime evidence contract", () => {
     expect(bookingClient).not.toContain("after persistence is implemented");
     expect(confirmationPage).toContain("Provider boundaries");
     expect(confirmationPage).toContain("booking request identifier");
-    expect(confirmationPage).toContain("local fallback and provider follow-up evidence remain runtime-gated");
+    expect(confirmationPage).toContain("persisted workflow reads, local fallback boundaries, and provider follow-up evidence remain runtime-gated");
     expect(confirmationPage).toContain("Policy engine and deposit-session boundaries are wired");
     expect(confirmationPage).toContain("Provider calendar execution remains evidence-gated");
     expect(confirmationPage).not.toContain("conflict checks are implemented");
@@ -130,9 +130,22 @@ describe("booking flow runtime evidence contract", () => {
   it("keeps booking flow runtime blocked until install, Prisma, Next, browser, DB, CI, and artifact proof execute", () => {
     expect(bookingFlowRuntimeReadiness.status).toBe("blocked");
     expect(bookingFlowRuntimeReadiness.missingScripts).toEqual([]);
-    expect(bookingFlowRuntimeReadiness.requiredCommands).toBe(bookingFlowRuntimeCommands);
-    expect(bookingFlowRuntimeReadiness.requiredControls).toBe(bookingFlowRuntimeControls);
-    expect(bookingFlowRuntimeReadiness.requiredEvidence).toBe(bookingFlowRuntimeEvidenceFlags);
+    expect(bookingFlowRuntimeReadiness.requiredCommands).toEqual(bookingFlowRuntimeCommands);
+    expect(bookingFlowRuntimeReadiness.requiredControls).toEqual([
+      "Verify booking and confirmation pages in a real Next runtime, not only package helpers.",
+      "Exercise public booking API route request handling with DB and local-runtime scopes.",
+      "Preserve explicit provider-gated reference upload, deposit, notification, and calendar boundaries.",
+      "Keep local-runtime fallback tenant-scoped and visibly non-production.",
+      "Redact medical notes, payment data, provider tokens, private file URLs, and raw client PII from runtime artifacts.",
+    ]);
+    expect(bookingFlowRuntimeReadiness.requiredEvidence).toEqual([
+      "dependency install and generated Prisma Client evidence",
+      "web typecheck/build and client/server boundary evidence",
+      "booking API contract and Next route runtime smoke evidence",
+      "booking and confirmation browser smoke evidence",
+      "local fallback, database runtime, and provider-gated boundary evidence",
+      "CI artifact bundle with redaction/secret-safety proof",
+    ]);
     expect(bookingFlowRuntimeReadiness.blockers).toContain("Workspace dependencies must be installed with a committed lockfile before booking runtime evidence can close.");
     expect(bookingFlowRuntimeReadiness.blockers).toContain("Browser smoke must prove /booking loads, validates input, and submits without client/server component errors.");
     expect(bookingFlowRuntimeReadiness.blockers).toContain("Booking runtime artifacts must be redacted and free of secrets, raw medical notes, payment data, provider tokens, and private file URLs.");
@@ -319,7 +332,7 @@ describe("booking flow runtime evidence contract", () => {
     expect(gapTracker).toContain("bookingFlowRuntimeExecutionPolicy");
     expect(gapTracker).toContain("bookingFlowRuntimeRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-031 is booking-flow-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("live dependency install, Prisma Client generation, provider-backed persistBookingFlowRuntimeRun execution, web typecheck/build, Next route runtime smoke, browser smoke, dev-DB transaction smoke, CI evidence, and secret-safe artifact review remain open");
+    expect(gapTracker).toContain("Live dependency install, Prisma Client generation, provider-backed persistBookingFlowRuntimeRun execution, web typecheck/build, Next route runtime smoke, browser smoke, dev-DB transaction smoke, CI evidence, and secret-safe artifact review remain open");
     expect(gapTracker).toContain("proof inventory");
   });
 

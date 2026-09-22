@@ -189,16 +189,22 @@ describe("live Stripe payments runtime contract", () => {
     expect(paymentsSource).toContain("buildLiveStripePaymentsReadinessPlan");
     expect(paymentsSource).toContain("verifyStripeWebhookSignature");
     expect(paymentsTests).toContain("buildLiveStripePaymentsReadinessPlan");
-    expect(paymentRoutesTest).toContain("Stripe-Signature");
+    expect(paymentRoutesTest).toContain("stripe-signature");
     expect(stripeWebhookRoute).toContain("verifyStripeWebhookSignature");
-    expect(dashboardPaymentReadTest).toContain("PaymentAuditLog");
+    expect(dashboardPaymentReadTest).toContain("tx.paymentAuditLog.create");
   });
 
   it("keeps live provider blockers explicit until real Stripe evidence exists", () => {
     expect(liveStripePaymentsRuntimeReadiness.status).toBe("blocked");
     expect(liveStripePaymentsRuntimeReadiness.missingScripts).toEqual([]);
-    expect(liveStripePaymentsRuntimeReadiness.requiredCommands).toBe(liveStripePaymentsRuntimeCommands);
-    expect(liveStripePaymentsRuntimeReadiness.requiredEvidence).toBe(liveStripePaymentsRequiredEvidence);
+    expect(liveStripePaymentsRuntimeReadiness.requiredCommands).toEqual(liveStripePaymentsRuntimeCommands);
+    expect(liveStripePaymentsRuntimeReadiness.requiredEvidence).toEqual([
+      "Stripe SDK pin plus redacted secret/webhook/API-version configuration evidence.",
+      "Real Checkout session creation with persisted provider session and DB-backed idempotency evidence.",
+      "Raw-body webhook verification, replay protection, and supported lifecycle event evidence.",
+      "Tenant-scoped transactional reconciliation and cross-tenant denial evidence.",
+      "Stripe CLI, booking-to-paid E2E, CI, and secret-safe artifact evidence.",
+    ]);
     expect(liveStripePaymentsRuntimeReadiness.blockers).not.toContain(
       "Stripe SDK must be installed and pinned before live provider payment readiness can close.",
     );
@@ -310,7 +316,7 @@ describe("live Stripe payments runtime contract", () => {
     expect(decision.requiredEvidence).toEqual(
       buildLiveStripePaymentsDecisionRequiredEvidence(liveStripePaymentsRuntimeReadiness.requiredEvidence),
     );
-    expect(decision.requiredEvidence).toBe(liveStripePaymentsRequiredEvidence);
+    expect(decision.requiredEvidence).toEqual(liveStripePaymentsRequiredEvidence);
     expect(decision.blockers).not.toContain("Stripe SDK must be installed and pinned before live provider payment readiness can close.");
     expect(decision.blockers).toContain("Stripe secret key must be configured through the secret store.");
     expect(decision.blockers).toContain("Stripe webhook secret must be configured through the secret store.");
@@ -363,7 +369,7 @@ describe("live Stripe payments runtime contract", () => {
     expect(gapTracker).toContain("LiveStripePaymentsRun");
     expect(gapTracker).toContain("apps/web/lib/liveStripePaymentsRuntime.ts");
     expect(gapTracker).toContain("buildLiveStripePaymentsDecisionRequiredEvidence");
-    expect(gapTracker).toContain("liveStripePaymentsRequiredEvidence");
+    expect(gapTracker).toContain("liveStripePaymentsReadinessRequiredEvidence");
     expect(gapTracker).toContain("liveStripePaymentsRuntimeLocalArtifacts");
     expect(gapTracker).toContain("liveStripePaymentsRuntimeExternalArtifacts");
     expect(gapTracker).toContain("persistLiveStripePaymentsRun upsert seam");

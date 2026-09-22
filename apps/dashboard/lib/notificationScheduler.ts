@@ -479,7 +479,7 @@ export function buildDashboardNotificationSchedulerContract(): DashboardNotifica
   const base = {
     tenantId: "tenant_demo",
     now: demoNow,
-    queueStrategy: "database" as const,
+    queueStrategy: "database_polling" as const,
     workerEnabled: true,
     idempotencyStoreAvailable: true,
     auditLogPersistenceAvailable: true,
@@ -586,7 +586,7 @@ export function buildDashboardSchedulerPlanFromAction(input: {
     tenantId: input.tenantId,
     action: input.action,
     now: input.now,
-    queueStrategy: "database",
+    queueStrategy: "database_polling",
     workerEnabled: true,
     idempotencyStoreAvailable: input.idempotencyStoreAvailable ?? false,
     auditLogPersistenceAvailable: input.auditLogPersistenceAvailable ?? false,
@@ -610,22 +610,27 @@ export async function executeNotificationSchedulerPlan(
 ): Promise<{ status: "planned" | "duplicate" | "blocked"; plan: NotificationSchedulerPlan }> {
   if (plan.status === "blocked" || !plan.idempotencyKey) return { status: "blocked", plan };
 
-  const idempotency = await repository.claimIdempotencyKey({ tenantId: plan.writes[0]?.tenantId ?? "missing_tenant", key: plan.idempotencyKey, action: plan.action });
+  const firstWrite = plan.writes[0];
+  const tenantId = firstWrite?.tenantId ?? "missing_tenant";
+  const idempotency = await repository.claimIdempotencyKey({ tenantId, key: plan.idempotencyKey, action: plan.action });
   if (idempotency === "duplicate") return { status: "duplicate", plan };
 
-  if (plan.action === "schedule_sequence") await repository.persistNotificationJobs({ tenantId: plan.writes[0].tenantId, plan });
-  if (plan.action === "process_due_job") await repository.persistNotificationDelivery({ tenantId: plan.writes[0].tenantId, plan });
-  if (plan.action === "retry_failed_job") await repository.persistRetry({ tenantId: plan.writes[0].tenantId, plan });
-  if (plan.action === "dead_letter_job") await repository.persistDeadLetter({ tenantId: plan.writes[0].tenantId, plan, reason: String(plan.writes[0].payload.cancellationReason ?? "unknown") });
+  if (plan.action === "schedule_sequence") await repository.persistNotificationJobs({ tenantId, plan });
+  if (plan.action === "process_due_job") await repository.persistNotificationDelivery({ tenantId, plan });
+  if (plan.action === "retry_failed_job") await repository.persistRetry({ tenantId, plan });
+  if (plan.action === "dead_letter_job")
+    await repository.persistDeadLetter({ tenantId, plan, reason: String(firstWrite?.payload.cancellationReason ?? "unknown") });
   if (plan.action === "cancel_scheduled_jobs") {
+    const appointmentId = String(firstWrite?.payload.appointmentId ?? "") || undefined;
+    const bookingRequestId = String(firstWrite?.payload.bookingRequestId ?? "") || undefined;
     await repository.cancelScheduledJobs({
-      tenantId: plan.writes[0].tenantId,
-      appointmentId: String(plan.writes[0].payload.appointmentId ?? "") || undefined,
-      bookingRequestId: String(plan.writes[0].payload.bookingRequestId ?? "") || undefined,
-      reason: String(plan.writes[0].payload.cancellationReason ?? "scheduler_cancellation"),
+      tenantId,
+      ...(appointmentId !== undefined ? { appointmentId } : {}),
+      ...(bookingRequestId !== undefined ? { bookingRequestId } : {}),
+      reason: String(firstWrite?.payload.cancellationReason ?? "scheduler_cancellation"),
     });
   }
-  await repository.persistWorkerAuditLog({ tenantId: plan.writes[0].tenantId, plan, redactedMetadata: { action: plan.action, scheduledJobCount: plan.scheduledJobs.length } });
+  await repository.persistWorkerAuditLog({ tenantId, plan, redactedMetadata: { action: plan.action, scheduledJobCount: plan.scheduledJobs.length } });
   return { status: "planned", plan };
 }
 

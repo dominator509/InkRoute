@@ -128,7 +128,7 @@ Run the Codex workspace prompt in `docs/workspace/CODEX_WORKSPACE_PROMPT.md`, co
 ## 2026-06-06 command-driven workspace verification rerun (08:23:41Z)
 
 Executed from this environment with full command log:
-- `docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log`
+- docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log (log not retained in repo)
 
 Observed outcomes:
 - `corepack enable` ? exit `0`
@@ -150,18 +150,18 @@ Current phase state:
 ## 2026-06-06 command-driven workspace verification rerun (15:27:54Z)
 
 - Executed from `C:\dev\InkRoute` on branch `main`.
-- Full run log: `docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log`.
+- Full run log: docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log (log not retained in repo).
 - Outcomes:
-  - `corepack enable` — exit `0`.
-  - `pnpm install` — exit `0`.
-  - `pnpm workspace:all` — exit `0`.
-  - `pnpm handoff:all` — exit `0`.
-  - `pnpm quality:all` — exit `0`.
-  - `pnpm typecheck` — exit `0`.
-  - `pnpm test:unit` — exit `0`.
-  - `pnpm test:manifest` — exit `0`.
-  - `pnpm --filter @inkroute/web build` — exit `0`.
-  - `pnpm --filter @inkroute/dashboard build` — exit `0`.
+  - `corepack enable` ï¿½ exit `0`.
+  - `pnpm install` ï¿½ exit `0`.
+  - `pnpm workspace:all` ï¿½ exit `0`.
+  - `pnpm handoff:all` ï¿½ exit `0`.
+  - `pnpm quality:all` ï¿½ exit `0`.
+  - `pnpm typecheck` ï¿½ exit `0`.
+  - `pnpm test:unit` ï¿½ exit `0`.
+  - `pnpm test:manifest` ï¿½ exit `0`.
+  - `pnpm --filter @inkroute/web build` ï¿½ exit `0`.
+  - `pnpm --filter @inkroute/dashboard build` ï¿½ exit `0`.
 - Manifest outputs refreshed (by command run):
   - `docs/workspace/manifests/workspace-import-audit.json`
   - `docs/workspace/manifests/package-script-audit.json`
@@ -177,18 +177,18 @@ Current phase state:
 ## 2026-06-06 command-driven workspace verification rerun (15:34:26Z)
 
 - Executed from `C:\dev\InkRoute` on branch `main`.
-- Full command stream: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log`.
+- Full command stream: docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log (log not retained in repo).
 - Outcomes:
-  - `corepack enable` — exit `0`
-  - `pnpm install` — exit `0`
-  - `pnpm workspace:all` — exit `0`
-  - `pnpm handoff:all` — exit `0`
-  - `pnpm quality:all` — exit `0`
-  - `pnpm typecheck` — exit `0`
-  - `pnpm test:unit` — exit `0`
-  - `pnpm test:manifest` — exit `0`
-  - `pnpm --filter '@inkroute/web' build` — exit `0`
-  - `pnpm --filter '@inkroute/dashboard' build` — exit `0`
+  - `corepack enable` ï¿½ exit `0`
+  - `pnpm install` ï¿½ exit `0`
+  - `pnpm workspace:all` ï¿½ exit `0`
+  - `pnpm handoff:all` ï¿½ exit `0`
+  - `pnpm quality:all` ï¿½ exit `0`
+  - `pnpm typecheck` ï¿½ exit `0`
+  - `pnpm test:unit` ï¿½ exit `0`
+  - `pnpm test:manifest` ï¿½ exit `0`
+  - `pnpm --filter '@inkroute/web' build` ï¿½ exit `0`
+  - `pnpm --filter '@inkroute/dashboard' build` ï¿½ exit `0`
 - Manifests generated/updated:
   - `docs/workspace/manifests/workspace-import-audit.json`
   - `docs/workspace/manifests/package-script-audit.json`
@@ -204,18 +204,18 @@ Current phase state:
 ## 2026-06-06 command-driven workspace verification rerun (15:43:59Z)
 
 - Executed `docs/workspace/CODEX_WORKSPACE_PROMPT.md` in full sequence from `C:\dev\InkRoute`.
-- Log: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-43-37.log`.
+- Log: docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-43-37.log (log not retained in repo).
 - Outcomes:
-  - `corepack enable` — PASS (`0`)
-  - `pnpm install` — PASS (`0`)
-  - `pnpm workspace:all` — PASS (`0`)
-  - `pnpm handoff:all` — PASS (`0`)
-  - `pnpm quality:all` — PASS (`0`)
-  - `pnpm typecheck` — PASS (`0`)
-  - `pnpm test:unit` — PASS (`14 passed, 0 failed`)
-  - `pnpm test:manifest` — PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
-  - `pnpm --filter '@inkroute/web' build` — PASS (`0`)
-  - `pnpm --filter '@inkroute/dashboard' build` — PASS (`0`)
+  - `corepack enable` ï¿½ PASS (`0`)
+  - `pnpm install` ï¿½ PASS (`0`)
+  - `pnpm workspace:all` ï¿½ PASS (`0`)
+  - `pnpm handoff:all` ï¿½ PASS (`0`)
+  - `pnpm quality:all` ï¿½ PASS (`0`)
+  - `pnpm typecheck` ï¿½ PASS (`0`)
+  - `pnpm test:unit` ï¿½ PASS (`14 passed, 0 failed`)
+  - `pnpm test:manifest` ï¿½ PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
+  - `pnpm --filter '@inkroute/web' build` ï¿½ PASS (`0`)
+  - `pnpm --filter '@inkroute/dashboard' build` ï¿½ PASS (`0`)
 - Evidence artifacts generated/updated:
   - `docs/workspace/manifests/workspace-import-audit.json`
   - `docs/workspace/manifests/package-script-audit.json`
@@ -231,7 +231,7 @@ Current phase state:
 
 ## 2026-06-06 command-driven workspace verification rerun (2026-06-06T08:58:20Z)
 
-- Source of truth: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log`.
+- Source of truth: docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log (log not retained in repo).
 - Command status summary:
   - `corepack enable` â€” `0`
   - `pnpm install` â€” `0`

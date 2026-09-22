@@ -321,7 +321,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const definitions = await buildDefinitionsForTenant(tenantId, tx as FeatureFlagRepository)();
+      const definitions = await buildDefinitionsForTenant(tenantId, tx as unknown as FeatureFlagRepository)();
       const audit = await tx.auditLog.create({
         data: {
           tenantId,
@@ -504,11 +504,10 @@ export async function POST(request: NextRequest) {
       description: input.description ?? null,
       rules: persistedRules,
     });
+    const bodyIdempotencyKey = (body as Record<string, unknown>).idempotencyKey;
     const idempotencyKey =
       request.headers.get("idempotency-key") ??
-      (typeof (body as Record<string, unknown>).idempotencyKey === "string" && (body as Record<string, unknown>).idempotencyKey.trim()
-        ? (body as Record<string, unknown>).idempotencyKey.trim()
-        : null) ??
+      (typeof bodyIdempotencyKey === "string" && bodyIdempotencyKey.trim() ? bodyIdempotencyKey.trim() : null) ??
       `feature-flag-update:${tenantId}:${input.key}:${requestHash}`;
     const persisted = await prisma.$transaction(async (tx) => {
       const membershipMetadata = buildTenantMembershipLookupMetadata({ ...membershipLookup, actorSource: membershipLookup.source });

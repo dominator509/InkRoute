@@ -201,7 +201,7 @@ describe("mobile support helpers", () => {
       redactedAdoptionOnly: true,
       rollbackTargetUpdateId: "update_previous_001",
       blockers: [],
-      requiredEvidence: [],
+      requiredEvidence: ["redacted OTA adoption and failure proof"],
     });
   });
 

@@ -13,7 +13,7 @@ Use Serena and Obsidian to reduce context drag, not to add a research phase. Rep
 
 ## Routing contract
 
-Classification priority is strict: bare live Serena activation first, Serena semantic lookup second when activation/use is paired with symbol, owner, reference, call-site, or route/service-boundary discovery, explicit workflow/tooling optimization third, exact repo seams fourth, repeated gap-batch signals fifth, then owner/reference/memory-read/memory-append lookups. Treat `workflow` as a tooling signal only when it is paired with Serena, Obsidian, RTK, routing, router, tool admission, vault, bootstrap, or one-shot language. A bare mention of Serena or Obsidian is not enough to enter tooling mode; route by the concrete intent unless the request is about configuring, optimizing, routing, bootstrapping, or maintaining the tool workflow itself. Plain `activate`, `activation`, or `Serena activation` wording is not maintenance by itself; only `fix`, `diagnose`, `configure`, `optimize`, `index`, `LSP`, `.serena`, or `project.yml` wording converts Serena activation into maintenance. If the user says to activate or use Serena and then asks to find symbols, owners, references, call sites, or a route/service boundary, classify it as Serena semantic lookup instead of Serena-maintenance. Do not let generic words such as `script`, `.md`, or bare `workflow` trigger a semantic lookup when the task already identifies a CI workflow, package workflow, owning workflow surface, or exact repo seam.
+Classification priority is strict: bare live Serena activation first, Serena semantic lookup second when activation/use is paired with symbol, owner, reference, call-site, or route/service-boundary discovery, explicit workflow/tooling optimization third, exact repo seams fourth, repeated gap-batch signals fifth, then owner/reference/memory-read/memory-append lookups. Treat `workflow` as a tooling signal only when it is paired with Serena, Obsidian, RTK, routing, router, tool admission, vault, bootstrap, or one-shot language. A bare mention of Serena or Obsidian is not enough to enter tooling mode; route by the concrete intent unless the request is about configuring, optimizing, routing, bootstrapping, or maintaining the tool workflow itself. Plain `activate`, `activation`, or `Serena activation` wording is not maintenance by itself; only `fix`, `diagnose`, `configure`, `optimize`, `index`, `LSP`, `.serena`, or `.serena/project.yml` wording converts Serena activation into maintenance. If the user says to activate or use Serena and then asks to find symbols, owners, references, call sites, or a route/service boundary, classify it as Serena semantic lookup instead of Serena-maintenance. Do not let generic words such as `script`, `.md`, or bare `workflow` trigger a semantic lookup when the task already identifies a CI workflow, package workflow, owning workflow surface, or exact repo seam.
 
 | Task shape | Serena | Obsidian | Action |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ Classification priority is strict: bare live Serena activation first, Serena sem
 | Failing check names the exact missing dependency, file, row, or assertion | Skip | Skip | Patch the named seam and update the local source/test/tracker contract. |
 | Owner route, service, model, or symbol is unknown | One owner lookup | Skip | Inspect the located file slice before editing. |
 | Exported/shared contract changes | One references lookup | Skip unless a prior API decision matters | Patch compatible source/tests and direct call sites only. |
-| Serena activation/use plus symbol, owner, reference, call-site, or route/service-boundary discovery | One semantic lookup after activation if needed | Skip | Read only `activation.md`, run one focused owner/reference lookup, then inspect located repo slices. |
+| Serena activation/use plus symbol, owner, reference, call-site, or route/service-boundary discovery | One semantic lookup after activation if needed | Skip | Read only `.serena/memories/inkroute/activation.md`, run one focused owner/reference lookup, then inspect located repo slices. |
 | Prior accepted architecture/API decision changes the edit | Optional one lookup if code impact is unclear | Read one specific InkRoute note | Decide from repo evidence, not memory. |
 | DeepSeek-Claude handoff or Codex review | Lookup changed exported symbols only if impact is unclear | Append one concise note only after review if durable; do not browse the vault first | Codex owns final acceptance. |
 | Tooling workflow | Usually skip because files are known | Skip; bootstrap owns local notes | Patch `.serena/project.yml`, `.serena/memories/inkroute/*`, this doc, or `scripts/bootstrap-obsidian-vault.ps1`. Use `.serena/memories/inkroute/serena-health.md` for activation/health fallback rules. |
@@ -150,7 +150,7 @@ Use the shorter scorecard when the route is still fuzzy:
 
 | Tool | Admit only when | Reject when |
 | --- | --- | --- |
-| Serena | Owner, exported references, or direct call-site blast radius is unknown. | The file, route, gap row, helper, assertion, package script, or CI seam is already named. |
+| Serena | Owner, exported references, or direct call-site blast radius is unknown. | The file, route, gap row, helper, assertion, package script, or CI seam is already named. | (gated)
 | Obsidian | A prior accepted InkRoute decision changes the implementation or review. | The question is current source, test, tracker, diff, branch, CI, provider, or runtime state. |
 | RTK | Current repo evidence is needed. | The action would mutate secrets, providers, production infra, or run validation without approval. |
 | DeepSeek-Claude | Substantial backend implementation needs delegation and Codex can review it. | Frontend/aesthetic work, secrets, provider settings, production infra, or unbounded research is involved. |
@@ -511,7 +511,7 @@ Do not ask Serena to reconfirm files already named by the row, failing check, or
 2. Use one Serena references lookup only if changing an exported/shared contract.
 3. Patch tenant/auth/RBAC checks before persistence changes.
 4. Add or update the narrowest test/static assertion that locks the behavior.
-5. Keep frontend styling, provider settings, production infrastructure, secrets, and legal copy untouched unless explicitly approved.
+5. Keep frontend styling, provider settings, production infrastructure, secrets, and legal copy untouched unless explicitly approved (gated).
 
 ## Query pack
 

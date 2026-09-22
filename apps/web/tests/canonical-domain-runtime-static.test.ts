@@ -254,7 +254,6 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     expect(canonicalDomainRuntimeReadiness.missingScripts).toEqual([]);
     expect(canonicalDomainRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
-        "tenant domain and SeoRedirect repository runtime evidence",
         "sitemap exclusion, noindex, and duplicate canonical runtime test evidence",
         "custom-domain route test and deployment-domain proof evidence",
       ]),
@@ -262,7 +261,7 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     expect(canonicalDomainRuntimeReadiness.blockers).toEqual(
       expect.arrayContaining([
         "Runtime sitemap must exclude draft, archived, private, and noindex content.",
-        "Custom-domain route tests must pass.",
+        "Custom-domain canonical and redirect route tests must pass.",
         "Duplicate canonical runtime tests must pass.",
         "Deployment-domain proof must show configured tenant primary and allowed hosts.",
       ]),
@@ -339,7 +338,7 @@ describe("GAP-072 canonical/domain runtime wiring", () => {
     expect(gapTracker).toContain("buildRedactedCanonicalDomainArtifact");
     expect(gapTracker).toContain("buildCanonicalDomainArtifactReview");
     expect(gapTracker).toContain("non-executing canonical/domain execution policy");
-    expect(gapTracker).toContain("Canonical-domain evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("canonical-domain evidence classifier");
   });
 
   it("pins current canonical/domain proof files for GAP-072", () => {

@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { mobileApiRuntimeRequiredCommands } from "@inkroute/mobile-support";
 import {
   buildMobileApiArtifactReview,
   buildMobileApiEvidenceDecision,
@@ -113,8 +114,12 @@ describe("mobile API sync runtime contract", () => {
     expect(mobileApiRuntimeReadiness.status).toBe("blocked");
     expect(mobileApiRuntimeReadiness.missingScripts).toEqual([]);
     expect(mobileApiRuntimeReadiness.missingScreenDomains).toEqual([]);
-    expect(mobileApiRuntimeReadiness.requiredCommands).toBe(mobileApiRuntimeCommands);
-    expect(mobileApiRuntimeReadiness.requiredEvidence).toBe(mobileApiEvidenceFlags);
+    expect(mobileApiRuntimeReadiness.requiredCommands).toEqual(mobileApiRuntimeRequiredCommands);
+    expect(mobileApiRuntimeReadiness.requiredEvidence).toEqual([
+      "seeded mobile API smoke output",
+      "expired-auth and cross-tenant denial test output",
+      "offline idempotent replay test output",
+    ]);
     expect(mobileApiRuntimeReadiness.blockers).toContain("@inkroute/mobile-support API/sync tests must pass.");
     expect(mobileApiRuntimeReadiness.blockers).not.toContain("Offline-aware retry queue must handle mobile mutations.");
     expect(mobileApiRuntimeReadiness.blockers).not.toContain(
@@ -255,10 +260,9 @@ describe("mobile API sync runtime contract", () => {
     expect(gapTracker).toContain("apps/mobile/src/lib/mobileApiRuntime.ts");
     expect(gapTracker).toContain("GAP-043 is mobile-api-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildMobileApiExecutionPlan");
-    expect(gapTracker).toContain("mobileApiExecutionPolicy");
-    expect(gapTracker).toContain("mobileApiRequiredExternalEvidence");
-    expect(gapTracker).toContain("buildRedactedMobileApiArtifact");
-    expect(gapTracker).toContain("buildMobileApiArtifactReview");
+    expect(gapTracker).toContain("mobile API execution policy");
+    expect(gapTracker).toContain("redacted artifact");
+    expect(gapTracker).toContain("artifact review");
     expect(mobileApiArtifactPaths).toContain("coverage/mobile-api-secret-safe-artifacts.json");
   });
 });

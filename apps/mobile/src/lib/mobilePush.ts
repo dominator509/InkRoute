@@ -420,7 +420,7 @@ export function buildMobilePushRegistrationPlan(context: MobilePushRuntimeContex
     userId: context.userId,
     deviceId: context.deviceId,
     permissionStatus: context.permissionStatus,
-    expoPushToken: context.expoPushToken,
+    ...(context.expoPushToken !== undefined ? { expoPushToken: context.expoPushToken } : {}),
     pushOptIn: context.pushOptIn,
     registeredAt: context.registeredAt,
   });
@@ -597,7 +597,7 @@ export const mobilePushContractPreview: MobilePushContractPreview = {
     deviceId: "device_mobile_demo",
     requestId: "push_registration_demo",
     permissionStatus: "granted",
-    expoPushToken: mobileNotificationConsent.pushToken,
+    ...(mobileNotificationConsent.pushToken !== undefined ? { expoPushToken: mobileNotificationConsent.pushToken } : {}),
     pushOptIn: mobileNotificationConsent.pushOptIn,
     registeredAt: "2026-06-09T00:00:00.000Z",
   }),

@@ -15,8 +15,8 @@ describe("Phase 12 release automation static coverage", () => {
 
     expect(releasesRoute).toContain("export async function GET");
     expect(releasesRoute).toContain("export async function POST");
-    expect(releasesRoute).toContain('assertPermission(actor, "release:read")');
-    expect(releasesRoute).toContain('assertPermission(actor, "release:write")');
+    expect(releasesRoute).toContain('assertPermissionWithTenantMembership(actor, "release:read")');
+    expect(releasesRoute).toContain('assertPermissionWithTenantMembership(actor, "release:write")');
     expect(releasesRoute).toContain("releaseCreateInputSchema.safeParse");
     expect(releasesRoute).toContain("TENANT_MISMATCH");
     expect(releasesRoute).toContain("RELEASE_UNIQUENESS_CONFLICT");
@@ -26,8 +26,8 @@ describe("Phase 12 release automation static coverage", () => {
 
     expect(flagsRoute).toContain("export async function GET");
     expect(flagsRoute).toContain("export async function POST");
-    expect(flagsRoute).toContain('assertPermission(actor, "release:read")');
-    expect(flagsRoute).toContain('assertPermission(actor, "settings:write")');
+    expect(flagsRoute).toContain('assertPermissionWithTenantMembership(actor, "release:read")');
+    expect(flagsRoute).toContain('assertPermissionWithTenantMembership(actor, "settings:write")');
     expect(flagsRoute).toContain("featureFlagPatchInputSchema.safeParse");
     expect(flagsRoute).toContain("PROVIDER_CREDENTIALS_REQUIRED");
     expect(flagsRoute).toContain("feature_flag:update");

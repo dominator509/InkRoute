@@ -242,8 +242,8 @@ export function auditDashboardCalendarTimezoneInputs(input: {
   travelStops?: readonly { id: string; timezone: string }[];
 }) {
   return auditCalendarTimezones({
-    windows: input.windows,
-    travelStops: input.travelStops,
+    ...(input.windows !== undefined ? { windows: input.windows } : {}),
+    ...(input.travelStops !== undefined ? { travelStops: input.travelStops } : {}),
     requiredTimezones: requiredSchedulingTimezones,
   });
 }

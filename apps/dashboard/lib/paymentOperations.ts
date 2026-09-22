@@ -341,7 +341,7 @@ const baseOperationInput = {
   bookingRequestId: "booking_demo",
   paymentId: "payment_demo",
   amountCents: 12500,
-  currency: "USD" as CurrencyCode,
+  currency: "usd",
   provider: "stripe" as PaymentOperationProvider,
   occurredAt: "2026-06-09T12:00:00.000Z",
   actorId: "operator_demo",
@@ -357,7 +357,7 @@ const baseOperationInput = {
   receiptDeliveryConfigured: true,
   exportReviewerId: "reviewer_demo",
   taxReviewApproved: true,
-} satisfies PaymentOperationsWorkflowPlanInput;
+} satisfies Omit<PaymentOperationsWorkflowPlanInput, "action">;
 
 export function buildPaymentOperationPreflightDecision(input: PaymentOperationPreflightInput): PaymentOperationPreflightDecision {
   const blockers: string[] = [];

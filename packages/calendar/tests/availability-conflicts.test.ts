@@ -637,7 +637,7 @@ describe("calendar availability", () => {
       googleCalendarRuntimeReadinessRequiredEvidence[4],
       googleCalendarRuntimeReadinessRequiredEvidence[5],
     ]);
-    expect(allMissingEvidencePlan.requiredEvidence).toBe(googleCalendarRuntimeReadinessRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toEqual(googleCalendarRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Google OAuth callback route must exchange code and persist encrypted tokens.");
     expect(plan.blockers).toContain("Invalid sync-token recovery must trigger and verify full resync.");
     expect(plan.blockers).toContain("Google test calendar evidence must be attached for OAuth, freebusy, event sync, push, and recovery flows.");
@@ -936,7 +936,7 @@ describe("calendar availability", () => {
       timezoneRuntimeReadinessRequiredEvidence[3],
       timezoneRuntimeReadinessRequiredEvidence[4],
     ]);
-    expect(allMissingEvidencePlan.requiredEvidence).toBe(timezoneRuntimeReadinessRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toEqual(timezoneRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Temporal or an explicit timezone/date library must be implemented at route, persistence, and provider boundaries.");
     expect(plan.blockers).toContain("Recurring availability expansion must be tested against stored windows.");
     expect(plan.blockers).toContain("ICS timezone rendering/import smoke test must pass.");
@@ -1096,7 +1096,7 @@ describe("calendar availability", () => {
       travelPublishRuntimeReadinessRequiredEvidence[4],
       travelPublishRuntimeReadinessRequiredEvidence[5],
     ]);
-    expect(allMissingEvidencePlan.requiredEvidence).toBe(travelPublishRuntimeReadinessRequiredEvidence);
+    expect(allMissingEvidencePlan.requiredEvidence).toEqual(travelPublishRuntimeReadinessRequiredEvidence);
     expect(plan.blockers).toContain("Dashboard travel publish/update/unpublish/rollback mutation route evidence must be captured before travel publish readiness.");
     expect(plan.blockers).toContain("Tenant-scoped persisted TravelStop/PublicTravelPage repository execution evidence must be captured before travel publish readiness.");
     expect(plan.blockers).toContain("Travel publish rollback executor evidence must be captured before travel publish readiness.");

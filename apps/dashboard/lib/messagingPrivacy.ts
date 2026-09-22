@@ -341,17 +341,25 @@ export async function executeMessagingPrivacyPlan(
   await repository.persistPrivacyEvent({ tenantId: input.tenantId, plan, redactedMetadata: { action: plan.action, findings: plan.redactionFindings } });
   if (plan.action === "redact_message" && input.messageId) await repository.persistRedactedMessage({ tenantId: input.tenantId, messageId: input.messageId, bodyPreview: "[redacted-message-body]", findings: plan.redactionFindings });
   if (plan.action === "export_thread") {
-    await repository.persistExportWorkflow({ tenantId: input.tenantId, plan, threadId: effectiveThreadId });
+    await repository.persistExportWorkflow({
+      tenantId: input.tenantId,
+      plan,
+      ...(effectiveThreadId !== undefined ? { threadId: effectiveThreadId } : {}),
+    });
   }
   if (plan.action === "delete_thread") {
-    await repository.persistDeleteWorkflow({ tenantId: input.tenantId, plan, threadId: effectiveThreadId });
+    await repository.persistDeleteWorkflow({
+      tenantId: input.tenantId,
+      plan,
+      ...(effectiveThreadId !== undefined ? { threadId: effectiveThreadId } : {}),
+    });
   }
   if (plan.action === "apply_retention") {
     await repository.persistRetentionWorkflow({
       tenantId: input.tenantId,
       plan,
-      threadId: effectiveThreadId,
-      retentionDays: effectiveRetentionDays,
+      ...(effectiveThreadId !== undefined ? { threadId: effectiveThreadId } : {}),
+      ...(effectiveRetentionDays !== undefined ? { retentionDays: effectiveRetentionDays } : {}),
     });
   }
   if (plan.action === "moderate_message") await repository.persistModerationDecision({ tenantId: input.tenantId, plan, spamScore: input.spamScore ?? 0 });
@@ -422,7 +430,7 @@ export function createPrismaMessagingPrivacyRepository(
           scope: messagingPrivacyIdempotencyScope,
           key: `${input.action}:${input.key}`,
           status: "claimed",
-          metadata: planMetadata({ action: input.action, status: "ready", visibleFields: [], requiredWrites: [], redactionFindings: [] } as MessagingPrivacyPlan),
+          metadata: planMetadata({ action: input.action, status: "ready", visibleFields: [], requiredWrites: [], redactionFindings: [] } as unknown as MessagingPrivacyPlan),
         },
       });
       return "claimed";
@@ -448,25 +456,35 @@ export function createPrismaMessagingPrivacyRepository(
           status: "ready",
           workflowStatus: "message_redacted",
           redactionFindings: input.findings,
-          metadata: planMetadata({ action: "redact_message", status: "ready", visibleFields: [], requiredWrites: [], redactionFindings: input.findings } as MessagingPrivacyPlan, {
+          metadata: planMetadata({ action: "redact_message", status: "ready", visibleFields: [], requiredWrites: [], redactionFindings: input.findings } as unknown as MessagingPrivacyPlan, {
             bodyPreview: input.bodyPreview,
           }),
         },
       });
     },
     async persistExportWorkflow(input) {
-      await persistWorkflowEvent({ tenantId: input.tenantId, plan: input.plan, workflowStatus: "export_queued", threadId: input.threadId });
+      await persistWorkflowEvent({
+        tenantId: input.tenantId,
+        plan: input.plan,
+        workflowStatus: "export_queued",
+        ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
+      });
     },
     async persistDeleteWorkflow(input) {
-      await persistWorkflowEvent({ tenantId: input.tenantId, plan: input.plan, workflowStatus: "delete_queued", threadId: input.threadId });
+      await persistWorkflowEvent({
+        tenantId: input.tenantId,
+        plan: input.plan,
+        workflowStatus: "delete_queued",
+        ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
+      });
     },
     async persistRetentionWorkflow(input) {
       await persistWorkflowEvent({
         tenantId: input.tenantId,
         plan: input.plan,
         workflowStatus: "retention_queued",
-        threadId: input.threadId,
-        retentionDays: input.retentionDays,
+        ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
+        ...(input.retentionDays !== undefined ? { retentionDays: input.retentionDays } : {}),
       });
     },
     async authorizeAttachment(input) {
@@ -542,25 +560,29 @@ export function createInMemoryMessagingPrivacyRepository(): MessagingPrivacyRepo
       });
     },
     async persistExportWorkflow(input) {
+      const threadId = input.threadId ?? input.plan.threadId;
       exportWorkflows.push({
         tenantId: input.tenantId,
         action: input.plan.action,
-        threadId: input.threadId ?? input.plan.threadId,
+        ...(threadId !== undefined ? { threadId } : {}),
       });
     },
     async persistDeleteWorkflow(input) {
+      const threadId = input.threadId ?? input.plan.threadId;
       deleteWorkflows.push({
         tenantId: input.tenantId,
         action: input.plan.action,
-        threadId: input.threadId ?? input.plan.threadId,
+        ...(threadId !== undefined ? { threadId } : {}),
       });
     },
     async persistRetentionWorkflow(input) {
+      const threadId = input.threadId ?? input.plan.threadId;
+      const retentionDays = input.retentionDays ?? input.plan.retentionDays;
       retentionWorkflows.push({
         tenantId: input.tenantId,
         action: input.plan.action,
-        threadId: input.threadId ?? input.plan.threadId,
-        retentionDays: input.retentionDays ?? input.plan.retentionDays,
+        ...(threadId !== undefined ? { threadId } : {}),
+        ...(retentionDays !== undefined ? { retentionDays } : {}),
       });
     },
     async authorizeAttachment(input) {
@@ -573,7 +595,7 @@ export function createInMemoryMessagingPrivacyRepository(): MessagingPrivacyRepo
         tenantId: input.tenantId,
         action: input.plan.action,
         spamScore: input.spamScore,
-        rateLimitAllowed: input.plan.rateLimitAllowed,
+        ...(input.plan.rateLimitAllowed !== undefined ? { rateLimitAllowed: input.plan.rateLimitAllowed } : {}),
       });
     },
     async persistAuditLog(input) {

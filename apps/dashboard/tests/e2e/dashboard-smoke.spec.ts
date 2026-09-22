@@ -17,7 +17,7 @@ test.describe("dashboard guarded operator surfaces", () => {
   });
 
   test("booking detail page renders demo timeline evidence", async ({ page }: { page: any }) => {
-    await page.goto("/bookings/demo-booking-1");
+    await page.goto("/bookings/booking_ari_serpent");
 
     await expect(page.locator("body")).toContainText(/timeline|readiness|deposit/i);
   });

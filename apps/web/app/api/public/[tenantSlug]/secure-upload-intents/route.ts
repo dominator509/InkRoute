@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { prisma } from "@inkroute/db";
 import { NextResponse, type NextRequest } from "next/server";
 import {
@@ -82,8 +82,12 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     return NextResponse.json({ ok: false, error: { code: "VALIDATION_FAILED", message: "Expected kind, filename, mimeType, and sizeBytes." } }, { status: 400, headers: noStoreHeaders });
   }
 
+  // Narrowed by isUploadKind above; captured so the UploadAssetKind type survives
+  // inside async callbacks where property-access narrowing is reset.
+  const uploadKind: UploadAssetKind = input.kind;
+
   const validation = validateUploadDraft({
-    kind: input.kind,
+    kind: uploadKind,
     filename: input.filename,
     mimeType: input.mimeType,
     sizeBytes: input.sizeBytes,
@@ -152,7 +156,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
         const now = new Date();
         const subjectId = `${bookingRequestId}-${now.getTime()}`;
         const signedIntentPlan = buildSignedUploadIntentPlan({
-          kind: input.kind,
+          kind: uploadKind,
           filename: input.filename,
           mimeType: input.mimeType,
           sizeBytes: input.sizeBytes,
@@ -161,8 +165,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
           subjectId,
           expiresInSeconds: 20 * 60,
         });
-        const objectKey = signedIntentPlan.objectKey ?? `private/${resolvedTenant.tenantId}/${input.kind}/${subjectId}`;
-        const bucket = validation.storageVisibility === "public" ? "inkroute-public-uploads" : "inkroute-private-uploads";
+        const objectKey = signedIntentPlan.objectKey ?? `private/${resolvedTenant.tenantId}/${uploadKind}/${subjectId}`;
+        const bucket = validation.storageVisibility === "public_derivative" ? "inkroute-public-uploads" : "inkroute-private-uploads";
         const expiresAt = new Date(now.getTime() + signedIntentPlan.expiresInSeconds * 1000);
 
         const result = await prisma.$transaction(async (tx) => {
@@ -182,7 +186,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               tenantId: resolvedTenant.tenantId,
               uploadedByUserId: issuer.userId,
               clientId: booking.clientId,
-              kind: fileAssetKindForUpload(input.kind),
+              kind: fileAssetKindForUpload(uploadKind),
               visibility: validation.storageVisibility,
               bucket,
               objectKey,
@@ -208,7 +212,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
               fileAssetId: fileAsset.id,
               issuedByUserId: issuer.userId,
               operation: "upload",
-              scope: input.kind,
+              scope: uploadKind,
               bucket,
               objectKey,
               signedUrlHash: hashGrant({ tenantId: resolvedTenant.tenantId, bucket, objectKey, operation: "upload", expiresAt }),
@@ -339,14 +343,14 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
   }
 
   const draft = persistUploadIntent(tenantSlug, {
-    kind: input.kind,
+    kind: uploadKind,
     filename: input.filename,
     mimeType: input.mimeType,
     sizeBytes: input.sizeBytes,
     visibility: validation.storageVisibility,
   });
   const signedIntentPlan = buildSignedUploadIntentPlan({
-    kind: input.kind,
+    kind: uploadKind,
     filename: input.filename,
     mimeType: input.mimeType,
     sizeBytes: input.sizeBytes,
@@ -356,7 +360,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     expiresInSeconds: 20 * 60,
   });
   const privateStoragePlan = buildPrivateStorageAccessPlan({
-    kind: input.kind,
+    kind: uploadKind,
     operation: "upload",
     tenantId: resolvedTenant.tenantId,
     subjectId: draft.id,
@@ -369,7 +373,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ te
     providerConfigured: false,
   });
   const fileAssetPersistencePlan = buildFileAssetPersistencePlan({
-    kind: input.kind,
+    kind: uploadKind,
     tenantId: resolvedTenant.tenantId,
     subjectId: draft.id,
     objectKey: signedIntentPlan.objectKey ?? draft.objectKey,

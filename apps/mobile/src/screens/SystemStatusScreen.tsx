@@ -80,7 +80,7 @@ export function SystemStatusScreen() {
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <MobilePill label={mobileUpdateRuntimePreview.updatePlan.compatibility} tone={mobileUpdateRuntimePreview.updatePlan.compatibility === "safe" ? "good" : "warn"} />
           <MobilePill label={mobileUpdateRuntimePreview.readiness.status} tone="warn" />
-          <MobilePill label={mobileUpdateRuntimePreview.rollbackContract.status} tone="warn" />
+          <MobilePill label={mobileUpdateRuntimePreview.rollbackContract.rollbackReady ? "ready" : "blocked"} tone="warn" />
           <MobilePill label="device receipt pending" tone="danger" />
           <MobilePill label="rollback republish pending" tone="danger" />
         </View>

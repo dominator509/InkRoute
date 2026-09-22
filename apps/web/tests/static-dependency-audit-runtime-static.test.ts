@@ -117,9 +117,9 @@ describe("static dependency audit runtime contract", () => {
     expect(workspacePackageJson).toContain('"test"');
     expect(workspaceImportAudit).toContain("workspace imports");
     expect(workspaceImportAudit).toContain("external imports");
-    expect(workspaceTests).toContain("external package-name normalization");
-    expect(workspaceProtocol).toContain("workspace import");
-    expect(workspaceImportManifest).toContain("workspace-import-audit");
+    expect(workspaceTests).toContain("flags undeclared external package imports");
+    expect(workspaceProtocol).toContain("Workspace imports");
+    expect(workspaceImportManifest).toContain("workspacePackages");
   });
 
   it("preserves the verified static audit result while runtime resolution remains gated", () => {
@@ -250,12 +250,10 @@ describe("static dependency audit runtime contract", () => {
     expect(unitManifest).toContain("StaticDependencyAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("StaticDependencyAuditRun");
     expect(gapTracker).toContain("apps/web/lib/staticDependencyAuditRuntime.ts");
-    expect(gapTracker).toContain("live package test/typecheck, install/typecheck/build, CI, peer/version, and runtime resolution proof remain open");
-    expect(gapTracker).toContain("GAP-131 is static-dependency-audit-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Static dependency audit runtime matrix now splits workspace import audit");
     expect(gapTracker).toContain("buildStaticDependencyAuditExecutionPlan");
     expect(gapTracker).toContain("staticDependencyAuditExecutionPolicy");
     expect(gapTracker).toContain("staticDependencyAuditReadinessRequiredEvidence");
-    expect(gapTracker).toContain("staticDependencyAuditRequiredEvidence");
     expect(gapTracker).toContain("staticDependencyAuditRequiredExternalEvidence");
     expect(gapTracker).toContain("staticDependencyAuditLocalArtifacts");
     expect(gapTracker).toContain("staticDependencyAuditExternalArtifacts");

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@inkroute/db";
 import { waitlistSignupInputSchema, type WaitlistSignupInput } from "@inkroute/validators";
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import {
   buildPublicContentProductionBoundary,
   isPublicContentDatabaseUnavailable,
@@ -48,6 +48,34 @@ function toJsonValue(value: unknown) {
 
 function destinationHash(value: string) {
   return createHash("sha256").update(value.toLowerCase().trim()).digest("hex");
+}
+
+function toWaitlistMessageInput(input: WaitlistSignupInput): {
+  citySlug: string;
+  clientName: string;
+  clientEmail: string;
+  phone?: string;
+  preferredStyle?: string;
+  placement?: string;
+  sizeEstimate?: string;
+  notes?: string;
+  marketingOptIn: boolean;
+  smsOptIn: boolean;
+} {
+  // Conditional spreads keep explicit `undefined` values out of the object so it
+  // satisfies exactOptionalPropertyTypes on persistWaitlistSignupMessage's input.
+  return {
+    citySlug: input.citySlug,
+    clientName: input.clientName,
+    clientEmail: input.clientEmail,
+    ...(input.phone !== undefined ? { phone: input.phone } : {}),
+    ...(input.preferredStyle !== undefined ? { preferredStyle: input.preferredStyle } : {}),
+    ...(input.placement !== undefined ? { placement: input.placement } : {}),
+    ...(input.sizeEstimate !== undefined ? { sizeEstimate: input.sizeEstimate } : {}),
+    ...(input.notes !== undefined ? { notes: input.notes } : {}),
+    marketingOptIn: input.marketingOptIn,
+    smsOptIn: input.smsOptIn,
+  };
 }
 
 function buildWaitlistBody(input: WaitlistSignupInput): string {
@@ -366,7 +394,7 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
       );
     }
 
-    const local = persistWaitlistSignupMessage(normalizedTenantSlug, parsed.data);
+    const local = persistWaitlistSignupMessage(normalizedTenantSlug, toWaitlistMessageInput(parsed.data));
     return NextResponse.json(
       {
         ok: true,
@@ -407,7 +435,7 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
       );
     }
 
-    const local = persistWaitlistSignupMessage(normalizedTenantSlug, parsed.data);
+    const local = persistWaitlistSignupMessage(normalizedTenantSlug, toWaitlistMessageInput(parsed.data));
     return NextResponse.json(
       {
         ok: true,

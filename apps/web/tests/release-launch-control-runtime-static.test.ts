@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { releaseLaunchControlEvidenceRequiredCommands } from "@inkroute/releases";
 import {
   buildRedactedReleaseLaunchControlArtifact,
   buildReleaseLaunchControlArtifactReview,
@@ -90,8 +91,8 @@ describe("release launch control runtime contract", () => {
     expect(releaseRoute).toContain("no-store");
     expect(featureFlagRoute).toContain("feature_flag:read:list");
     expect(featureFlagRoute).toContain("no-store");
-    expect(releaseRouteTest).toContain("tenant-scoped release envelope");
-    expect(featureFlagRouteTest).toContain("FeatureFlag/default definition loader");
+    expect(releaseRouteTest).toContain("uses tenant-scoped ReleaseRecord reads with read audit logging");
+    expect(featureFlagRouteTest).toContain("loads DB and default flag definitions through audited tenant-scoped reads");
     expect(releaseHealthRoute).toContain("release");
     expect(rootPackageJson).toContain("release:launch-control-evidence");
     expect(evidenceWriterSource).toContain("providerBackedRouteTestsPassed: false");
@@ -114,8 +115,14 @@ describe("release launch control runtime contract", () => {
   it("keeps launch control blocked until persisted controls, protected environments, rollback, EAS, provider, CI, and safe artifacts exist", () => {
     expect(releaseLaunchControlRuntimeReadiness.status).toBe("blocked");
     expect(releaseLaunchControlRuntimeReadiness.missingScripts).toEqual([]);
-    expect(releaseLaunchControlRuntimeReadiness.requiredCommands).toBe(releaseLaunchControlRuntimeCommands);
-    expect(releaseLaunchControlRuntimeReadiness.requiredEvidence).toBe(releaseLaunchControlEvidenceFlags);
+    expect(releaseLaunchControlRuntimeReadiness.requiredCommands).toEqual(releaseLaunchControlEvidenceRequiredCommands);
+    expect(releaseLaunchControlRuntimeReadiness.requiredEvidence).toEqual([
+      "ReleaseRecord/FeatureFlag persistence, RBAC, tenant-scope, concurrency, and audit evidence",
+      "protected environment, signed job, CI required-check, preview deploy, and production approval dry-run evidence",
+      "migration gate and incident-linked rollback drill evidence",
+      "EAS update governance, channel, runtime, adoption, and rollback evidence",
+      "provider-backed route, CI artifact, and secret-safe launch evidence",
+    ]);
     expect(releaseLaunchControlRuntimeReadiness.blockers).toContain(
       "GitHub preview, staging, and production protected environments must be configured.",
     );
@@ -135,6 +142,7 @@ describe("release launch control runtime contract", () => {
       commitSha: "abc123",
       status: "partial",
       evidence: {
+        incidentLinkedRollbackDrillPassed: true,
         rolloutControlsVerified: true,
         killSwitchDrillPassed: true,
         releaseHealthEnvelopeVerified: true,
@@ -294,11 +302,11 @@ describe("release launch control runtime contract", () => {
     expect(unitManifest).toContain("unit-web-release-launch-control-runtime-static");
     expect(unitManifest).toContain("ReleaseLaunchControlRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/releaseLaunchControlRuntime.ts");
-    expect(gapTracker).toContain("ReleaseLaunchControlRun Prisma model and app row contract");
+    expect(gapTracker).toContain("ReleaseLaunchControlRun Prisma model/app row contract");
     expect(gapTracker).toContain("local redacted release-control/persistence/RBAC/concurrency/audit/governance/rollback/EAS/rollout/kill-switch/release-health/provider-route/CI/secret-safe fixture artifacts");
-    expect(gapTracker).toContain("persistReleaseLaunchControlRun upsert seam is source-wired");
-    expect(gapTracker).toContain("live ReleaseRecord/FeatureFlag provider-backed persistence, provider-backed persistReleaseLaunchControlRun execution, protected environments, signed jobs, CI required checks, preview/prod approval dry runs, migration gates, incident-linked rollback, EAS governance, provider route tests, and CI artifacts remain open");
-    expect(gapTracker).toContain("GAP-015 is release-launch-control-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("persistReleaseLaunchControlRun upsert seam");
+    expect(gapTracker).toContain("live ReleaseRecord/FeatureFlag provider-backed persistence, provider-backed persistReleaseLaunchControlRun execution, protected environments, signed jobs, CI required checks, preview/prod approval dry runs, migration gates, incident-linked rollback, EAS governance, provider route tests, and live CI artifacts remain open");
+    expect(gapTracker).toContain("Release launch-control readiness now has releaseLaunchControlEvidenceRequiredCommands identity wiring");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildReleaseLaunchControlExecutionPlan");
     expect(gapTracker).toContain("releaseLaunchControlLocalCommands/releaseLaunchControlExternalCommands");

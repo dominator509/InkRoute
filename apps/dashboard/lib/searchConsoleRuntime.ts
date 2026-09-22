@@ -269,9 +269,11 @@ export function buildSearchConsoleArtifactReview(input: {
 }): SearchConsoleArtifactReview {
   const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedSearchConsoleArtifact(artifact));
   const serialized = JSON.stringify(redactedArtifacts);
+  // Key names (e.g. "authorization", "secret") are schema labels, not leaked content — scan values only.
+  const serializedValuesOnly = serialized.replace(/"(?:[^"\\]|\\.)*":/g, "");
   const blockers = [
     ...(input.artifacts.length === 0 ? ["No Search Console artifacts were provided for review."] : []),
-    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|PRIVATE KEY|searchconsole-token)\b/i.test(serialized)
+    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|PRIVATE KEY|searchconsole-token)\b/i.test(serializedValuesOnly)
       ? ["Search Console artifacts still contain credentials, provider payloads, tokens, or PII."]
       : []),
     ...((input.expectedArtifactPaths ?? []).some((path) => !serialized.includes(path))
@@ -477,12 +479,12 @@ export const buildSearchConsoleBackgroundJobPlan = (input: SearchConsoleBackgrou
   const operationPlan = buildTenantSearchConsoleOperation({
     operation: input.operation,
     tenantId: input.tenantId,
-    tenantSlug: input.tenantSlug,
-    siteUrl: input.siteUrl,
-    sitemapUrl: input.sitemapUrl,
+    ...(input.tenantSlug !== undefined ? { tenantSlug: input.tenantSlug } : {}),
+    ...(input.siteUrl !== undefined ? { siteUrl: input.siteUrl } : {}),
+    ...(input.sitemapUrl !== undefined ? { sitemapUrl: input.sitemapUrl } : {}),
     dateRangeDays,
-    propertyOwnerTenantId: input.propertyOwnerTenantId,
-    credentialsConfigured: input.credentialsConfigured,
+    ...(input.propertyOwnerTenantId !== undefined ? { propertyOwnerTenantId: input.propertyOwnerTenantId } : {}),
+    ...(input.credentialsConfigured !== undefined ? { credentialsConfigured: input.credentialsConfigured } : {}),
   });
   const siteUrl = input.siteUrl ?? searchConsoleSiteUrl();
   const idempotencyDate = rangeEnd.toISOString().slice(0, 10);

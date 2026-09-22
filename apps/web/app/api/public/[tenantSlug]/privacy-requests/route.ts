@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@inkroute/db";
 import { buildPrivacyRequestDraft, redactRecord, type PrivacyRequestType } from "@inkroute/security";
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 import { checkRateLimit, getClientIp, persistPrivacyRequest, resolveTenant } from "../../../../../lib/localRuntimeState";
 
 export const runtime = "nodejs";

@@ -101,7 +101,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
     expect(providerEnvironmentRuntimeReadiness.missingEnvironmentSurfacePairs).toEqual(
       expect.arrayContaining(["preview/web", "staging/database", "production/ci_cd"])
     );
-    expect(providerEnvironmentRuntimeReadiness.requiredCommands).toBe(providerEnvironmentRuntimeCommands);
+    expect(providerEnvironmentRuntimeReadiness.requiredCommands).toEqual(providerEnvironmentRuntimeCommands);
     expect(providerEnvironmentRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Redacted preview, staging, and production web/dashboard URL labels with smoke output.",
@@ -246,6 +246,7 @@ describe("GAP-114 provider environment runtime wiring", () => {
       githubEnvironmentProtectionsConfigured: false,
       secretStoreDestinationsConfigured: false,
       redactedEvidenceLabelsRecorded: true,
+      redactedHandoffPacketCaptured: false,
       ciProviderEnvironmentArtifactsCaptured: false,
       requiredCommandsRun: providerEnvironmentRuntimeCommands.filter(
         (command) =>

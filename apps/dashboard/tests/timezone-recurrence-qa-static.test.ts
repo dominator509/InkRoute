@@ -77,10 +77,12 @@ describe("dashboard timezone recurrence QA contract", () => {
   });
 
   it("blocks local timezone recurrence evidence when boundaries or UTC instants are malformed", () => {
+    const baseCase = dashboardTimezoneRecurrenceQaContract.qaCases[0];
+    if (!baseCase) throw new Error("expected at least one timezone QA case");
     const evidence = buildTimezoneRecurrenceLocalEvidence({
       cases: [
         {
-          ...dashboardTimezoneRecurrenceQaContract.qaCases[0],
+          ...baseCase,
           startsAt: "2026-06-09T09:00:00",
           timezone: "PST",
         },

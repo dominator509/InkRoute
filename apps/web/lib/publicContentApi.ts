@@ -103,14 +103,18 @@ function parsePublicFaq(value: unknown): PublicFaqItem[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
-    .map((item) => ({
-      question: typeof item.question === "string" ? item.question : "",
-      answer: typeof item.answer === "string" ? item.answer : "",
-      category:
-        item.category === "booking" || item.category === "travel" || item.category === "prep" || item.category === "aftercare" || item.category === "safety"
-          ? item.category
-          : "booking",
-    }))
+    .map((item) => {
+      const rawCategory = item.category;
+      const category: PublicFaqItem["category"] =
+        rawCategory === "booking" || rawCategory === "travel" || rawCategory === "prep" || rawCategory === "aftercare" || rawCategory === "safety"
+          ? rawCategory
+          : "booking";
+      return {
+        question: typeof item.question === "string" ? item.question : "",
+        answer: typeof item.answer === "string" ? item.answer : "",
+        category,
+      };
+    })
     .filter((item) => item.question.trim() && item.answer.trim());
 }
 
@@ -217,6 +221,7 @@ export async function readPublicTravelStops(tenantId: string): Promise<PublicTra
       timezone: true,
       bookingStatus: true,
       publicNotes: true,
+      // internalNotes intentionally excluded from the public travel API surface.
       travelCity: { select: { city: true, region: true, country: true, timezone: true } },
       studio: { select: { name: true } },
     },

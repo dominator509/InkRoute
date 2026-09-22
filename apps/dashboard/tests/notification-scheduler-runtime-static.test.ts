@@ -136,8 +136,17 @@ describe("dashboard notification scheduler runtime contract", () => {
   it("keeps backend, persistence, worker, provider, concurrency, integration, CI, and artifact blockers explicit", () => {
     expect(notificationSchedulerRuntimeReadiness.status).toBe("blocked");
     expect(notificationSchedulerRuntimeReadiness.missingScripts).toEqual([]);
-    expect(notificationSchedulerRuntimeReadiness.requiredCommands).toBe(notificationSchedulerRuntimeCommands);
-    expect(notificationSchedulerRuntimeReadiness.requiredEvidence).toBe(notificationSchedulerDecisionRequiredEvidence);
+    expect(notificationSchedulerRuntimeReadiness.requiredCommands).toEqual([
+      "pnpm --filter @inkroute/notifications typecheck",
+      "pnpm --filter @inkroute/notifications test",
+      "notification scheduler Postgres queue integration tests",
+      "notification retry/backoff and dead-letter integration tests",
+      "appointment reschedule/cancel scheduled-job cancellation integration tests",
+      "idempotent due-job worker concurrency test",
+    ]);
+    expect(notificationSchedulerRuntimeReadiness.requiredEvidence).toEqual([
+      "queue, retry/dead-letter, and appointment cancellation integration test evidence",
+    ]);
     expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("Notification queue backend must be configured before scheduler promotion.");
     expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("NotificationJob persistence must be available.");
     expect(notificationSchedulerRuntimeReadiness.blockers).not.toContain("Due-job claiming must be transactional to prevent duplicate sends.");

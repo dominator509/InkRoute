@@ -35,8 +35,8 @@ describe("GAP-094 release automated coverage contracts", () => {
     expect(spec).toContain("Release gates");
     expect(spec).toContain("Feature flag decisions");
     expect(spec).toContain("CI/CD guardrail plan");
-    expect(spec).toContain("/api/releases?tenantId=inkroute-demo");
-    expect(spec).toContain("/api/feature-flags?tenantId=inkroute-demo");
+    expect(spec).toContain('"/api/releases"');
+    expect(spec).toContain('"/api/feature-flags"');
     expect(spec).toContain("cache-control");
   });
 
@@ -46,7 +46,7 @@ describe("GAP-094 release automated coverage contracts", () => {
     const governanceWorkflow = readWorkspaceFile(".github/workflows/release-governance.yml");
 
     expect(releaseStatic).toContain("releaseCreateInputSchema.safeParse");
-    expect(mobileStatic).toContain("mobileOtaUpdatePlan");
+    expect(mobileStatic).toContain("mobileEasOtaReadinessPlan");
     expect(governanceWorkflow).toContain("workflow_dispatch:");
   });
 
@@ -178,7 +178,7 @@ describe("GAP-094 release automated coverage contracts", () => {
     expect(ci).toContain("release-automated-coverage-artifacts");
     expect(tracker).toContain("GAP-094");
     expect(tracker).toContain("apps/web/lib/releaseAutomatedCoverage.ts");
-    expect(tracker).toContain("Release automated coverage evidence classifier wired and execution-gated");
+    expect(tracker).toContain("release automated coverage evidence classifier");
     expect(tracker).toContain("releaseAutomatedCoverageDecisionRequiredEvidence");
     expect(tracker).toContain("releaseAutomatedCoverageLocalArtifacts");
     expect(tracker).toContain("releaseAutomatedCoverageExternalArtifacts");

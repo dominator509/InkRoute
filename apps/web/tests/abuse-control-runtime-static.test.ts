@@ -71,6 +71,7 @@ describe("GAP-101 abuse control runtime contract", () => {
       observedRequests: 1,
       windowSeconds: 60,
       routePath: "/api/webhooks/stripe",
+      providerWebhook: true,
       providerSignatureValid: true,
       redisConfigured: true,
       botChallengeConfigured: true,
@@ -83,6 +84,7 @@ describe("GAP-101 abuse control runtime contract", () => {
       observedRequests: 1,
       windowSeconds: 60,
       routePath: "/api/webhooks/stripe",
+      providerWebhook: true,
       providerSignatureValid: false,
       redisConfigured: true,
       botChallengeConfigured: true,
@@ -185,8 +187,8 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(ci).toContain("abuse-control-runtime-artifacts");
     expect(manifest).toContain("unit-web-abuse-control-runtime-static");
     expect(tracker).toContain("apps/web/lib/abuseControlRuntime.ts");
-    expect(tracker).toContain("Abuse control evidence classifier wired and distributed proof gated");
-    expect(tracker).toContain("GAP-101 is abuse-control-runtime-matrix wired with evidence classifier");
+    expect(tracker).toContain("Abuse controls are runtime-matrix wired with abuseControlRuntimeReadinessRequiredCommands identity wiring");
+    expect(tracker).toContain("GAP-101 is abuse-control-runtime-matrix wired with abuse control evidence classifier");
   });
 
   it("pins current abuse control proof files for GAP-101", () => {
@@ -376,7 +378,7 @@ describe("GAP-101 abuse control runtime contract", () => {
     expect(serialized).toContain('"entityType":"AbuseEvent"');
     expect(serialized).toContain('"action":"abuse.event.persisted"');
     expect(serialized).not.toContain("Authorization");
-    expect(serialized).not.toContain("providerSignature");
+    expect(serialized).toContain('"providerSignatureValid":"[REDACTED]"');
     expect(serialized).not.toContain("messageBody");
   });
 

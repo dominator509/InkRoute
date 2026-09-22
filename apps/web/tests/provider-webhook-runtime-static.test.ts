@@ -106,7 +106,12 @@ describe("provider webhook runtime contract", () => {
   it("keeps signature, persistence, reconciliation, sandbox, concurrency, alerting, CI, and artifact blockers explicit", () => {
     expect(providerWebhookRuntimeReadiness.status).toBe("blocked");
     expect(providerWebhookRuntimeReadiness.missingScripts).toEqual([]);
-    expect(providerWebhookRuntimeReadiness.requiredEvidence).toBe(providerWebhookDecisionRequiredEvidence);
+    expect(providerWebhookRuntimeReadiness.requiredEvidence).toEqual([
+      "provider signature verification and raw-body route evidence",
+      "durable replay protection and exactly-once ProviderEvent evidence",
+      "delivery, suppression, inbound routing, and invalid-token persistence evidence",
+      "provider sandbox, invalid-signature, and failed-webhook alerting evidence",
+    ]);
     expect(providerWebhookRuntimeReadiness.blockers).not.toContain("Email provider cryptographic signature verification evidence must be captured before webhook readiness.");
     expect(providerWebhookRuntimeReadiness.blockers).not.toContain("SMS provider cryptographic signature verification evidence must be captured before webhook readiness.");
     expect(providerWebhookRuntimeReadiness.blockers).not.toContain("Email provider cryptographic signature verification must be implemented.");

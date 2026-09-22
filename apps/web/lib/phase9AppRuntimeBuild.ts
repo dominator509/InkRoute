@@ -171,7 +171,7 @@ const sensitiveRuntimeArtifactValuePatterns = [
   /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
   /\+?\d[\d\s().-]{7,}\d/g,
   /\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi,
-  /\b(?:expo|device|push|stripe|twilio|resend|provider)[\w:./?=&-]*/gi,
+  /\b(?:expo|device|push|stripe|twilio|resend|provider(?!-disabled\b))[\w:./?=&-]*/gi,
 ];
 
 export function buildRedactedPhase9RuntimeArtifact(input: unknown): unknown {
@@ -214,9 +214,11 @@ export function buildPhase9RuntimeArtifactReview(input: {
 }): Phase9RuntimeArtifactReview {
   const redactedArtifacts = input.artifacts.map((artifact) => buildRedactedPhase9RuntimeArtifact(artifact));
   const serialized = JSON.stringify(redactedArtifacts);
+  // Key names (e.g. "authorization", "stripeClientSecret") are schema labels, not leaked content — scan values only.
+  const serializedValuesOnly = serialized.replace(/"(?:[^"\\]|\\.)*":/g, "");
   const blockers = [
     ...(input.artifacts.length === 0 ? ["No Phase 9 runtime/build artifacts were provided for review."] : []),
-    ...(/\b(secret|token|authorization|cookie|ari@example|206 555|expo_push_token|stripe|twilio|resend)\b/i.test(serialized)
+    ...(/\b(secret(?!-safe)|token|authorization|cookie|ari@example|206 555|expo_push_token|stripe|twilio|resend)\b/i.test(serializedValuesOnly)
       ? ["Phase 9 runtime/build artifacts still contain provider credentials, tokens, or PII."]
       : []),
     ...((input.expectedArtifactPaths ?? []).some((path) => !serialized.includes(path))

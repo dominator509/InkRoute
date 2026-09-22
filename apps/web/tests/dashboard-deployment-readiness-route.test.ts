@@ -10,7 +10,8 @@ function deploymentRequest(method: "GET" | "POST", body?: unknown, role = "owner
       "x-user-role": role,
       "x-user-id": "deployment-operator-1",
     },
-    body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body),
+    // Conditional spread: exactOptionalPropertyTypes rejects an explicit `undefined` body.
+    ...(body === undefined ? {} : { body: typeof body === "string" ? body : JSON.stringify(body) }),
   });
 }
 

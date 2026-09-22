@@ -19,12 +19,14 @@ function getTenantSlugFromPayload(payload: Record<string, unknown>): string {
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
   const signature = request.headers.get("resend-signature") ?? request.headers.get("svix-signature");
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET ?? process.env.EMAIL_WEBHOOK_SECRET;
   const signatureVerification = verifyEmailWebhookSignature({
     rawBody,
     signatureHeader: signature,
     svixId: request.headers.get("svix-id"),
     svixTimestamp: request.headers.get("svix-timestamp"),
-    secret: process.env.RESEND_WEBHOOK_SECRET ?? process.env.EMAIL_WEBHOOK_SECRET,
+    // Conditional spread: exactOptionalPropertyTypes rejects an explicit `undefined` secret.
+    ...(webhookSecret !== undefined ? { secret: webhookSecret } : {}),
   });
 
   if (!signature) {

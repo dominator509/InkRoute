@@ -23,8 +23,8 @@ describe("dashboard payment read route contract", () => {
   });
 
   it("uses Prisma payment reads with projection redaction and general plus payment-specific audit logs", () => {
-    expect(listRouteSource).toContain("tx.payment.findMany");
-    expect(detailRouteSource).toContain("tx.payment.findFirst");
+    expect(listRouteSource).toContain("paymentModel.findMany");
+    expect(detailRouteSource).toContain("paymentModel.findFirst");
 
     for (const source of [listRouteSource, detailRouteSource]) {
       expect(source).toContain("buildTenantDashboardView");
@@ -52,8 +52,7 @@ describe("dashboard payment read route contract", () => {
 
   it("documents that payment reads are wired while Stripe write actions remain credential-gated", () => {
     expect(paymentsPageSource).toContain("Tenant-scoped redacted payment read APIs now exist");
-    expect(paymentsPageSource).toContain("Payment reads now have redacted dashboard APIs");
-    expect(paymentsPageSource).toContain("Stripe credentials");
+    expect(paymentsPageSource).toContain("Stripe write actions are still credential-gated");
   });
 
   it("replaces the disabled payment placeholder with a gated deposit-session draft action", () => {

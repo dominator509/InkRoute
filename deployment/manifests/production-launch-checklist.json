@@ -22,7 +22,7 @@
   },
   {
     "id": "web-dashboard-preview",
-    "area": "web/dashboard",
+    "area": "tooling",
     "blocksProduction": true,
     "status": "deployment_gated",
     "evidence": "Vercel preview URLs and route smoke tests"

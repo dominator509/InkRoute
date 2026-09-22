@@ -1287,7 +1287,7 @@ export function buildMessageThreadDraft(params: {
 
 export function interpretEmailWebhook(eventType: string): ProviderWebhookInterpretation {
   const normalized = eventType.toLowerCase();
-  const status: NotificationStatus = normalized.includes("delivered") ? "delivered" : normalized.includes("bounce") || normalized.includes("complaint") || normalized.includes("failed") ? "failed" : normalized.includes("sent") ? "sent" : "queued";
+  const status: NotificationStatus = normalized.includes("delivered") ? "delivered" : normalized.includes("bounce") || normalized.includes("complain") || normalized.includes("failed") ? "failed" : normalized.includes("sent") ? "sent" : "queued";
   return {
     provider: "resend",
     eventType,
@@ -1357,7 +1357,7 @@ export function buildProviderEventReconciliationPlan(input: ProviderEventReconci
   const normalizedInbound = input.inboundBody?.trim().toLowerCase();
   const shouldSuppressDestination =
     (input.provider === "twilio" && (normalizedInbound === "stop" || normalizedInbound === "unsubscribe")) ||
-    (input.provider === "resend" && /bounce|complaint|unsubscribe/i.test(input.eventType));
+    (input.provider === "resend" && /bounce|complain|unsubscribe/i.test(input.eventType));
   const shouldMarkPushTokenInactive = input.provider === "expo" && /DeviceNotRegistered|invalid|notregistered/i.test(input.eventType);
 
   if (!input.eventId.trim()) {
@@ -2285,6 +2285,9 @@ export interface ExpoPushReceiptProcessingPlan {
   tenantId: string;
   deliveryId: string;
   receiptId: string;
+  receiptStatus: "ok" | "error";
+  errorCode?: string;
+  errorMessage?: string;
   normalizedStatus: NotificationStatus;
   idempotencyKey: string;
   shouldUpdateDeliveryLog: boolean;
@@ -2466,6 +2469,9 @@ export function buildExpoPushReceiptProcessingPlan(input: ExpoPushReceiptProcess
     tenantId: input.tenantId,
     deliveryId: input.deliveryId,
     receiptId: input.receiptId,
+    receiptStatus: input.receiptStatus,
+    ...(input.errorCode !== undefined ? { errorCode: input.errorCode } : {}),
+    ...(input.errorMessage !== undefined ? { errorMessage: input.errorMessage } : {}),
     normalizedStatus: input.receiptStatus === "ok" ? "delivered" : "failed",
     idempotencyKey: `expo-receipt:${input.tenantId}:${input.receiptId}:${input.requestId}`,
     shouldUpdateDeliveryLog: blockers.length === 0,
@@ -3068,20 +3074,20 @@ export function buildMessagingPrivacyPlan(input: MessagingPrivacyPlanInput): Mes
   return {
     status: blockers.length === 0 ? "ready" : "blocked",
     tenantId: input.tenantId,
-    actorId: input.actorId,
-    threadId: input.threadId,
-    messageId: input.messageId,
-    body: input.body,
-    bodyRedacted: input.bodyRedacted,
-    attachmentUrl: input.attachmentUrl,
-    attachmentPolicyApproved: input.attachmentPolicyApproved,
-    retentionDays: input.retentionDays,
-    exportIncludesProviderPayloads: input.exportIncludesProviderPayloads,
-    exportIncludesPrivateUrls: input.exportIncludesPrivateUrls,
-    deleteRequestedAt: input.deleteRequestedAt,
-    spamScore: input.spamScore,
-    rateLimitAllowed: input.rateLimitAllowed,
-    idempotencyKey: input.idempotencyKey,
+    ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
+    ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
+    ...(input.messageId !== undefined ? { messageId: input.messageId } : {}),
+    ...(input.body !== undefined ? { body: input.body } : {}),
+    ...(input.bodyRedacted !== undefined ? { bodyRedacted: input.bodyRedacted } : {}),
+    ...(input.attachmentUrl !== undefined ? { attachmentUrl: input.attachmentUrl } : {}),
+    ...(input.attachmentPolicyApproved !== undefined ? { attachmentPolicyApproved: input.attachmentPolicyApproved } : {}),
+    ...(input.retentionDays !== undefined ? { retentionDays: input.retentionDays } : {}),
+    ...(input.exportIncludesProviderPayloads !== undefined ? { exportIncludesProviderPayloads: input.exportIncludesProviderPayloads } : {}),
+    ...(input.exportIncludesPrivateUrls !== undefined ? { exportIncludesPrivateUrls: input.exportIncludesPrivateUrls } : {}),
+    ...(input.deleteRequestedAt !== undefined ? { deleteRequestedAt: input.deleteRequestedAt } : {}),
+    ...(input.spamScore !== undefined ? { spamScore: input.spamScore } : {}),
+    ...(input.rateLimitAllowed !== undefined ? { rateLimitAllowed: input.rateLimitAllowed } : {}),
+    ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
     action: input.action,
     role: input.role,
     visibleFields,
@@ -3286,9 +3292,9 @@ export const notificationLaunchEvidenceRequiredCommands = [
       "pnpm --filter @inkroute/notifications typecheck",
       "pnpm --filter @inkroute/notifications test",
       "notification provider sandbox tests",
-      "notification queue worker integration tests",
+      "notification queue worker source contract tests",
       "provider webhook signature/replay tests",
-      "message thread/preference suppression integration tests",
+      "preference suppression source contract tests",
       "Expo push device smoke",
       "GitHub Actions notification launch evidence job",
     ] as const;

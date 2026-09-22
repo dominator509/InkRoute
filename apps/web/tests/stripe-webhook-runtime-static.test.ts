@@ -12,7 +12,6 @@ import {
   stripeWebhookEvidenceFlags,
   stripeWebhookLocalCommands,
   stripeWebhookRequiredExternalEvidence,
-  stripeWebhookRuntimeRequiredEvidence,
   stripeWebhookRuntimeProofFiles,
   stripeWebhookRuntimeCommands,
   stripeWebhookRuntimeMatrix,
@@ -124,9 +123,14 @@ describe("Stripe webhook runtime contract", () => {
     expect(stripeWebhookRuntimeReadiness.status).toBe("blocked");
     expect(stripeWebhookRuntimeReadiness.missingScripts).toEqual([]);
     expect(stripeWebhookRuntimeReadiness.missingSupportedEvents).toEqual([]);
-    expect(stripeWebhookRuntimeReadiness.requiredCommands).toBe(stripeWebhookRuntimeCommands);
-    expect(stripeWebhookRuntimeReadiness.requiredEvidence).toBe(stripeWebhookRuntimeRequiredEvidence);
-    expect(stripeWebhookRuntimeReadiness.requiredEvidence).not.toContain(
+    expect(stripeWebhookRuntimeReadiness.requiredCommands).toEqual(stripeWebhookRuntimeCommands);
+    expect(stripeWebhookRuntimeReadiness.requiredEvidence).toEqual([
+      "Stripe SDK constructEvent raw-body verification evidence with STRIPE_WEBHOOK_SECRET",
+      "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
+      "Deposit, Payment, Refund, BookingStateEvent, and PaymentAuditLog persistence evidence",
+      "Stripe CLI replay transcript for supported events, invalid signature, and replay denial",
+    ]);
+    expect(stripeWebhookRuntimeReadiness.requiredEvidence).toContain(
       "supported event reconciliation tests for success, failure, expiration, refund, dispute, and mismatch cases",
     );
     expect(stripeWebhookRuntimeReadiness.requiredEvidence).not.toContain(

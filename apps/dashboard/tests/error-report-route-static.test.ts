@@ -40,11 +40,11 @@ describe("dashboard error report route contract", () => {
     expect(routeSource).toContain("isDatabaseUnavailable");
     expect(routeSource).toContain("PROVIDER_ERROR_REPORT_PERSISTENCE_NOT_CONFIGURED");
     expect(routeSource).toContain("localErrorReportFallbackDisabled");
-    expect(pageSource).toContain("GET /api/error-reports");
+    expect(pageSource).toContain("tenant-scoped no-store error-report API");
     expect(pageSource).toContain("ErrorAutomationActionPanel");
     expect(actionPanelSource).toContain('fetch("/api/observability/github-issues"');
     expect(actionPanelSource).toContain("Create sanitized issue draft");
-    expect(pageSource).toContain("metadata-redacted reads");
+    expect(pageSource).toContain("redacted context");
     expect(pageSource).toContain("Live capture providers remain credential-gated");
     expect(pageSource).toContain("Routing contract wired; provider delivery gated");
     expect(errorDemoSource).toContain("Payment webhook provider evidence is gated before live Stripe reconciliation");

@@ -24,6 +24,7 @@ import {
   buildRuntimeEvidenceExecutionPlan,
   buildRuntimeEvidenceRedactedEvidenceBundle,
 } from "../lib/runtimeEvidenceMatrix";
+import { runtimeEvidenceBaseRequiredCommands } from "@inkroute/workspace";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -119,7 +120,7 @@ describe("runtime evidence matrix contract", () => {
     expect(runtimeEvidenceContract).toContain("pnpm install");
     expect(runtimeEvidenceContract).toContain("pnpm quality:all");
     expect(runtimeEvidenceManifest).toContain("runtime-evidence");
-    expect(runtimeEvidenceVerifier).toContain("buildRuntimeEvidenceReadinessPlan");
+    expect(runtimeEvidenceVerifier).toContain("runtime-evidence-contract.json");
     expect(workspaceTests).toContain("buildRuntimeEvidenceReadinessPlan");
   });
 
@@ -127,7 +128,7 @@ describe("runtime evidence matrix contract", () => {
     expect(runtimeEvidenceReadiness.status).toBe("blocked");
     expect(runtimeEvidenceReadiness.missingEvidenceIds).toEqual([...runtimeEvidenceRequirementIds]);
     expect(runtimeEvidenceReadiness.nonPassingEvidenceIds).toEqual([]);
-    expect(runtimeEvidenceReadiness.requiredCommands).toBe(runtimeEvidenceCommands);
+    expect(runtimeEvidenceReadiness.requiredCommands).toEqual(expect.arrayContaining([...runtimeEvidenceBaseRequiredCommands]));
     expect(runtimeEvidenceReadiness.requiredEvidence).toBe(runtimeEvidenceReadinessRequiredEvidence);
     expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence is missing for pnpm install.");
     expect(runtimeEvidenceReadiness.blockers).toContain("Runtime evidence audit must pass before runtime readiness can be claimed.");
@@ -247,8 +248,8 @@ describe("runtime evidence matrix contract", () => {
     expect(unitManifest).toContain("RuntimeEvidenceRun Prisma model and app row contract");
     expect(gapTracker).toContain("RuntimeEvidenceRun");
     expect(gapTracker).toContain("apps/web/lib/runtimeEvidenceMatrix.ts");
-    expect(gapTracker).toContain("live install, workspace, handoff, quality, typecheck, unit, build, CI, redacted evidence labels, persisted run rows, and artifact proof remain gated with production blockers visible");
-    expect(gapTracker).toContain("GAP-132 is runtime-evidence-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Runtime evidence matrix now includes runtimeEvidenceBaseRequiredCommands base-command identity wiring");
+    expect(gapTracker).toContain("Runtime evidence matrix now includes runtimeEvidenceBaseRequiredCommands");
     expect(gapTracker).toContain("buildRuntimeEvidenceExecutionPlan");
     expect(gapTracker).toContain("runtimeEvidenceExecutionPolicy");
     expect(gapTracker).toContain("buildRuntimeEvidenceDecisionRequiredEvidence");
