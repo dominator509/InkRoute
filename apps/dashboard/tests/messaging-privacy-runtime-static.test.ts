@@ -103,7 +103,7 @@ describe("messaging privacy runtime contract", () => {
   it("keeps authorization, attachment, workflow, retention, moderation, Postgres, CI, and artifact blockers explicit", () => {
     expect(messagingPrivacyRuntimeReadiness.status).toBe("blocked");
     expect(messagingPrivacyRuntimeReadiness.missingScripts).toEqual([]);
-    expect(messagingPrivacyRuntimeReadiness.requiredEvidence).toBe(messagingPrivacyDecisionRequiredEvidence);
+    expect(messagingPrivacyRuntimeReadiness.requiredEvidence).toEqual(messagingPrivacyDecisionRequiredEvidence);
     expect(messagingPrivacyRuntimeReadiness.blockers).toContain("Unauthorized role denial tests must pass for messaging UI/API.");
     expect(messagingPrivacyRuntimeReadiness.blockers).not.toContain("Message export workflow persistence must be available.");
     expect(messagingPrivacyRuntimeReadiness.blockers).not.toContain("Message delete workflow persistence must be available.");

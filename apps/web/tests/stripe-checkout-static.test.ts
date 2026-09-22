@@ -36,12 +36,12 @@ describe("Stripe Checkout route static contract", () => {
   it("persists idempotency and audit before provider session creation", () => {
     expect(checkoutSource).toContain("verifyStripeDepositAuthorization");
     expect(checkoutSource).toContain("authorization.canCreateCheckout");
-    expect(checkoutSource.indexOf("verifyStripeDepositAuthorization")).toBeLessThan(checkoutSource.indexOf("persistIdempotencyKey"));
-    expect(checkoutSource.indexOf('phase: "before_provider_call"')).toBeLessThan(checkoutSource.indexOf("persistIdempotencyKey"));
-    expect(checkoutSource.indexOf("persistIdempotencyKey")).toBeLessThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf('action: "checkout_session_requested"')).toBeLessThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf('phase: "after_provider_call"')).toBeGreaterThan(checkoutSource.indexOf("createCheckoutSession"));
-    expect(checkoutSource.indexOf("persistProviderSession")).toBeGreaterThan(checkoutSource.indexOf("createCheckoutSession"));
+    expect(checkoutSource.indexOf("const authorization = verifyStripeDepositAuthorization(")).toBeLessThan(checkoutSource.indexOf("await input.persistence.persistIdempotencyKey("));
+    expect(checkoutSource.indexOf("runTenantScopedCheckoutPersistenceTransaction(")).toBeLessThan(checkoutSource.indexOf("await input.persistence.persistIdempotencyKey("));
+    expect(checkoutSource.indexOf("await input.persistence.persistIdempotencyKey(")).toBeLessThan(checkoutSource.indexOf("await input.provider.createCheckoutSession("));
+    expect(checkoutSource.lastIndexOf('action: "checkout_session_requested"')).toBeLessThan(checkoutSource.indexOf("await input.provider.createCheckoutSession("));
+    expect(checkoutSource.lastIndexOf('phase: "after_provider_call"')).toBeGreaterThan(checkoutSource.indexOf("await input.provider.createCheckoutSession("));
+    expect(checkoutSource.indexOf("await input.persistence.persistProviderSession(")).toBeGreaterThan(checkoutSource.indexOf("await input.provider.createCheckoutSession("));
   });
 
   it("defines accepted-booking or signed-token authorization before live Checkout", () => {

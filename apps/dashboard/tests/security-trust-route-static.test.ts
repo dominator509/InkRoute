@@ -39,8 +39,7 @@ describe("dashboard trust status route static contract", () => {
     expect(pageSource).toContain("redaction contract");
     expect(pageSource).toContain("fixture contract");
     expect(pageSource).toContain("no-store trust/privacy API boundaries");
-    expect(pageSource).toContain("GET /api/security/trust-status");
-    expect(pageSource).toContain("tenant and role gates");
+    expect(pageSource).toContain("Guarded API seams are wired");
     expect(pageSource).not.toContain("Security hardening scaffold");
     expect(pageSource).not.toContain("redaction scaffold");
     expect(pageSource).not.toContain("test scaffold");

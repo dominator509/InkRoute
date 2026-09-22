@@ -20,7 +20,7 @@ import {
   migrationRuntimeRequiredExternalEvidence,
 } from "../lib/migrationRuntimeDryRun";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const workflow = readFileSync(join(root, ".github/workflows/release-governance.yml"), "utf8");
 const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const tracker = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
@@ -71,7 +71,7 @@ describe("migration runtime dry-run compatibility contract", () => {
     expect(contract.status).toBe("blocked");
     expect(contract.blockers).toEqual(
       expect.arrayContaining([
-        "Real Prisma migrations must be generated and committed before dry-run proof.",
+        "Prisma migrate diff dry-run must pass against staging DATABASE_URL.",
         "Staging DATABASE_URL must be provisioned in GitHub Actions secrets.",
       ]),
     );
@@ -231,7 +231,7 @@ describe("migration runtime dry-run compatibility contract", () => {
     expect(ci).toContain("apps/dashboard/tests/migration-runtime-dry-run-static.test.ts");
     expect(tracker).toContain("GAP-092");
     expect(tracker).toContain("apps/dashboard/lib/migrationRuntimeDryRun.ts");
-    expect(tracker).toContain("Migration compatibility evidence classifier wired and staging-proof gated");
+    expect(tracker).toContain("migration compatibility evidence classifier");
     expect(tracker).toContain("migrationRuntimeDecisionRequiredEvidence");
     expect(tracker).toContain("staging database dry-run proof");
   });

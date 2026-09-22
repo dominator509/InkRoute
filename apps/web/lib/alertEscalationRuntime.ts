@@ -196,10 +196,12 @@ export function buildAlertEscalationArtifactReview(
 ): AlertEscalationArtifactReview {
   const redactedArtifact = buildRedactedAlertEscalationArtifact(artifact);
   const serialized = JSON.stringify(redactedArtifact);
+  // Key names (e.g. "slackWebhook", "pagerdutyRoutingKey") are schema labels, not leaked content — scan values only.
+  const serializedValuesOnly = serialized.replace(/"(?:[^"\\]|\\.)*":/g, "");
   const unsafeFindings = [
-    serialized.match(alertArtifactEmailPattern) ? "email" : null,
-    serialized.match(alertArtifactPhonePattern) ? "phone" : null,
-    serialized.match(alertArtifactTokenPattern) ? "provider-token" : null,
+    serializedValuesOnly.match(alertArtifactEmailPattern) ? "email" : null,
+    serializedValuesOnly.match(alertArtifactPhonePattern) ? "phone" : null,
+    serializedValuesOnly.match(alertArtifactTokenPattern) ? "provider-token" : null,
   ].filter((finding): finding is string => finding !== null);
 
   return {

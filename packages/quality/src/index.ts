@@ -1991,7 +1991,7 @@ export function buildPrDiffEvidenceEvidenceDecision(
 }
 
 const sensitivePrDiffEvidenceKeyPattern =
-  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|branch|repository|owner)$/iu;
+  /(token|secret|password|authorization|cookie|email|phone|tenant|user|account|database|url|uri|dsn|key|id|branch(name)?|repository|owner)$/iu;
 const sensitivePrDiffEvidenceValuePattern =
   /(https?:\/\/[^\s"']+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|\+?\d[\d .()-]{8,}\d|(?:gh[psuor]_|github_pat_)[A-Za-z0-9_]+|[A-Za-z0-9_-]{24,})/giu;
 

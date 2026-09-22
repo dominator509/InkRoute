@@ -21,6 +21,7 @@ Paste the current `GAP_TRACKER.md` row or link to it.
 - [ ] Environment used
 - [ ] Test/build/provider evidence
 - [ ] Secret redaction confirmed
+- [ ] No secrets, credentials, or private keys in evidence
 - [ ] New residual gaps logged
 
 ## Exact commands or provider actions

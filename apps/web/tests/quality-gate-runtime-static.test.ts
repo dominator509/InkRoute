@@ -91,8 +91,14 @@ describe("quality gate runtime contract", () => {
     expect(qualityGateRuntimeReadiness.missingRootScripts).toEqual([]);
     expect(qualityGateRuntimeReadiness.missingPackageScripts).toEqual([]);
     expect(qualityGateRuntimeReadiness.missingGeneratedManifests).toEqual([]);
-    expect(qualityGateRuntimeReadiness.requiredCommands).toBe(qualityGateRuntimeCommands);
-    expect(qualityGateRuntimeReadiness.requiredEvidence).toBe(qualityGateRuntimeRequiredEvidence);
+    expect(qualityGateRuntimeReadiness.requiredCommands).toEqual(qualityGateRuntimeCommands);
+    expect(qualityGateRuntimeReadiness.requiredEvidence).toEqual([
+      "@inkroute/quality package typecheck and test output.",
+      "quality:all output showing documentation, gap evidence, PR gap fixtures, governance, required checks, and gate summary passed.",
+      "Generated manifests for Markdown links, documentation consistency, documentation inventory, gap evidence, repository governance, required checks, and quality gates.",
+      "GitHub Actions quality job URL and status check evidence.",
+      "CI report/artifact labels for quality gate outputs or documented blocker if artifact upload is unavailable.",
+    ]);
     expect(qualityGateRuntimeReadiness.blockers).toEqual([
       "@inkroute/quality typecheck must pass.",
       "@inkroute/quality tests must pass.",
@@ -203,8 +209,8 @@ describe("quality gate runtime contract", () => {
     expect(ciWorkflow).toContain("quality-gate-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-quality-gate-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/qualityGateRuntime.ts");
-    expect(gapTracker).toContain("live package typecheck/test, quality:all, CI quality job, persisted run row, and CI artifact capture remain gated");
-    expect(gapTracker).toContain("GAP-126 is quality-gate-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("live package typecheck/test, quality:all, CI quality job, persisted run row, CI artifact capture, and redacted evidence bundle capture remain gated");
+    expect(gapTracker).toContain("proof-file inventory, execution policy, redacted artifact review");
     expect(gapTracker).toContain("buildQualityGateDecisionRequiredEvidence");
     expect(gapTracker).toContain("qualityGateRuntimeRequiredEvidence");
     expect(gapTracker).toContain("buildQualityGateRuntimeExecutionPlan");

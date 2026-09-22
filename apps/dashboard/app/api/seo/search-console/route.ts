@@ -81,12 +81,15 @@ export async function POST(request: NextRequest) {
 
   const operation = operationValue(body.operation);
   const idempotencyKey = request.headers.get("idempotency-key") ?? stringValue(body.idempotencyKey) ?? `search-console:${tenantId}:${operation}`;
+  const tenantSlug = stringValue(body.tenantSlug);
+  const siteUrl = stringValue(body.siteUrl);
+  const sitemapUrl = stringValue(body.sitemapUrl);
   const plan = buildTenantSearchConsoleOperation({
     operation,
     tenantId,
-    tenantSlug: stringValue(body.tenantSlug),
-    siteUrl: stringValue(body.siteUrl),
-    sitemapUrl: stringValue(body.sitemapUrl),
+    ...(tenantSlug !== undefined ? { tenantSlug } : {}),
+    ...(siteUrl !== undefined ? { siteUrl } : {}),
+    ...(sitemapUrl !== undefined ? { sitemapUrl } : {}),
     dateRangeDays: numberValue(body.dateRangeDays, 28),
     propertyOwnerTenantId: stringValue(body.propertyOwnerTenantId) ?? tenantId,
   });

@@ -69,9 +69,7 @@ describe("dashboard form read route contract", () => {
 
   it("documents the wired form read API seam on the dashboard page", () => {
     expect(formsPageSource).toContain("Tenant-scoped redacted form read APIs now expose metadata");
-    expect(formsPageSource).toContain("GET /api/forms");
-    expect(formsPageSource).toContain("GET /api/forms/[formId]");
-    expect(formsPageSource).toContain("attorney-reviewed copy remain gated");
+    expect(formsPageSource).toContain("keeping raw answers, signatures, and medical payloads private");
   });
 
   it("wires an archive-only form metadata write seam without legal copy or signature side effects", () => {

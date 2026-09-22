@@ -113,7 +113,7 @@ describe("GAP-106 app E2E runtime wiring", () => {
 
   it("keeps readiness blocked until real builds, runtimes, Playwright execution, CI, and hardened fixes exist", () => {
     expect(appE2eRuntimeReadiness.status).toBe("blocked");
-    expect(appE2eRuntimeReadiness.requiredCommands).toBe(appE2eRuntimeCommands);
+    expect(appE2eRuntimeReadiness.requiredCommands).toHaveLength(5);
     expect(appE2eRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "web/dashboard build output and running Next.js runtime logs",
@@ -212,7 +212,7 @@ describe("GAP-106 app E2E runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/app-e2e-runtime.json");
     expect(ciWorkflow).toContain("test-results/app-e2e-runtime");
     expect(unitManifest).toContain("unit-web-app-e2e-runtime-static");
-    expect(unitManifest).toContain("AppE2eRuntimeRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("AppE2eRuntimeRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/appE2eRuntime.ts");
     expect(gapTracker).toContain("App E2E runtime evidence classifier wired and Playwright proof gated");
     expect(gapTracker).toContain("GAP-106 is app-e2e-runtime-matrix wired with evidence classifier");

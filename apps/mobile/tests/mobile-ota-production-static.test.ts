@@ -243,7 +243,7 @@ describe("mobile OTA production enablement contract", () => {
     expect(workflow).toContain("mobile-ota-production-artifacts");
     expect(tracker).toContain("GAP-091");
     expect(tracker).toContain("apps/mobile/src/lib/mobileOtaProduction.ts");
-    expect(tracker).toContain("Mobile OTA production evidence classifier wired and live-proof gated");
+    expect(tracker).toContain("mobile OTA production evidence classifier");
     expect(tracker).toContain("live EAS build/update/device/rollback proof");
   });
 });

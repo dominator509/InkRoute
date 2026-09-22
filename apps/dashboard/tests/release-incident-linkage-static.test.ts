@@ -19,7 +19,7 @@ import {
   releaseIncidentLinkageRequiredExternalEvidence,
 } from "../lib/releaseIncidentLinkage";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const route = readFileSync(join(root, "apps/dashboard/app/api/observability/release-incidents/route.ts"), "utf8");
 const page = readFileSync(join(root, "apps/dashboard/app/errors/page.tsx"), "utf8");
 const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
@@ -58,7 +58,7 @@ describe("release incident linkage runtime contract", () => {
     expect(route).toContain("tx.releaseIncidentLink.upsert");
     expect(route).toContain("releaseIncidentLinkIds");
     expect(route).toContain("tx.errorReport.update");
-    expect(route).toContain("...report.redactedMetadata");
+    expect(route).toContain(".redactedMetadata,");
     expect(route).toContain("releaseIncidentLinkage");
     expect(route).toContain("tenantCommunicationOwner");
     expect(route).toContain("rollbackCommunicationHandoffPersisted: true");
@@ -264,7 +264,7 @@ describe("release incident linkage runtime contract", () => {
     expect(workflow).toContain("release-incident-linkage-artifacts");
     expect(tracker).toContain("GAP-093");
     expect(tracker).toContain("apps/dashboard/lib/releaseIncidentLinkage.ts");
-    expect(tracker).toContain("Release incident linkage evidence classifier wired and live-provider gated");
+    expect(tracker).toContain("release incident linkage evidence classifier");
     expect(tracker).toContain("releaseIncidentLinkageDecisionRequiredEvidence");
     expect(tracker).toContain("live Sentry/provider proof");
   });

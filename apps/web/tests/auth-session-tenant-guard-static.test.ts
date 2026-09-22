@@ -288,7 +288,7 @@ describe("GAP-095 auth session tenant guard runtime contract", () => {
     expect(manifest).toContain("unit-web-auth-session-tenant-guard-static");
     expect(tracker).toContain("apps/web/lib/authSessionTenantGuardRuntime.ts");
     expect(tracker).toContain("persistAuthSessionTenantGuardRun upsert seam");
-    expect(tracker).toContain("Auth/session/tenant guard evidence classifier wired and provider-backed proof gated");
+    expect(tracker).toContain("Auth/session/tenant guard evidence classifier");
     expect(tracker).toContain("authSessionTenantGuardSurfaceContract");
     expect(tracker).toContain("buildAuthSessionTenantGuardExternalEvidencePacket");
   });

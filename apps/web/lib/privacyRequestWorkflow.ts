@@ -52,7 +52,7 @@ export interface PrivacyRequestPersistenceInput {
 export interface PrivacyRequestPersistenceContract {
   modelName: "PrivacyRequest";
   row: PrivacyRequestPersistenceInput;
-  transactionWrites: readonly ["PrivacyRequest", "AuditLog"];
+  transactionWrites: readonly ["IdempotencyKey", "PrivacyRequest", "AuditLog"];
   statusTransitions: readonly ["intake_received", "identity_pending", "processing", "legal_hold", "completed", "denied"];
   auditActions: readonly [
     "privacy.request.created",

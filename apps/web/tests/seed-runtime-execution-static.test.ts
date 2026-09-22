@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { seedRuntimeExecutionEvidenceCommands } from "@inkroute/db";
 import {
   buildRedactedSeedRuntimeExecutionArtifact,
   buildSeedRuntimeExecutionEvidenceDecision,
@@ -101,7 +102,7 @@ describe("seed runtime execution contract", () => {
     expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-production-provider-ban.json");
     expect(seedRuntimeEvidenceWriter).toContain("coverage/seed-command-transcript-redacted.log");
     expect(seedRuntimeEvidenceWriter).toContain("productionProviderCredentialsUsed: false");
-    expect(seedDocs).toContain("Seed readiness");
+    expect(seedDocs).toContain("Seed Readiness");
     expect(integrationReadiness).toContain("buildSeedRuntimeExecutionEvidencePlan");
     expect(dbTests).toContain("buildSeedRuntimeExecutionEvidencePlan");
   });
@@ -109,13 +110,12 @@ describe("seed runtime execution contract", () => {
   it("keeps seed execution blocked until dev database, migrations, seed run, queries, smokes, and evidence exist", () => {
     expect(seedRuntimeExecutionReadiness.status).toBe("blocked");
     expect(seedRuntimeExecutionReadiness.missingScripts).toEqual([]);
-    expect(seedRuntimeExecutionReadiness.requiredCommands).toBe(seedRuntimeExecutionCommands);
-    expect(seedRuntimeExecutionReadiness.requiredEvidence).toBe(seedRuntimeExecutionEvidenceFlags);
-    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("seedReadinessVerifierPassed");
-    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("fakeDataOnlyVerified");
-    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("noProductionProviderCredentialsUsed");
-    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("commandEvidenceCaptured");
-    expect(seedRuntimeExecutionReadiness.missingEvidence).not.toContain("ciOrCleanCheckoutEvidenceCaptured");
+    expect(seedRuntimeExecutionReadiness.requiredCommands).toEqual(seedRuntimeExecutionEvidenceCommands);
+    expect(seedRuntimeExecutionReadiness.requiredEvidence).toEqual([
+      "non-production Postgres, DATABASE_URL, Prisma generate, migration, and seed command evidence",
+      "seeded tenant, membership, workflow, payment/file/message, SEO/release/flag, and audit-log query evidence",
+      "web/API and dashboard seeded-data smoke evidence",
+    ]);
     expect(seedRuntimeExecutionReadiness.blockers).toContain(
       "A non-production Postgres database must be provisioned for seed execution.",
     );
@@ -270,7 +270,7 @@ describe("seed runtime execution contract", () => {
     expect(gapTracker).toContain("apps/web/lib/seedRuntimeExecution.ts");
     expect(gapTracker).toContain("SeedRuntimeExecutionRun Prisma model and app row contract");
     expect(gapTracker).toContain("SeedRuntimeExecutionRun upsert seam is source-wired");
-    expect(gapTracker).toContain("GAP-018 is seed-runtime-execution-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Seed runtime execution readiness now has a dedicated app-level runtime matrix");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildSeedRuntimeExecutionPlan");
     expect(gapTracker).toContain("seedRuntimeExecutionLocalCommands/seedRuntimeExecutionExternalCommands");

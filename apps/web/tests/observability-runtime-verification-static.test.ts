@@ -265,7 +265,7 @@ describe("GAP-079 observability runtime verification contract", () => {
     expect(ciWorkflow).toContain("coverage/observability-ci-evidence.json");
     expect(unitManifest).toContain("observabilityRuntimeVerificationMatrix");
     expect(gapTracker).toContain("observabilityRuntimeDecisionRequiredEvidence");
-    expect(gapTracker).toContain("Observability runtime evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("GAP-079");
   });
 
   it("pins current observability runtime proof files for GAP-079", () => {

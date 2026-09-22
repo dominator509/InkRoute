@@ -911,6 +911,7 @@ export const accessibilityVisualRuntimeReadinessRequiredCommands = [
       "responsive layout audit for mobile, tablet, and desktop breakpoints",
       "visual regression baseline and diff review",
       "manual screen-reader and mobile accessibility QA pass",
+      "GitHub Actions accessibility/visual job",
     ] as const;
 
 export const accessibilityVisualRuntimeReadinessRequiredEvidence = [

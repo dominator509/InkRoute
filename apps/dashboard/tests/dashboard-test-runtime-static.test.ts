@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { dashboardTestExecutionEvidenceRequiredCommands } from "@inkroute/testing";
 import {
   buildDashboardTestArtifactReview,
   buildDashboardTestEvidenceDecision,
@@ -125,7 +126,7 @@ describe("dashboard test execution runtime contract", () => {
   it("keeps execution blockers explicit until real app tests, axe, Playwright, CI, branch protection, and safe artifacts exist", () => {
     expect(dashboardTestRuntimeReadiness.status).toBe("blocked");
     expect(dashboardTestRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardTestRuntimeReadiness.requiredCommands).toBe(dashboardTestRuntimeCommands);
+    expect(dashboardTestRuntimeReadiness.requiredCommands).toEqual(dashboardTestExecutionEvidenceRequiredCommands);
     expect(dashboardTestRuntimeReadiness.requiredEvidence).toContain("dashboard typecheck and build command evidence");
     expect(dashboardTestRuntimeReadiness.requiredEvidence).toContain("dashboard unit/component, route rendering, and auth guard test output");
     expect(dashboardTestRuntimeReadiness.requiredEvidence).toContain(

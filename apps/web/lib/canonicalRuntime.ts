@@ -2,6 +2,7 @@
   buildSeoRedirectDecision,
   resolveTenantCanonicalPolicy,
   type SeoRedirectRule,
+  type SeoRedirectStatusCode,
   type TenantCanonicalDomain,
 } from "@inkroute/seo";
 import { inkrouteDemoTenant } from "@inkroute/config";
@@ -117,9 +118,18 @@ export function buildTenantCanonicalDomainsFromRows(rows: readonly PersistedTena
   });
 }
 
+const seoRedirectStatusCodes: readonly SeoRedirectStatusCode[] = [301, 302, 307, 308];
+
+function isSeoRedirectStatusCode(value: number): value is SeoRedirectStatusCode {
+  return (seoRedirectStatusCodes as readonly number[]).includes(value);
+}
+
 export function buildSeoRedirectRulesFromRows(rows: readonly PersistedSeoRedirectRow[]): readonly SeoRedirectRule[] {
   return rows
-    .filter((row) => row.isActive)
+    .filter(
+      (row): row is PersistedSeoRedirectRow & { readonly statusCode: SeoRedirectStatusCode } =>
+        row.isActive && isSeoRedirectStatusCode(row.statusCode),
+    )
     .map((row) => ({
       tenantId: row.tenantId,
       fromPath: row.fromPath,

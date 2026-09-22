@@ -63,7 +63,21 @@ export async function POST(request: NextRequest) {
       ...(input.healedPhotoUploadUrl !== undefined ? { healedPhotoUploadUrl: input.healedPhotoUploadUrl } : {}),
       ...(input.unsubscribeUrl !== undefined ? { unsubscribeUrl: input.unsubscribeUrl } : {}),
     },
-    consent: input.consent,
+    consent: {
+      emailOptIn: input.consent.emailOptIn,
+      smsOptIn: input.consent.smsOptIn,
+      pushOptIn: input.consent.pushOptIn,
+      marketingOptIn: input.consent.marketingOptIn,
+      transactionalAllowed: input.consent.transactionalAllowed,
+      ...(input.consent.clientId !== undefined ? { clientId: input.consent.clientId } : {}),
+      ...(input.consent.email !== undefined ? { email: input.consent.email } : {}),
+      ...(input.consent.phone !== undefined ? { phone: input.consent.phone } : {}),
+      ...(input.consent.pushToken !== undefined ? { pushToken: input.consent.pushToken } : {}),
+      ...(input.consent.inAppUserId !== undefined ? { inAppUserId: input.consent.inAppUserId } : {}),
+      ...(input.consent.unsubscribedAt !== undefined ? { unsubscribedAt: input.consent.unsubscribedAt } : {}),
+      ...(input.consent.smsStoppedAt !== undefined ? { smsStoppedAt: input.consent.smsStoppedAt } : {}),
+      ...(input.consent.pushDisabledAt !== undefined ? { pushDisabledAt: input.consent.pushDisabledAt } : {}),
+    },
     ...(input.channels !== undefined ? { channels: input.channels } : {}),
   });
 

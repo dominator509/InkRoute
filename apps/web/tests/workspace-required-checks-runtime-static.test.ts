@@ -108,8 +108,8 @@ describe("workspace required checks runtime contract", () => {
     expect(rootPackageJson).toContain('"workspace:all"');
     expect(rootPackageJson).toContain('"quality:required-checks"');
     expect(requiredChecksContract).toContain("workspace:required-checks");
-    expect(requiredChecksContract).toContain("branchProtection");
-    expect(requiredChecksVerifier).toContain("buildWorkspaceRequiredChecksReadinessPlan");
+    expect(requiredChecksContract).toContain("requiredBranchProtectionChecks");
+    expect(requiredChecksVerifier).toContain("workspace-required-checks-contract.json");
     expect(workspaceTests).toContain("buildWorkspaceRequiredChecksReadinessPlan");
     expect(qualityRequiredChecksContract).toContain("required-checks");
   });
@@ -117,8 +117,8 @@ describe("workspace required checks runtime contract", () => {
   it("keeps branch protection and merge-block evidence explicit until GitHub proof exists", () => {
     expect(workspaceRequiredChecksReadiness.status).toBe("blocked");
     expect(workspaceRequiredChecksReadiness.missingBranchProtectionChecks).toEqual([...workspaceRequiredBranchProtectionChecks]);
-    expect(workspaceRequiredChecksReadiness.requiredCommands).toBe(workspaceRequiredChecksCommands);
-    expect(workspaceRequiredChecksReadiness.requiredEvidence).toBe(workspaceRequiredChecksReadinessRequiredEvidence);
+    expect(workspaceRequiredChecksReadiness.requiredCommands).toEqual(workspaceRequiredChecksCommands);
+    expect(workspaceRequiredChecksReadiness.requiredEvidence).toEqual(workspaceRequiredChecksReadinessRequiredEvidence);
     expect(workspaceRequiredChecksReadiness.blockers).toContain("Workspace required-check contract audit must pass.");
     expect(workspaceRequiredChecksReadiness.blockers).toContain("GitHub branch protection must require every workspace and PR gap-diff check before merge.");
   });
@@ -178,8 +178,8 @@ describe("workspace required checks runtime contract", () => {
     expect(decision.requiredEvidence).toEqual(
       buildWorkspaceRequiredChecksDecisionRequiredEvidence(workspaceRequiredChecksReadinessRequiredEvidence),
     );
-    expect(decision.requiredEvidence).toBe(workspaceRequiredChecksRequiredEvidence);
-    expect(decision.blockers).toContain("pnpm workspace:all must include and pass workspace required checks.");
+    expect(decision.requiredEvidence).toEqual(workspaceRequiredChecksRequiredEvidence);
+    expect(decision.blockers).toContain("pnpm workspace:all must pass with required-check enforcement included.");
     expect(decision.blockers).toContain("WorkspaceRequiredChecksRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Redacted workspace required-checks evidence bundle must be captured.");
     expect(decision.blockers).toContain("Every required workspace checks artifact must be captured.");
@@ -222,7 +222,7 @@ describe("workspace required checks runtime contract", () => {
     expect(gapTracker).toContain(
       "live command, CI, branch-protection, failing-PR merge-block, PR gap-diff merge-block, redacted-log, persisted run, and artifact evidence remain gated",
     );
-    expect(gapTracker).toContain("GAP-133 is workspace-required-checks-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Workspace required checks runtime matrix now includes workspaceRequiredChecksRequiredCommands identity wiring");
     expect(gapTracker).toContain("buildWorkspaceRequiredChecksExecutionPlan");
     expect(gapTracker).toContain("workspaceRequiredChecksExecutionPolicy");
     expect(gapTracker).toContain("workspaceRequiredChecksReadinessRequiredEvidence");

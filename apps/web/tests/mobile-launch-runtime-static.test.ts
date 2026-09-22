@@ -174,8 +174,14 @@ describe("mobile launch runtime contract", () => {
   it("keeps mobile launch blockers explicit until Expo/device/provider evidence exists", () => {
     expect(mobileLaunchRuntimeReadiness.status).toBe("blocked");
     expect(mobileLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(mobileLaunchRuntimeReadiness.requiredCommands).toBe(mobileLaunchRuntimeCommands);
-    expect(mobileLaunchRuntimeReadiness.requiredEvidence).toBe(mobileLaunchRequiredEvidence);
+    expect(mobileLaunchRuntimeReadiness.requiredCommands).toEqual(mobileLaunchRuntimeCommands);
+    expect(mobileLaunchRuntimeReadiness.requiredEvidence).toEqual([
+      "mobile-support and mobile app typecheck/test output",
+      "Expo runtime, iOS simulator, Android emulator, and EAS preview build evidence",
+      "auth/biometric, tenant API, push, and encrypted offline QA evidence",
+      "upload, crash, OTA rollback, physical device, and accessibility QA evidence",
+      "Expo project/channel configuration, CI, and secret-safe artifact evidence",
+    ]);
     expect(mobileLaunchRuntimeReadiness.blockers).toContain("Expo runtime must start locally or from a preview build.");
     expect(mobileLaunchRuntimeReadiness.blockers).toContain("Physical device QA checklist must be completed.");
   });
@@ -321,7 +327,7 @@ describe("mobile launch runtime contract", () => {
     expect(gapTracker).toContain("MobileLaunchRun");
     expect(gapTracker).toContain("apps/web/lib/mobileLaunchRuntime.ts");
     expect(gapTracker).toContain("buildMobileLaunchDecisionRequiredEvidence");
-    expect(gapTracker).toContain("mobileLaunchRequiredEvidence");
+    expect(gapTracker).toContain("execution policy");
     expect(gapTracker).toContain("mobileLaunchRuntimeLocalArtifacts");
     expect(gapTracker).toContain("mobileLaunchRuntimeExternalArtifacts");
     expect(gapTracker).toContain("persistMobileLaunchRun upsert seam");

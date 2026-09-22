@@ -18,7 +18,7 @@ describe("dashboard deployment readiness route static contract", () => {
   });
 
   it("audit-logs DB-backed readiness reads without exposing secret values", () => {
-    expect(routeSource).toContain("prisma.auditLog.create");
+    expect(routeSource).toContain("auditLogModel.create");
     expect(routeSource).toContain('action: "deployment:readiness:read"');
     expect(routeSource).toContain('entityType: "DeploymentReadiness"');
     expect(routeSource).toContain("missingRequiredNames");

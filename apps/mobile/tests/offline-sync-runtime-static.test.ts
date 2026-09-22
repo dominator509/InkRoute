@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { offlineRuntimeRequiredCommands } from "@inkroute/mobile-support";
 import {
   buildOfflineSyncArtifactReview,
   buildOfflineSyncEvidenceDecision,
@@ -91,16 +92,22 @@ describe("mobile offline sync runtime contract", () => {
     expect(offlineSyncSource).toContain("failedItemIds");
     expect(offlineSyncSource).toContain("buildOfflineSyncTransportFailureAuditEvent");
     expect(offlineSyncSource).toContain("retryCount: item.retryCount + 1");
-    expect(offlineStaticTest).toContain("redacted offline sync audit events");
+    expect(offlineStaticTest).toContain("records redacted audit events instead of leaking sensitive offline payloads");
     expect(offlineScreen).toContain("Sync worker contract");
-    expect(offlineScreen).toContain("encrypted-storage");
+    expect(offlineScreen).toContain("encrypted device storage gated");
   });
 
   it("keeps encrypted persistence, worker, conflict, audit, and reconnect blockers explicit", () => {
     expect(offlineSyncRuntimeReadiness.status).toBe("blocked");
     expect(offlineSyncRuntimeReadiness.missingScripts).toEqual([]);
-    expect(offlineSyncRuntimeReadiness.requiredCommands).toBe(offlineSyncRuntimeCommands);
-    expect(offlineSyncRuntimeReadiness.requiredEvidence).toBe(offlineSyncEvidenceFlags);
+    expect(offlineSyncRuntimeReadiness.requiredCommands).toEqual(offlineRuntimeRequiredCommands);
+    expect(offlineSyncRuntimeReadiness.requiredEvidence).toEqual([
+      "encrypted offline storage adapter and at-rest encryption proof",
+      "device restart and airplane-mode reconnect evidence",
+      "runtime sync worker retry and idempotent replay test output",
+      "server conflict-resolution test output",
+      "offline sync audit trail persistence evidence",
+    ]);
     expect(offlineSyncRuntimeReadiness.blockers).not.toContain("Offline storage adapter must be selected before runtime readiness.");
     expect(offlineSyncRuntimeReadiness.blockers).toContain("Encrypted offline store must be configured for sensitive queue items.");
     expect(offlineSyncRuntimeReadiness.blockers).not.toContain("Runtime offline sync worker must be configured.");

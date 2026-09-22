@@ -91,11 +91,11 @@ describe("repository governance runtime contract", () => {
     expect(rootPackageJson).toContain('"quality:governance"');
     expect(rootPackageJson).toContain('"quality:all"');
     expect(codeowners).toContain("*");
-    expect(prTemplate).toContain("Gap evidence");
+    expect(prTemplate).toContain("Gap tracker");
     expect(issueTemplate).toContain("Gap");
-    expect(governanceContract).toContain("branchProtection");
-    expect(governanceContract).toContain("requiredStatusChecks");
-    expect(governanceVerifier).toContain("buildRepositoryGovernanceRuntimeReadinessPlan");
+    expect(governanceContract).toContain("main branch protection");
+    expect(governanceContract).toContain("required status checks");
+    expect(governanceVerifier).toContain("repository-governance-contract.json");
     expect(qualityTests).toContain("buildRepositoryGovernanceRuntimeReadinessPlan");
   });
 
@@ -112,8 +112,16 @@ describe("repository governance runtime contract", () => {
       "enforcement-test-pr",
       "redacted-settings-evidence",
     ]);
-    expect(repositoryGovernanceRuntimeReadiness.requiredCommands).toBe(repositoryGovernanceRuntimeCommands);
-    expect(repositoryGovernanceRuntimeReadiness.requiredEvidence).toBe(repositoryGovernanceRuntimeRequiredEvidence);
+    expect(repositoryGovernanceRuntimeReadiness.requiredCommands).toEqual(repositoryGovernanceRuntimeCommands);
+    expect(repositoryGovernanceRuntimeReadiness.requiredEvidence).toEqual([
+      "Repository governance audit output with required files, CODEOWNERS, PR/issue templates, and CI terms passing.",
+      "Redacted branch protection settings proving required checks and review rules are active.",
+      "Required status check list including CI quality and PR gap-diff enforcement.",
+      "CODEOWNERS review enforcement proof on a protected surface change.",
+      "Secret scanning and Dependabot/security alert settings proof.",
+      "Merge queue, required linear history, or equivalent merge-rule proof.",
+      "Test PR evidence proving enforcement without exposing secrets.",
+    ]);
   });
 
   it("blocks repository governance closure until GitHub settings, enforcement, persistence, artifact, and command proof exist", () => {
@@ -207,7 +215,7 @@ describe("repository governance runtime contract", () => {
     expect(unitManifest).toContain("unit-web-repository-governance-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/repositoryGovernanceRuntime.ts");
     expect(gapTracker).toContain("live GitHub branch protection, required-check, CODEOWNERS review, secret-scanning, security-alert, merge-rule, and enforcement-test evidence remain open");
-    expect(gapTracker).toContain("GAP-125 is repository-governance-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Repository governance evidence classifier wired with repositoryGovernanceRuntimeRequiredCommands");
     expect(gapTracker).toContain("buildRepositoryGovernanceDecisionRequiredEvidence");
     expect(gapTracker).toContain("repositoryGovernanceRuntimeRequiredEvidence");
     expect(gapTracker).toContain("buildRepositoryGovernanceRuntimeExecutionPlan");

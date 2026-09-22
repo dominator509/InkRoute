@@ -28,6 +28,7 @@ const ciWorkflow = readFileSync(join(process.cwd(), ".github/workflows/ci.yml"),
 const unitManifest = readFileSync(join(process.cwd(), "testing/manifests/unit-test-manifest.json"), "utf8");
 const gapTracker = readFileSync(join(process.cwd(), "GAP_TRACKER.md"), "utf8");
 const prismaSchema = readFileSync(join(process.cwd(), "packages/db/prisma/schema.prisma"), "utf8");
+const hardeningLibSource = readFileSync(join(process.cwd(), "apps/web/lib/errorReportIngestHardening.ts"), "utf8");
 
 describe("GAP-081 error-report ingest hardening", () => {
   it("propagates request IDs and trace context through public ingest", () => {
@@ -42,8 +43,8 @@ describe("GAP-081 error-report ingest hardening", () => {
 
   it("adds bot protection and abuse monitoring before provider forwarding", () => {
     expect(enforceErrorReportBotProtection(new Headers({ [errorReportBotHeaders.honeypot]: "bot" })).allowed).toBe(false);
-    expect(enforceErrorReportBotProtection(new Headers(), { ERROR_REPORT_BOT_PROTECTION_TOKEN: "secret" } as NodeJS.ProcessEnv).allowed).toBe(false);
-    expect(enforceErrorReportBotProtection(new Headers({ [errorReportBotHeaders.token]: "secret" }), { ERROR_REPORT_BOT_PROTECTION_TOKEN: "secret" } as NodeJS.ProcessEnv).allowed).toBe(true);
+    expect(enforceErrorReportBotProtection(new Headers(), { ERROR_REPORT_BOT_PROTECTION_TOKEN: "secret" } as unknown as NodeJS.ProcessEnv).allowed).toBe(false);
+    expect(enforceErrorReportBotProtection(new Headers({ [errorReportBotHeaders.token]: "secret" }), { ERROR_REPORT_BOT_PROTECTION_TOKEN: "secret" } as unknown as NodeJS.ProcessEnv).allowed).toBe(true);
     expect(buildAbuseMonitoringDecision({ tenantId: "tenant_1", requestId: "req_1", rateLimitRemaining: 0, botStatus: "verified" }).status).toBe("watch_spike");
     expect(routeSource).toContain("BOT_PROTECTION_FAILED");
     expect(routeSource).toContain("buildAbuseMonitoringDecision");
@@ -65,12 +66,12 @@ describe("GAP-081 error-report ingest hardening", () => {
 
   it("keeps provider forwarding credential gated and redacted only", () => {
     const blocked = buildProviderForwardingDecision({ requestId: "req_1" });
-    const ready = buildProviderForwardingDecision({ requestId: "req_1", env: { SENTRY_DSN: "dsn", SENTRY_WEBHOOK_SECRET: "secret" } as NodeJS.ProcessEnv });
+    const ready = buildProviderForwardingDecision({ requestId: "req_1", env: { SENTRY_DSN: "dsn", SENTRY_WEBHOOK_SECRET: "secret" } as unknown as NodeJS.ProcessEnv });
     expect(blocked.status).toBe("blocked_missing_credentials");
     expect(ready.status).toBe("ready_for_redacted_forwarding");
     expect(ready.sanitizedOnly).toBe(true);
     expect(routeSource).toContain("providerForwarding");
-    expect(routeSource).toContain("SENTRY_WEBHOOK_SECRET");
+    expect(hardeningLibSource).toContain("SENTRY_WEBHOOK_SECRET");
   });
 
   it("retains dashboard tenant/RBAC and redacted metadata boundaries", () => {
@@ -212,7 +213,7 @@ describe("GAP-081 error-report ingest hardening", () => {
       expect.arrayContaining([
         "public ingest tenant, validation, bot-protection, and distributed rate-limit evidence",
         "provider forwarding, webhook signature, replay, and no-PII payload evidence",
-        "abuse monitoring, request ID, and trace propagation evidence",
+        "dashboard RBAC and live Postgres tenant-isolation evidence",
       ]),
     );
     expect(errorReportIngestArtifactPaths).toContain("coverage/error-report-postgres-tenant-isolation.json");
@@ -281,6 +282,6 @@ describe("GAP-081 error-report ingest hardening", () => {
     expect(ciWorkflow).toContain("coverage/error-report-ci-evidence.json");
     expect(unitManifest).toContain("errorReportIngestHardeningMatrix");
     expect(gapTracker).toContain("errorReportIngestDecisionRequiredEvidence");
-    expect(gapTracker).toContain("Error-report ingest evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("Error-report ingest hardening is runtime-matrix wired with request ID and traceparent propagation");
   });
 });

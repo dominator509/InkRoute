@@ -20,7 +20,7 @@ import {
   resolveReleaseApprovalState,
 } from "../lib/releaseControlPlane";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const releaseRoute = readFileSync(join(root, "apps/dashboard/app/api/releases/route.ts"), "utf8");
 const flagRoute = readFileSync(join(root, "apps/dashboard/app/api/feature-flags/route.ts"), "utf8");
 const workflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");

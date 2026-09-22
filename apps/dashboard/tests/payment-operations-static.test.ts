@@ -302,7 +302,7 @@ describe("dashboard payment operation contract", () => {
     const mutationInput = {
       tenantId: "tenant_demo",
       bookingRequestId: "booking_demo",
-      currency: "USD",
+      currency: "usd",
       actorId: "artist_demo",
       paymentId: "payment_demo",
       action: "execute_refund",

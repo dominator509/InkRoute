@@ -171,7 +171,7 @@ describe("GAP-096 upload scan worker static contract", () => {
     expect(ci).toContain("upload-scan-worker-artifacts");
     expect(manifest).toContain("unit-web-upload-scan-worker-static");
     expect(tracker).toContain("apps/web/lib/uploadScanWorker.ts");
-    expect(tracker).toContain("Upload scan worker evidence classifier wired and scanner/storage proof gated");
+    expect(tracker).toContain("Upload validation is runtime-matrix wired with dependency-light scan pipeline planning");
     expect(tracker).toContain("uploadScanWorkerLocalArtifacts");
     expect(tracker).toContain("uploadScanWorkerExternalArtifacts");
   });

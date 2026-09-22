@@ -36,7 +36,7 @@ describe("database integration test plan", () => {
         "pnpm --filter @inkroute/db db:validate",
         "pnpm --filter @inkroute/db db:generate",
         "pnpm --filter @inkroute/db db:migrate",
-        "pnpm db:verify-seed",
+        "pnpm --filter @inkroute/db db:verify-seed",
         "pnpm --filter @inkroute/db db:seed",
       ]),
     );
@@ -76,7 +76,7 @@ describe("database integration test plan", () => {
     expect(schema).toContain("@@unique([tenantId, userId])");
     expect(schema).toContain("@@index([tenantId, status, createdAt])");
     expect(schema).toContain("model AuditLog");
-    expect(schema).toContain("actorId");
+    expect(schema).toContain("actorUserId");
     expect(schema).toContain("entityType");
     expect(schema).toContain("entityId");
   });
@@ -273,8 +273,8 @@ describe("database integration test plan", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["db:seed"]);
-    expect(plan.requiredCommands).toBe(seedRuntimeExecutionEvidenceCommands);
-    expect(plan.requiredEvidence).toBe(seedRuntimeExecutionRequiredEvidence);
+    expect(plan.requiredCommands).toEqual(seedRuntimeExecutionEvidenceCommands);
+    expect(plan.requiredEvidence).toEqual(seedRuntimeExecutionRequiredEvidence);
     expect(plan.blockers).toContain("A non-production Postgres database must be provisioned for seed execution.");
     expect(plan.blockers).toContain("Seeded demo tenant must be readable after seed execution.");
     expect(plan.blockers).toContain("Seed execution must not use production provider credentials or live provider endpoints.");

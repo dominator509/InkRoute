@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { POST as receiveEmailWebhook } from "../app/api/webhooks/email/route";
 import { POST as receiveSmsWebhook } from "../app/api/webhooks/sms/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 describe("provider webhook route boundaries", () => {
   it("rejects email provider webhooks without signature-like headers or valid JSON", async () => {
@@ -67,7 +68,7 @@ describe("provider webhook route boundaries", () => {
 
   it("fail-closes production email webhooks before parsing or local runtime persistence when the webhook secret is missing", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await receiveEmailWebhook(
@@ -98,7 +99,7 @@ describe("provider webhook route boundaries", () => {
       expect(payload.productionBoundary.requiresCryptographicSignatureSecret).toBe(true);
       expect(payload.productionBoundary.durablePersistence).toBe("not-attempted-production-secret-gated");
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
@@ -181,7 +182,7 @@ describe("provider webhook route boundaries", () => {
 
   it("fail-closes production SMS webhooks before parsing or local runtime persistence when the auth token is missing", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await receiveSmsWebhook(
@@ -212,7 +213,7 @@ describe("provider webhook route boundaries", () => {
       expect(payload.productionBoundary.requiresCryptographicSignatureSecret).toBe(true);
       expect(payload.productionBoundary.durablePersistence).toBe("not-attempted-production-secret-gated");
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 });

@@ -176,30 +176,51 @@ export async function GET(request: NextRequest, context: TravelDetailRouteContex
           studioLocation: result.row.studio ? [result.row.studio.city, result.row.studio.region].filter(Boolean).join(", ") : null,
           guestSpotUrl: result.row.guestSpotUrl,
           internalNotes: result.row.internalNotes,
-          availability: result.row.availability.map((window) => ({
-            id: window.id,
-            kind: window.kind,
-            status: window.status,
-            startsAt: window.startsAt.toISOString(),
-            endsAt: window.endsAt.toISOString(),
-            timezone: window.timezone,
-            maxBookings: window.maxBookings,
-            bufferBeforeMinutes: window.bufferBeforeMinutes,
-            bufferAfterMinutes: window.bufferAfterMinutes,
-            publicLabel: window.publicLabel,
-            internalNotes: window.internalNotes,
-          })),
-          bookingRequests: result.row.travelCity.bookingRequests.map((booking) => ({
+          availability: result.row.availability.map(
+            (window: {
+              id: string;
+              kind: string;
+              status: string;
+              startsAt: { toISOString(): string };
+              endsAt: { toISOString(): string };
+              timezone: string;
+              maxBookings: number | null;
+              bufferBeforeMinutes: number | null;
+              bufferAfterMinutes: number | null;
+              publicLabel: string | null;
+              internalNotes: string | null;
+            }) => ({
+              id: window.id,
+              kind: window.kind,
+              status: window.status,
+              startsAt: window.startsAt.toISOString(),
+              endsAt: window.endsAt.toISOString(),
+              timezone: window.timezone,
+              maxBookings: window.maxBookings,
+              bufferBeforeMinutes: window.bufferBeforeMinutes,
+              bufferAfterMinutes: window.bufferAfterMinutes,
+              publicLabel: window.publicLabel,
+              internalNotes: window.internalNotes,
+            }),
+          ),
+          bookingRequests: result.row.travelCity.bookingRequests.map((booking: { id: string; status: string }) => ({
             id: booking.id,
             status: booking.status,
             clientName: "[redacted-dashboard-field]",
           })),
-          appointments: result.row.travelCity.appointments.map((appointment) => ({
-            id: appointment.id,
-            status: appointment.status,
-            startsAt: appointment.startsAt.toISOString(),
-            endsAt: appointment.endsAt.toISOString(),
-          })),
+          appointments: result.row.travelCity.appointments.map(
+            (appointment: {
+              id: string;
+              status: string;
+              startsAt: { toISOString(): string };
+              endsAt: { toISOString(): string };
+            }) => ({
+              id: appointment.id,
+              status: appointment.status,
+              startsAt: appointment.startsAt.toISOString(),
+              endsAt: appointment.endsAt.toISOString(),
+            }),
+          ),
         },
       ],
       redactedFields: ["internalNotes", "guestSpotUrl"],

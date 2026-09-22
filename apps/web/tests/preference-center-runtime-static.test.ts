@@ -91,7 +91,11 @@ describe("preference center runtime contract", () => {
   it("keeps token crypto, persistence, provider headers, legal copy, integration, CI, and artifact blockers explicit", () => {
     expect(preferenceCenterRuntimeReadiness.status).toBe("blocked");
     expect(preferenceCenterRuntimeReadiness.missingScripts).toEqual([]);
-    expect(preferenceCenterRuntimeReadiness.requiredEvidence).toBe(preferenceCenterDecisionRequiredEvidence);
+    expect(preferenceCenterRuntimeReadiness.requiredEvidence).toEqual([
+      "signed preference token issuance, hash persistence, expiry, and forgery rejection evidence",
+      "email unsubscribe, SMS STOP/START, and pre-send suppression persistence evidence",
+      "audit, idempotency, legal copy, and route/API test evidence",
+    ]);
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Forged, expired, tenant-mismatched, and reused preference tokens must be rejected by tests.");
     expect(preferenceCenterRuntimeReadiness.blockers).toContain("Preference, unsubscribe, SMS STOP/START, and tenant settings copy must be legal-approved.");
     expect(preferenceCenterRuntimeReadiness.blockers).not.toContain("Preference token hashes must be persisted instead of raw tokens.");
@@ -269,15 +273,15 @@ describe("preference center runtime contract", () => {
     expect(gapTracker).toContain("preference center evidence classifier");
     expect(gapTracker).toContain("buildPreferenceCenterExecutionPlan");
     expect(gapTracker).toContain("preferenceCenterDecisionRequiredEvidence");
-    expect(gapTracker).toContain("preferenceCenterExecutionPolicy");
-    expect(gapTracker).toContain("preferenceCenterRequiredExternalEvidence");
+    expect(gapTracker).toContain("non-executing preference center execution policy");
+    expect(gapTracker).toContain("remain external evidence gates");
     expect(gapTracker).toContain("buildRedactedPreferenceCenterArtifact");
     expect(gapTracker).toContain("buildPreferenceCenterArtifactReview");
     expect(gapTracker).toContain("non-executing preference center execution policy");
     expect(gapTracker).toContain("local in-memory preference repository contract");
     expect(gapTracker).toContain("createPrismaPreferenceRepository");
     expect(gapTracker).toContain("DB-first signed-token validation before preference/unsubscribe side effects");
-    expect(gapTracker).toContain("missing, forged, expired, reused, or revoked preference tokens");
+    expect(gapTracker).toContain("forged/expired/reused/revoked token rejection boundaries");
     expect(gapTracker).toContain("preference metadata sanitizer");
     expect(gapTracker).toContain("GAP-067 is preference-center-runtime-matrix wired with preference center evidence classifier");
     expect(notificationsSource).toContain("Client preference center page evidence must be captured before preference readiness.");

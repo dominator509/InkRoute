@@ -93,7 +93,7 @@ describe("GAP-100 legal review evidence contract", () => {
     expect(packet).toContain("SMS consent, STOP/HELP, quiet-hour, and notification language");
     expect(privacyPage).toContain("not legal advice, not attorney-reviewed");
     expect(trustPage).toContain("Legal review");
-    expect(dashboardTrustPage).toContain("attorney-reviewed legal documents");
+    expect(dashboardTrustPage).toContain("Attorney review required");
   });
 
   it("blocks legal document and payment policy readiness until approvals, versions, audits, route smokes, and rollback exist", () => {
@@ -117,7 +117,7 @@ describe("GAP-100 legal review evidence contract", () => {
     expect(paymentPolicyLegalRuntimeContract.blockers).toEqual(
       expect.arrayContaining([
         "Attorney approval must be recorded for payment, cancellation, no-show, refund, SMS, receipt, and liability language.",
-        "Tax/accounting approval must be recorded for deposits, refunds, tax disclosures, and reporting copy.",
+        "Tax/accounting approval must be recorded for receipt and accounting export language.",
         "Reviewed SMS consent, STOP, HELP, and quiet-hours copy must be committed.",
         "Terms, privacy, consent, and studio policy documents must be updated with reviewed payment policy language.",
       ]),
@@ -145,7 +145,7 @@ describe("GAP-100 legal review evidence contract", () => {
     expect(ci).toContain("legal-review-evidence-artifacts");
     expect(manifest).toContain("unit-web-legal-review-evidence-static");
     expect(tracker).toContain("apps/web/lib/legalReviewEvidence.ts");
-    expect(tracker).toContain("Legal review evidence classifier wired and attorney reviewed-copy proof gated");
+    expect(tracker).toContain("Legal review is runtime-matrix wired with legalDocumentProductionReadinessRequiredCommands identity wiring plus legalDocumentProductionReadinessRequiredEvidence typed requiredEvidence catalog");
     expect(tracker).toContain("legalReviewLocalArtifacts");
     expect(tracker).toContain("legalReviewExternalArtifacts");
   });

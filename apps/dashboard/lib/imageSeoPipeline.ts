@@ -120,7 +120,7 @@ const imageSeoSensitiveKeyPattern =
   /(?:authorization|bucket|clientsecret|credential|cookie|email|original|password|phone|private|secret|signedurl|sourceobjectkey|token)/i;
 const imageSeoEmailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const imageSeoPhonePattern = /\+?\d[\d ().-]{7,}\d/g;
-const imageSeoTokenPattern = /\b(?:aws|bearer|cdn|gcp|s3|sk|supabase)[A-Za-z0-9._:/-]{8,}\b/gi;
+const imageSeoTokenPattern = /\b(?:aws|bearer|gcp|s3|sk|supabase)[A-Za-z0-9._:/-]{8,}\b/gi;
 
 function redactImageSeoPipelineValue(value: unknown, key = ""): unknown {
   if (value === null || value === undefined) {
@@ -308,7 +308,7 @@ export function buildDashboardImageSeoPipelinePlan(input: {
     cdnBaseUrl: input.cdnBaseUrl ?? "https://cdn.inkroute.example",
     widths: [...imageSeoDerivativeWidths],
     formats: [...imageSeoDerivativeFormats],
-    now: input.now,
+    ...(input.now !== undefined ? { now: input.now } : {}),
   });
 }
 

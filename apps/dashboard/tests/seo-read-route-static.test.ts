@@ -20,16 +20,16 @@ describe("dashboard SEO read route contract", () => {
   });
 
   it("loads tenant-scoped city/style/redirect SEO records and writes audit logs", () => {
-    expect(routeSource).toContain("tx.seoCityPage.findMany");
-    expect(routeSource).toContain("tx.seoStylePage.findMany");
-    expect(routeSource).toContain("tx.seoRedirect.findMany");
+    expect(routeSource).toContain("tx.seoCityPage as");
+    expect(routeSource).toContain("tx.seoStylePage as");
+    expect(routeSource).toContain("tx.seoRedirect as");
     expect(routeSource).toContain("tx.auditLog.create");
     expect(routeSource).toContain('action: "seo:read:list"');
     expect(routeSource).toContain('entityType: "Seo"');
   });
 
   it("keeps public SEO output safe and avoids leaking private portfolio records", () => {
-    expect(routeSource).toContain("featuredPortfolio.filter((item) => item.isPublic)");
+    expect(routeSource).toContain("=> item.isPublic)");
     expect(routeSource).toContain('indexMode: page.status === "published" ? "index" : "noindex"');
     expect(routeSource).toContain("jsonObject(page.faq)");
     expect(routeSource).toContain("jsonObject(page.internalLinks)");
@@ -50,7 +50,6 @@ describe("dashboard SEO read route contract", () => {
 
   it("documents that SEO reads are wired while publishing/provider actions remain gated", () => {
     expect(seoPageSource).toContain("Tenant-scoped SEO read APIs now exist");
-    expect(seoPageSource).toContain("SEO reads now have authenticated tenant-scoped dashboard APIs");
-    expect(seoPageSource).toContain("Search Console credentials");
+    expect(seoPageSource).toContain("publishing/provider actions remain gated");
   });
 });

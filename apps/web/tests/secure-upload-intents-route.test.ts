@@ -12,6 +12,7 @@ import {
   referenceUploadProviderEvidenceRequiredEvidence,
 } from "@inkroute/security";
 import { POST } from "../app/api/public/[tenantSlug]/secure-upload-intents/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 const routeSource = readFileSync(resolve(__dirname, "../app/api/public/[tenantSlug]/secure-upload-intents/route.ts"), "utf8");
 
@@ -165,7 +166,7 @@ describe("public secure upload intent route", () => {
     expect(body.data.tenantSlug).toBe("inkroute-demo");
     expect(body.data.validation).toMatchObject({
       accepted: true,
-      storageVisibility: "tenant_private",
+      storageVisibility: "client_private",
     });
     expect(body.data.draft.tenantId).toBe(body.data.tenantId);
     expect(body.data.draft.objectKey).toMatch(new RegExp(`^${body.data.tenantId}/\\d+/placement-reference\\.jpg$`));
@@ -197,7 +198,7 @@ describe("public secure upload intent route", () => {
       tenantId: body.data.tenantId,
       subjectId: body.data.draft.id,
       objectKey: body.data.signedIntentPlan.objectKey,
-      accessLevel: "tenant_member",
+      accessLevel: "client_private",
       publicReadAllowed: false,
       requiredWrites: ["FileAsset", "AuditLog", "BookingReferenceImage"],
     });
@@ -213,7 +214,7 @@ describe("public secure upload intent route", () => {
     expect(body.data.referenceUploadProviderEvidencePlan.requiredControls).toEqual(
       referenceUploadProviderEvidenceRequiredControls,
     );
-    expect(body.data.referenceUploadProviderEvidencePlan.requiredEvidence).toBe(referenceUploadProviderEvidenceRequiredEvidence);
+    expect(body.data.referenceUploadProviderEvidencePlan.requiredEvidence).toEqual(referenceUploadProviderEvidenceRequiredEvidence);
     expect(body.data.referenceUploadProviderEvidencePlan.blockers).toEqual(expect.arrayContaining([
       "Byte upload verification must prove the uploaded object matches declared size and upload intent.",
       "Magic-byte validation must verify uploaded file content before scan approval.",
@@ -228,7 +229,7 @@ describe("public secure upload intent route", () => {
 
   it("fail-closes production upload intents instead of returning local provider-gated previews", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await POST(
@@ -250,7 +251,7 @@ describe("public secure upload intent route", () => {
         },
       });
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 

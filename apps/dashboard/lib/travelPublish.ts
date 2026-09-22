@@ -112,12 +112,12 @@ function buildSampleTravelPublishPlans(): TravelPublishMutationPlan[] {
       actorId: "operator_demo",
       action,
       stop: sampleStop,
-      previousStop: action === "publish" ? undefined : previousSampleStop,
+      ...(action === "publish" ? {} : { previousStop: previousSampleStop }),
       idempotencyKey: `travel-publish-demo-${action}`,
       consentedWaitlistClientIds: ["client_demo_waitlist"],
       changedFieldNames: action === "publish" ? ["created"] : ["bookingStatus", "startsAt", "endsAt"],
       providerActionsSucceeded: action === "rollback" ? false : true,
-      rollbackReason: action === "rollback" ? "Provider revalidation failed after publish." : undefined,
+      ...(action === "rollback" ? { rollbackReason: "Provider revalidation failed after publish." } : {}),
     }),
   );
 }
@@ -261,9 +261,17 @@ export async function executeTravelPublishMutation(
   });
 
   const plan = buildTravelPublishMutationPlan({
-    ...input,
-    previousStop,
+    tenantId: input.tenantId,
+    artistId: input.artistId,
+    ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
+    action: input.action,
+    stop: input.stop,
+    ...(previousStop !== undefined ? { previousStop } : {}),
+    ...(input.idempotencyKey !== undefined ? { idempotencyKey: input.idempotencyKey } : {}),
     consentedWaitlistClientIds,
+    ...(input.changedFieldNames !== undefined ? { changedFieldNames: input.changedFieldNames } : {}),
+    ...(input.providerActionsSucceeded !== undefined ? { providerActionsSucceeded: input.providerActionsSucceeded } : {}),
+    ...(input.rollbackReason !== undefined ? { rollbackReason: input.rollbackReason } : {}),
   });
 
   if (plan.status === "blocked" || !plan.idempotencyKey) {

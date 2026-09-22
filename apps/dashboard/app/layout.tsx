@@ -6,7 +6,7 @@ import { notFound, redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { dashboardShellContext } from "../lib/demo";
 import {
-  getLocalDashboardActor,
+  resolveDashboardActorFromHeaders,
   resolveDashboardPermissionForRoute,
   toTenantAccessContext,
 } from "./api/dashboardAuth";
@@ -22,7 +22,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   noStore();
   const requestHeaders = await headers();
   const routePath = requestHeaders.get("x-matched-path") ?? requestHeaders.get("x-invoke-path") ?? "/dashboard";
-  const actor = getLocalDashboardActor();
+  // Resolve the actor the same way the middleware does (demo auth headers honored),
+  // so the layout guard and the middleware guard never disagree on who is asking.
+  const actor = resolveDashboardActorFromHeaders(requestHeaders);
   const permission = resolveDashboardPermissionForRoute(routePath);
   const guard = evaluateDashboardRouteGuard({
     context: toTenantAccessContext(actor),

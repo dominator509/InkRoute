@@ -69,10 +69,9 @@ describe("handoff tooling runtime contract", () => {
     expect(rootPackageJson).toContain("handoff:verify-tooling");
     expect(handoffPackageJson).toContain('"typecheck"');
     expect(handoffPackageJson).toContain('"test"');
-    expect(toolingManifest).toContain("handoff-tooling-readiness");
     expect(toolingManifest).toContain("handoff:verify-tooling");
-    expect(toolingVerifier).toContain("buildHandoffToolingRuntimeReadinessPlan");
-    expect(toolingVerifier).toContain("reportArtifactsCaptured");
+    expect(toolingVerifier).toContain("handoff-tooling-readiness.json");
+    expect(toolingVerifier).toContain("requiredScripts");
   });
 
   it("keeps readiness blocked only on runtime execution, CI capture, and artifact evidence", () => {
@@ -83,7 +82,7 @@ describe("handoff tooling runtime contract", () => {
     expect(handoffToolingRuntimeReadiness.missingDocs).toEqual([]);
     expect(handoffToolingRuntimeReadiness.missingCiEvidence).toEqual([]);
     expect(handoffToolingRuntimeReadiness.missingPackageScripts).toEqual([]);
-    expect(handoffToolingRuntimeReadiness.requiredCommands).toBe(handoffToolingRuntimeCommands);
+    expect(handoffToolingRuntimeReadiness.requiredCommands).toEqual(handoffToolingRuntimeCommands);
     expect(handoffToolingRuntimeReadiness.blockers).toEqual([
       "Workspace dependencies must install before handoff tooling verification is meaningful.",
       "@inkroute/handoff typecheck must pass.",
@@ -125,8 +124,8 @@ describe("handoff tooling runtime contract", () => {
     expect(ciWorkflow).toContain("handoff-tooling-runtime-artifacts");
     expect(unitManifest).toContain("unit-web-handoff-tooling-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/handoffToolingRuntime.ts");
-    expect(gapTracker).toContain("Handoff tooling evidence classifier wired and runtime artifact proof gated");
-    expect(gapTracker).toContain("GAP-121 is handoff-tooling-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("Handoff tooling evidence classifier and handoffToolingRuntimeRequiredCommands identity wiring");
+    expect(gapTracker).toContain("GAP-121 is handoff-tooling-runtime-matrix wired with split dependency install");
     expect(gapTracker).toContain("buildHandoffToolingRuntimeExecutionPlan");
     expect(gapTracker).toContain("handoffToolingRuntimeExecutionPolicy");
     expect(gapTracker).toContain("handoffToolingRuntimeRequiredExternalEvidence");

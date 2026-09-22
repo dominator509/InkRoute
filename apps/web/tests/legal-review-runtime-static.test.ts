@@ -13,7 +13,6 @@ import {
   legalReviewLocalArtifacts,
   legalReviewLocalCommands,
   legalReviewRequiredArtifactPaths,
-  legalReviewRuntimeRequiredEvidence,
   legalReviewRequiredExternalEvidence,
   legalReviewRequiredItemIds,
   legalReviewRunPersistenceContract,
@@ -24,6 +23,7 @@ import {
   legalReviewRuntimeReadiness,
   persistLegalReviewRun,
 } from "../lib/legalReviewRuntime";
+import { legalReviewRuntimeRequiredEvidence } from "@inkroute/quality";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -141,8 +141,8 @@ describe("legal review runtime contract", () => {
     expect(rootPackageJson).toContain("verify-legal-review.mjs");
     expect(legalPacket).toContain("Legal Review Packet");
     expect(legalContract).toContain("privacy");
-    expect(legalEvidence).toContain("legal-review-evidence");
-    expect(legalVerifier).toContain("buildLegalReviewRuntimeReadinessPlan");
+    expect(legalEvidence).toContain("GAP-013 legal/compliance");
+    expect(legalVerifier).toContain("legal-review-contract.json");
     expect(qualityTests).toContain("buildLegalReviewRuntimeReadinessPlan");
   });
 
@@ -150,8 +150,8 @@ describe("legal review runtime contract", () => {
     expect(legalReviewRuntimeReadiness.status).toBe("blocked");
     expect(legalReviewRuntimeReadiness.missingApprovedItems).toEqual([...legalReviewRequiredItemIds]);
     expect(legalReviewRuntimeReadiness.missingArtifacts).toEqual([]);
-    expect(legalReviewRuntimeReadiness.requiredCommands).toBe(legalReviewRuntimeCommands);
-    expect(legalReviewRuntimeReadiness.requiredEvidence).toBe(legalReviewRuntimeRequiredEvidence);
+    expect(legalReviewRuntimeReadiness.requiredCommands).toEqual(legalReviewRuntimeCommands);
+    expect(legalReviewRuntimeReadiness.requiredEvidence).toEqual(legalReviewRuntimeRequiredEvidence);
     expect(legalReviewRuntimeReadiness.blockers).toContain(
       "Every required legal review item must be attorney-approved before production launch.",
     );
@@ -261,6 +261,7 @@ describe("legal review runtime contract", () => {
       "approvalSignature",
       "nested.databaseUrl",
       "nested.evidenceId",
+      "nested.publicLabel",
     ]);
     expect(review.safeForTracker).toBe(true);
     expect(review.requiredExternalEvidence).toBe(legalReviewRequiredExternalEvidence);

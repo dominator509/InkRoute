@@ -138,7 +138,46 @@ export async function GET(request: NextRequest) {
       collection: "travel",
       tenantId,
       source: "repository",
-      records: result.rows.map((row) => ({
+      records: result.rows.map(
+        (row: {
+          id: string;
+          tenantId: string;
+          artistId: string;
+          title: string;
+          travelCity: {
+            id: string;
+            city: string;
+            region: string | null;
+            country: string;
+            slug: string;
+            timezone: string;
+            publicSummary: string | null;
+            waitlistEnabled: boolean;
+            latitude: unknown;
+            longitude: unknown;
+          };
+          timezone: string;
+          startsAt: { toISOString(): string };
+          endsAt: { toISOString(): string };
+          bookingStatus: string;
+          publicNotes: string | null;
+          guestSpotUrl: string | null;
+          internalNotes: string | null;
+          studio: { name: string; city: string | null; region: string | null } | null;
+          availability: {
+            id: string;
+            kind: string;
+            status: string;
+            startsAt: { toISOString(): string };
+            endsAt: { toISOString(): string };
+            timezone: string;
+            maxBookings: number | null;
+            bufferBeforeMinutes: number | null;
+            bufferAfterMinutes: number | null;
+            publicLabel: string | null;
+            internalNotes: string | null;
+          }[];
+        }) => ({
         id: row.id,
         tenantId: row.tenantId,
         artistId: row.artistId,
@@ -162,8 +201,23 @@ export async function GET(request: NextRequest) {
         guestSpotUrl: row.guestSpotUrl,
         internalNotes: row.internalNotes,
         availabilityCount: row.availability.length,
-        openAvailabilityCount: row.availability.filter((window) => window.status === "open").length,
-        availability: row.availability.map((window) => ({
+        openAvailabilityCount: row.availability.filter(
+          (window: { status: string }) => window.status === "open",
+        ).length,
+        availability: row.availability.map(
+          (window: {
+            id: string;
+            kind: string;
+            status: string;
+            startsAt: { toISOString(): string };
+            endsAt: { toISOString(): string };
+            timezone: string;
+            maxBookings: number | null;
+            bufferBeforeMinutes: number | null;
+            bufferAfterMinutes: number | null;
+            publicLabel: string | null;
+            internalNotes: string | null;
+          }) => ({
           id: window.id,
           kind: window.kind,
           status: window.status,

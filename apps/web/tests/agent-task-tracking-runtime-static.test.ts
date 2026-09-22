@@ -98,9 +98,9 @@ describe("agent task tracking runtime contract", () => {
     expect(trackingManifest).toContain("agent-task");
     expect(trackingManifest).toContain("gap-tracked");
     expect(trackingManifest).toContain("verification-required");
-    expect(trackingVerifier).toContain("buildAgentTaskTrackingReadinessPlan");
-    expect(trackingVerifier).toContain("githubIssuesCreated");
-    expect(trackingVerifier).toContain("statusUpdatesTraceable");
+    expect(trackingVerifier).toContain("agent-task-tracking-sync.json");
+    expect(trackingVerifier).toContain("plannedIssues");
+    expect(trackingVerifier).toContain("allowedStatuses");
     expect(handoffPackageTests).toContain("buildAgentTaskTrackingReadinessPlan");
   });
 
@@ -110,8 +110,8 @@ describe("agent task tracking runtime contract", () => {
     expect(agentTaskTrackingRuntimeReadiness.unknownIssueTaskIds).toEqual([]);
     expect(agentTaskTrackingRuntimeReadiness.incompleteIssueTaskIds).toEqual([]);
     expect(agentTaskTrackingRuntimeReadiness.unsafeTrackingFields).toEqual([]);
-    expect(agentTaskTrackingRuntimeReadiness.requiredCommands).toBe(agentTaskTrackingRuntimeCommands);
-    expect(agentTaskTrackingRuntimeReadiness.requiredEvidence).toBe(agentTaskTrackingReadinessRequiredEvidence);
+    expect(agentTaskTrackingRuntimeReadiness.requiredCommands).toEqual(agentTaskTrackingRuntimeCommands);
+    expect(agentTaskTrackingRuntimeReadiness.requiredEvidence).toEqual(agentTaskTrackingReadinessRequiredEvidence);
     expect(agentTaskTrackingRuntimeReadiness.blockers).toEqual([
       "pnpm handoff:verify-task-sync must pass.",
       "GitHub issues must be created for every queued agent task.",
@@ -211,7 +211,7 @@ describe("agent task tracking runtime contract", () => {
     expect(unitManifest).toContain("unit-web-agent-task-tracking-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/agentTaskTrackingRuntime.ts");
     expect(gapTracker).toContain("live GitHub issue/project creation and traceable status-update proof remain open");
-    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-123 is agent-task-tracking-runtime-matrix wired with split task-sync");
     expect(gapTracker).toContain("buildAgentTaskTrackingRuntimeExecutionPlan");
     expect(gapTracker).toContain("agentTaskTrackingRuntimeExecutionPolicy");
     expect(gapTracker).toContain("agentTaskTrackingReadinessRequiredEvidence");

@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { mobileDeviceQaRuntimeReadinessRequiredCommands } from "@inkroute/mobile-support";
 import {
   buildMobileQaArtifactReview,
   buildMobileQaEvidenceDecision,
@@ -92,8 +93,14 @@ describe("mobile QA runtime contract", () => {
   it("keeps simulator, physical-device, accessibility, provider, CI, and artifact blockers explicit", () => {
     expect(mobileQaRuntimeReadiness.status).toBe("blocked");
     expect(mobileQaRuntimeReadiness.missingScripts).toEqual([]);
-    expect(mobileQaRuntimeReadiness.requiredCommands).toBe(mobileQaRuntimeCommands);
-    expect(mobileQaRuntimeReadiness.requiredEvidence).toBe(mobileQaEvidenceFlags);
+    expect(mobileQaRuntimeReadiness.requiredCommands).toEqual(mobileDeviceQaRuntimeReadinessRequiredCommands);
+    expect(mobileQaRuntimeReadiness.requiredEvidence).toEqual([
+      "Expo app component/render and static test output for every registered screen",
+      "iOS, Android, and physical device smoke screenshots or videos",
+      "VoiceOver/TalkBack, text scaling, contrast, and touch-target QA notes",
+      "offline, push, crash, and OTA rollback runtime QA transcripts",
+      "CI job links and retained mobile QA artifacts",
+    ]);
     expect(mobileQaRuntimeReadiness.blockers).toContain("Expo app component/render tests must cover registered screens.");
     expect(mobileQaRuntimeReadiness.blockers).toContain("Physical device smoke must cover auth, API sync, offline, push, crash, and OTA flows.");
     expect(mobileQaRuntimeReadiness.blockers).toContain("Mobile QA artifacts must include simulator screenshots/logs, accessibility notes, provider/device transcripts, and release evidence.");

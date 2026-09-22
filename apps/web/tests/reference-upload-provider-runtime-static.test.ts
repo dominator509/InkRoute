@@ -75,15 +75,20 @@ describe("reference upload provider runtime contract", () => {
     expect(uploadRoute).toContain('input.kind === "reference_private"');
     expect(uploadRoute).toContain('const noStoreHeaders = { "Cache-Control": "no-store" } as const');
     expect(uploadRouteTest).toContain("referenceUploadProviderEvidencePlan");
-    expect(uploadRouteTest).toContain("provider-signed URL");
+    expect(uploadRouteTest).toContain("signedUploadUrlRequired");
     expect(uploadRouteTest).toContain('response.headers.get("Cache-Control")).toBe("no-store")');
   });
 
   it("keeps provider blockers explicit until storage, scan, persistence, denial, CI, and artifact proof exists", () => {
     expect(referenceUploadProviderRuntimeReadiness.status).toBe("blocked");
     expect(referenceUploadProviderRuntimeReadiness.missingScripts).toEqual([]);
-    expect(referenceUploadProviderRuntimeReadiness.requiredCommands).toBe(referenceUploadProviderRuntimeCommands);
-    expect(referenceUploadProviderRuntimeReadiness.requiredEvidence).toBe(referenceUploadProviderEvidenceFlags);
+    expect(referenceUploadProviderRuntimeReadiness.requiredCommands).toEqual(referenceUploadProviderRuntimeCommands);
+    expect(referenceUploadProviderRuntimeReadiness.requiredEvidence).toEqual([
+      "secure upload intent route, provider-signed URL, and byte upload verification evidence",
+      "magic-byte validation, malware scan, and quarantine flow evidence",
+      "private ACL, anonymous fetch denial, and cross-tenant denial evidence",
+      "web typecheck/route test, CI, and secret-safe artifact evidence",
+    ]);
     expect(referenceUploadProviderRuntimeReadiness.blockers).toContain(
       "Provider-signed upload URL must be issued for reference_private uploads.",
     );
@@ -202,7 +207,7 @@ describe("reference upload provider runtime contract", () => {
     expect(gapTracker).toContain("referenceUploadProviderExecutionPolicy");
     expect(gapTracker).toContain("referenceUploadProviderRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-033 is reference-upload-provider-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-033 is route-wired with signed upload intent, private access, persistence, and provider evidence plans");
+    expect(gapTracker).toContain("GAP-033 is reference-upload-provider-runtime-matrix wired with evidence classifier and proof inventory");
     expect(gapTracker).toContain("proof inventory");
     expect(referenceUploadProviderArtifactPaths).toContain("coverage/reference-upload-secret-safe-artifacts.json");
   });

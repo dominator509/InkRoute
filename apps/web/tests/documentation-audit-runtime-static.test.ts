@@ -93,7 +93,7 @@ describe("documentation audit runtime contract", () => {
     expect(documentationAuditRuntimeReadiness.missingScripts).toEqual([]);
     expect(documentationAuditRuntimeReadiness.missingReports).toEqual([]);
     expect(documentationAuditRuntimeReadiness.failedAuditAreas).toEqual([]);
-    expect(documentationAuditRuntimeReadiness.requiredCommands).toBe(documentationAuditRuntimeCommands);
+    expect(documentationAuditRuntimeReadiness.requiredCommands).toEqual(documentationAuditRuntimeCommands);
     expect(documentationAuditRuntimeReadiness.requiredEvidence).toBe(
       documentationAuditRuntimeReadinessRequiredEvidence,
     );
@@ -195,7 +195,7 @@ describe("documentation audit runtime contract", () => {
     expect(unitManifest).toContain("unit-web-documentation-audit-runtime-static");
     expect(gapTracker).toContain("apps/web/lib/documentationAuditRuntime.ts");
     expect(gapTracker).toContain("live CI, provider review, legal review, and stale provider proof remain open");
-    expect(gapTracker).toContain("GAP-124 is documentation-audit-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-124 is documentation-audit-runtime-matrix wired with split quality docs alias/direct-script audit wiring");
     expect(gapTracker).toContain("documentationAuditRuntimeReadinessRequiredEvidence");
     expect(gapTracker).toContain("documentationAuditRuntimeRequiredEvidence");
     expect(gapTracker).toContain("buildDocumentationAuditDecisionRequiredEvidence");

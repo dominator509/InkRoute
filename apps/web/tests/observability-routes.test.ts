@@ -20,12 +20,14 @@ vi.mock("@inkroute/db", () => ({
 
 import { POST as createPublicErrorReport } from "../app/api/public/[tenantSlug]/error-reports/route";
 import { POST as receiveSentryWebhook } from "../app/api/webhooks/sentry/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 beforeEach(() => {
   dbMocks.tenantFindUnique.mockReset();
   dbMocks.transaction.mockReset();
   dbMocks.tenantFindUnique.mockRejectedValue(new Error("database unavailable in route contract test"));
   delete process.env.SENTRY_WEBHOOK_SECRET;
+  delete process.env.DATABASE_URL;
 });
 
 function errorReportRequest(body: unknown, clientIp: string): NextRequest {
@@ -111,7 +113,7 @@ describe("observability route boundaries", () => {
 
   it("fail-closes production public error reports instead of using local runtime fallback", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await createPublicErrorReport(
@@ -142,7 +144,7 @@ describe("observability route boundaries", () => {
       expect(payload.error.gapIds).toContain("GAP-081");
       expect(payload.productionBoundary.localObservabilityRuntimeFallbackDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
@@ -174,11 +176,13 @@ describe("observability route boundaries", () => {
     const createdAudit = { id: "audit_db_route_test" };
     const errorReportCreate = vi.fn(async ({ data }) => ({ ...createdReport, ...data, id: createdReport.id, createdAt: createdReport.createdAt }));
     const auditLogCreate = vi.fn(async ({ data }) => ({ ...createdAudit, ...data }));
+    const abuseEventCreate = vi.fn(async ({ data }) => ({ id: "abuse_db_route_test", ...data }));
 
     dbMocks.tenantFindUnique.mockResolvedValue({ id: "tenant_db_route_test" });
     dbMocks.transaction.mockImplementation(async (callback) =>
       callback({
         errorReport: { create: errorReportCreate },
+        abuseEvent: { create: abuseEventCreate },
         auditLog: { create: auditLogCreate },
       }),
     );
@@ -297,6 +301,8 @@ describe("observability route boundaries", () => {
 
   it("accepts valid Sentry webhook signatures with idempotency and reconciliation metadata", async () => {
     process.env.SENTRY_WEBHOOK_SECRET = "sentry_webhook_secret_test";
+    process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/inkroute_test";
+    dbMocks.transaction.mockRejectedValue(new Error("simulated write rejection for route contract test"));
 
     const response = await receiveSentryWebhook(
       signedSentryWebhookRequest(
@@ -304,6 +310,7 @@ describe("observability route boundaries", () => {
           action: "resolved",
           data: {
             id: "issue_123",
+            tenantId: "tenant_sentry_route_test",
             title: "Unhandled booking crash for avery@example.com",
             culprit: "/booking",
             release: "phase11-route-test",

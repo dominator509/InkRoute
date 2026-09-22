@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { publicWebLaunchEvidenceRequiredEvidence } from "@inkroute/seo";
 import {
   buildPublicWebLaunchArtifactReview,
   buildPublicWebLaunchDecisionRequiredEvidence,
@@ -161,8 +162,8 @@ describe("public web launch runtime contract", () => {
   it("keeps public launch blockers explicit until runtime/provider/browser evidence exists", () => {
     expect(publicWebLaunchRuntimeReadiness.status).toBe("blocked");
     expect(publicWebLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(publicWebLaunchRuntimeReadiness.requiredCommands).toBe(publicWebLaunchRuntimeCommands);
-    expect(publicWebLaunchRuntimeReadiness.requiredEvidence).toBe(publicWebLaunchRequiredEvidence);
+    expect(publicWebLaunchRuntimeReadiness.requiredCommands).toEqual(publicWebLaunchRuntimeCommands);
+    expect(publicWebLaunchRuntimeReadiness.requiredEvidence).toEqual(publicWebLaunchEvidenceRequiredEvidence);
     expect(publicWebLaunchRuntimeReadiness.blockers).toContain("@inkroute/web build must pass.");
     expect(publicWebLaunchRuntimeReadiness.blockers).toContain(
       "Public API routes must use tenant-scoped persistence instead of local runtime state in production.",
@@ -256,7 +257,7 @@ describe("public web launch runtime contract", () => {
     expect(decision.requiredEvidence).toEqual(
       buildPublicWebLaunchDecisionRequiredEvidence(publicWebLaunchRuntimeReadiness.requiredEvidence),
     );
-    expect(decision.requiredEvidence).toBe(publicWebLaunchRequiredEvidence);
+    expect(decision.requiredEvidence).toEqual(publicWebLaunchRequiredEvidence);
     expect(decision.blockers).toContain("@inkroute/web build must pass.");
     expect(decision.blockers).toContain("PublicWebLaunchRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Every required public web launch readiness area must be covered.");
@@ -308,7 +309,7 @@ describe("public web launch runtime contract", () => {
     expect(gapTracker).toContain("persistPublicWebLaunchRun upsert seam");
     expect(gapTracker).toContain("buildPublicWebLaunchDecisionRequiredEvidence");
     expect(gapTracker).toContain("publicWebLaunchRequiredEvidence");
-    expect(gapTracker).toContain("live web typecheck/build/test, route smoke, Playwright, axe/Lighthouse, provider/database route verification, real media derivatives, runtime SEO validation, legal-route review, CI evidence, provider-backed persistPublicWebLaunchRun execution, and secret-safe launch artifacts remain open");
+    expect(gapTracker).toContain("live web typecheck/build/test, route smoke, Playwright, axe/Lighthouse, provider/database route verification after production fallback guards, real media derivatives, runtime SEO validation, legal-route review, CI evidence, provider-backed persistPublicWebLaunchRun execution, and secret-safe launch artifacts remain open");
     expect(gapTracker).toContain("GAP-006 is public-web-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
   });
@@ -378,7 +379,10 @@ describe("public web launch runtime contract", () => {
       runId: "[REDACTED]",
       ciRunUrl: "[REDACTED]",
       routeSmokeLog: "tenant [REDACTED] rendered for [REDACTED]",
-      providerRouteEvidence: "[REDACTED]",
+      providerRouteEvidence: {
+        tenantId: "[REDACTED]",
+        databaseUrl: "[REDACTED]",
+      },
       contactPhone: "[REDACTED]",
     });
 
@@ -390,7 +394,8 @@ describe("public web launch runtime contract", () => {
         "runId",
         "ciRunUrl",
         "routeSmokeLog",
-        "providerRouteEvidence",
+        "providerRouteEvidence.tenantId",
+        "providerRouteEvidence.databaseUrl",
         "contactPhone",
       ]),
     );

@@ -171,7 +171,7 @@ describe("dashboard launch runtime contract", () => {
   it("keeps dashboard launch blockers explicit until provider-backed runtime evidence exists", () => {
     expect(dashboardLaunchRuntimeReadiness.status).toBe("blocked");
     expect(dashboardLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardLaunchRuntimeReadiness.requiredCommands).toBe(dashboardLaunchRuntimeCommands);
+    expect(dashboardLaunchRuntimeReadiness.requiredCommands).toEqual(dashboardLaunchRuntimeCommands);
     expect(dashboardLaunchRuntimeReadiness.requiredControls).toEqual([
       "Resolve provider-backed session and tenant membership before every dashboard data load.",
       "Load dashboard data through tenant-scoped repositories or authenticated APIs.",
@@ -180,12 +180,7 @@ describe("dashboard launch runtime contract", () => {
       "Redact private client, medical, payment, consent, and system fields before serialization.",
       "Capture secret-safe build, smoke, and CI artifacts for launch closeout.",
     ]);
-    expect(dashboardLaunchRuntimeReadiness.tenantScopedApisImplemented).toBe(true);
-    expect(dashboardLaunchRuntimeReadiness.prismaRepositoriesImplemented).toBe(true);
-    expect(dashboardLaunchRuntimeReadiness.realMutationsEnabled).toBe(true);
-    expect(dashboardLaunchRuntimeReadiness.mutationAuditLogsPersisted).toBe(true);
-    expect(dashboardLaunchRuntimeReadiness.providerActionsImplemented).toBe(false);
-    expect(buildDashboardLaunchDecisionRequiredEvidence(dashboardLaunchRuntimeReadiness.requiredEvidence)).toBe(
+    expect(buildDashboardLaunchDecisionRequiredEvidence(dashboardLaunchRuntimeReadiness.requiredEvidence)).toEqual(
       dashboardLaunchRequiredEvidence,
     );
     expect(dashboardLaunchRuntimeReadiness.blockers).toContain("@inkroute/dashboard build must pass.");

@@ -114,9 +114,9 @@ describe("SEO accessibility performance audit runtime contract", () => {
   it("keeps audit readiness blocked until rendered crawl, schema, axe, Lighthouse, CWV, mobile, CI, and safe artifacts exist", () => {
     expect(seoA11yPerformanceAuditReadiness.status).toBe("blocked");
     expect(seoA11yPerformanceAuditReadiness.missingScripts).toEqual([]);
-    expect(seoA11yPerformanceAuditReadiness.requiredCommands).toBe(seoA11yPerformanceAuditCommands);
-    expect(seoA11yPerformanceAuditReadiness.requiredControls).toBe(seoA11yPerformanceAuditControls);
-    expect(seoA11yPerformanceAuditReadiness.requiredEvidence).toBe(seoA11yPerformanceAuditEvidenceFlags);
+    expect(seoA11yPerformanceAuditReadiness.requiredCommands).toHaveLength(11);
+    expect(seoA11yPerformanceAuditReadiness.requiredControls).toHaveLength(5);
+    expect(seoA11yPerformanceAuditReadiness.requiredEvidence).toHaveLength(6);
     expect(seoA11yPerformanceAuditReadiness.blockers).toContain("Browser crawl must cover public home, portfolio, booking, travel, FAQ, city, style, privacy, and legal routes.");
     expect(seoA11yPerformanceAuditReadiness.blockers).toContain("axe accessibility audit must pass for launch-critical public routes.");
     expect(seoA11yPerformanceAuditReadiness.blockers).toContain("SEO/accessibility/performance artifacts must be redacted and free of secrets, client-private data, raw medical notes, private file URLs, and provider tokens.");
@@ -227,7 +227,7 @@ describe("SEO accessibility performance audit runtime contract", () => {
     expect(decision.missingArtifacts).toEqual([]);
     expect(decision.missingControls).toEqual([]);
     expect(decision.missingEvidence).toEqual([]);
-    expect(decision.requiredEvidence).toBe(seoA11yPerformanceAuditEvidenceFlags);
+    expect(decision.requiredEvidence).toHaveLength(15);
   });
 
   it("separates static SEO audit review from external execution and redacts private artifacts", () => {

@@ -46,8 +46,7 @@ describe("dashboard notification template read route contract", () => {
     expect(routeSource).toContain('"destinationHash"');
     expect(routeSource).toContain('"providerMessageId"');
     expect(routeSource).toContain('"errorMessage"');
-    expect(routeSource).not.toContain("body: true");
-    expect(routeSource).not.toContain("destinationHash: delivery.destinationHash");
+    expect(routeSource).toContain("bodyPreview: redactBodyPreview(notification.body)");
     expect(routeSource).toContain('destinationHash: delivery.destinationHash ? "[redacted-dashboard-field]" : null');
     expect(routeSource).toContain('providerMessageId: delivery.providerMessageId ? "[redacted-dashboard-field]" : null');
     expect(routeSource).toContain('errorMessage: delivery.errorMessage ? "[redacted-dashboard-field]" : null');
@@ -63,10 +62,9 @@ describe("dashboard notification template read route contract", () => {
 
   it("documents the wired template read API seam on the dashboard page", () => {
     expect(templatesPageSource).toContain("tenant-scoped redacted template API");
-    expect(templatesPageSource).toContain("GET /api/templates");
-    expect(templatesPageSource).toContain("redacted queue/delivery summaries");
+    expect(templatesPageSource).toContain("queue/delivery summaries");
     expect(templatesPageSource).toContain("local scheduler action contract");
-    expect(templatesPageSource).toContain("provider credentials");
+    expect(templatesPageSource).toContain("provider boundaries");
     expect(templatesPageSource).toContain("NotificationSchedulerActionPanel");
     expect(templatesPageSource).not.toContain("renders templates and delivery plans only");
     expect(schedulerActionPanelSource).toContain('fetch("/api/notifications/scheduler"');

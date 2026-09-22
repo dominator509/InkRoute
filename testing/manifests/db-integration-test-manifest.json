@@ -18,7 +18,7 @@
         "pnpm --filter @inkroute/db db:validate",
         "pnpm --filter @inkroute/db db:generate",
         "pnpm --filter @inkroute/db db:migrate",
-        "pnpm db:verify-seed",
+        "pnpm --filter @inkroute/db db:verify-seed",
         "pnpm --filter @inkroute/db db:seed"
       ],
       "evidence": ["schema validates", "client generates", "migrations apply", "seed readiness passes", "seed tenant exists"]

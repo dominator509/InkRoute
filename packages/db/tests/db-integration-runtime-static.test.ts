@@ -1,6 +1,6 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   buildRedactedDbIntegrationRuntimeArtifact,
   buildDbIntegrationRuntimeArtifactReview,
@@ -23,7 +23,7 @@ import {
   persistDbIntegrationRun
 } from "../src/db-integration-runtime";
 
-const root = process.cwd();
+const root = resolve(__dirname, "../../..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 const packageJson = read("packages/db/package.json");
 const dbManifest = read("testing/manifests/db-integration-test-manifest.json");
@@ -92,7 +92,7 @@ describe("GAP-107 DB integration runtime wiring", () => {
   it("keeps runtime readiness blocked until real database evidence exists", () => {
     expect(dbIntegrationRuntimeReadiness.status).toBe("blocked");
     expect(dbIntegrationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dbIntegrationRuntimeReadiness.requiredCommands).toBe(dbIntegrationRuntimeCommands);
+    expect(dbIntegrationRuntimeReadiness.requiredCommands).toEqual(dbIntegrationRuntimeCommands);
     expect(dbIntegrationRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "non-production Postgres provisioning, DATABASE_URL configuration, and destructive-reset guard proof",
@@ -179,7 +179,7 @@ describe("GAP-107 DB integration runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/db-command-transcript-redacted.log");
     expect(ciWorkflow).toContain("test-results/db-integration-runtime");
     expect(unitManifest).toContain("unit-db-integration-runtime-static");
-    expect(unitManifest).toContain("DbIntegrationRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("DbIntegrationRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("packages/db/src/db-integration-runtime.ts");
     expect(gapTracker).toContain("DB integration evidence classifier wired and Postgres proof gated");
     expect(gapTracker).toContain("GAP-107 is db-integration-runtime-matrix wired with evidence classifier");

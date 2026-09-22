@@ -65,9 +65,11 @@ import {
   summarizeQualityGates,
 } from "../src/index";
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const readRepoFile = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
 describe("quality gates", () => {
   it("summarizes the Phase 17 quality gate catalog", () => {
@@ -350,11 +352,16 @@ describe("quality gates", () => {
       "live failing PR merge-block evidence",
       "live passing PR evidence",
       "secret-safe PR gap enforcement log review",
+      "redacted PR gap evidence enforcement bundle",
     ]);
     expect(decision.missingCommands).toEqual([
       "pnpm quality:all",
       "GitHub Actions CI quality job",
       "branch protection required-check audit",
+      "capture PrGapEvidenceEnforcementRun persistence row",
+      "capture live failing PR merge-block evidence",
+      "capture live passing PR evidence",
+      "perform secret-safe PR gap enforcement log review",
     ]);
     expect(decision.requiredArtifacts).toBe(requiredPrGapEvidenceEnforcementArtifacts);
     expect(decision.requiredCommands).toBe(requiredPrGapEvidenceEnforcementCommands);
@@ -405,7 +412,7 @@ describe("quality gates", () => {
       "packages/db/prisma/migrations/20260609026000_add_pr_gap_evidence_enforcement_runs/migration.sql",
     );
     const gapTracker = readRepoFile("GAP_TRACKER.md");
-    expect(gapTracker).toContain("GAP-122 is pr-gap-evidence-enforcement-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("GAP-122 is pr-gap-evidence-enforcement-matrix wired with split fixture verification");
     expect(gapTracker).toContain("buildPrGapEvidenceEnforcementExecutionPlan");
     expect(gapTracker).toContain("prGapEvidenceEnforcementExecutionPolicy");
     expect(gapTracker).toContain("prGapEvidenceEnforcementLocalCommands/prGapEvidenceEnforcementExternalCommands");
@@ -923,8 +930,12 @@ describe("quality gates", () => {
       "redacted PR diff evidence bundle",
     ]);
     expect(decision.missingCommands).toEqual([
+      "simulate no-PR context skip",
       "GitHub Actions pull_request quality job",
       "simulated PR diff audit with missing merge-base fallback",
+      "capture positive PR diff fixture artifact",
+      "capture negative PR diff fixture artifact",
+      "perform secret-safe PR diff log review",
     ]);
     expect(decision.requiredArtifacts).toBe(requiredPrDiffEvidenceRuntimeArtifacts);
     expect(decision.requiredCommands).toBe(requiredPrDiffEvidenceRuntimeCommands);
@@ -969,7 +980,7 @@ describe("quality gates", () => {
       "packages/db/prisma/migrations/20260609030000_add_pr_diff_evidence_runs/migration.sql",
     );
     const gapTracker = readRepoFile("GAP_TRACKER.md");
-    expect(gapTracker).toContain("GAP-127 is pr-diff-evidence-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("PR diff evidence runtime matrix now splits PR gap audit");
     expect(gapTracker).toContain("buildPrDiffEvidenceRuntimeExecutionPlan");
     expect(gapTracker).toContain("prDiffEvidenceRuntimeExecutionPolicy");
     expect(gapTracker).toContain("prDiffEvidenceRuntimeLocalCommands/prDiffEvidenceRuntimeExternalCommands");

@@ -21,6 +21,7 @@ import {
   uiPackageAdoptionRuntimeReadiness,
   uiPackageAdoptionRunPersistenceContract,
 } from "../lib/uiPackageAdoptionRuntime";
+import { uiPackageAdoptionRequiredCommands, uiPackageAdoptionRequiredControls, uiPackageAdoptionRequiredEvidence } from "@inkroute/ui";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -126,24 +127,11 @@ describe("UI package adoption runtime contract", () => {
   it("keeps UI package adoption blocked until app adoption, accessibility, visual, build, docs, and artifact proof exists", () => {
     expect(uiPackageAdoptionRuntimeReadiness.status).toBe("blocked");
     expect(uiPackageAdoptionRuntimeReadiness.missingScripts).toEqual([]);
-    expect(uiPackageAdoptionRuntimeReadiness.requiredCommands).toBe(uiPackageAdoptionRuntimeCommands);
-    expect(uiPackageAdoptionRuntimeReadiness.requiredControls).toBe(uiPackageAdoptionRuntimeControls);
-    expect(uiPackageAdoptionRuntimeReadiness.requiredEvidence).toBe(uiPackageAdoptionEvidenceFlags);
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("webAdoptionCompleted");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("dashboardAdoptionCompleted");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("formFieldAdoptionCompleted");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("navSurfaceAdoptionCompleted");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("dialogAdoptionCompleted");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("accessibilitySmokePassed");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("keyboardFocusSmokePassed");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("storybookOrVisualSmokeConfigured");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("visualRegressionArtifactsCaptured");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("webBuildPassed");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("dashboardBuildPassed");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("appSmokeTestsPassed");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("noStyleRegressionAccepted");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("designTokensDocumented");
-    expect(uiPackageAdoptionRuntimeReadiness.missingEvidence).not.toContain("secretSafeArtifactsCaptured");
+    expect(uiPackageAdoptionRuntimeReadiness.requiredCommands).toEqual(uiPackageAdoptionRequiredCommands);
+    expect(uiPackageAdoptionRuntimeReadiness.requiredControls).toEqual(uiPackageAdoptionRequiredControls);
+    expect(uiPackageAdoptionRuntimeReadiness.requiredEvidence).toEqual([
+      "UI package typecheck, test, and export-contract evidence",
+    ]);
     expect(uiPackageAdoptionRuntimeReadiness.blockers).not.toContain(
       "Web app must adopt shared UI primitives on at least one production-relevant surface.",
     );
@@ -301,10 +289,9 @@ describe("UI package adoption runtime contract", () => {
     expect(unitManifest).toContain("UiPackageAdoptionRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/uiPackageAdoptionRuntime.ts");
     expect(gapTracker).toContain("UiPackageAdoptionRun Prisma model and app row contract");
-    expect(gapTracker).toContain("web/dashboard Surface, form, navigation, and dialog primitive adoption is source-wired");
-    expect(gapTracker).toContain("local visual/token/secret-safe evidence is source-wired");
-    expect(gapTracker).toContain("provider-backed UiPackageAdoptionRun upsert seam is source-wired");
-    expect(gapTracker).toContain("GAP-016 is ui-package-adoption-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("web/dashboard Surface, form, navigation, and dialog primitive adoption,");
+    expect(gapTracker).toContain("provider-backed persistUiPackageAdoptionRun upsert seam is source-wired");
+    expect(gapTracker).toContain("Static contracts now pin uiPackageAdoptionArtifactPaths identity wiring");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildUiPackageAdoptionExecutionPlan");
     expect(gapTracker).toContain("uiPackageAdoptionRuntimeCommands/uiPackageAdoptionExternalCommands");

@@ -7,6 +7,7 @@ export const authSessionTenantGuardArtifactPaths = [
   "coverage/auth-mobile-session-guard.json",
   "coverage/auth-csrf-revocation-redacted.json",
   "coverage/auth-provider-session-redacted.json",
+  "coverage/auth-audit-log-redacted.json",
   "coverage/auth-cross-tenant-denial-redacted.json",
   "coverage/auth-session-tenant-guard-external-evidence-packet.json",
   "test-results/auth-session-tenant-guards",

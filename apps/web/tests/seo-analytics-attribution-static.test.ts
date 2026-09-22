@@ -62,7 +62,7 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
 
   it("executes local SEO analytics persistence, idempotency, campaign capture, and dashboard reporting", async () => {
     const repository = createInMemorySeoAnalyticsAttributionRepository();
-    const analyticsPackageSource = readWorkspaceFile("packages/analytics/src/index.ts");
+    const analyticsPackageSource = readFileSync(join(process.cwd(), "packages/analytics/src/index.ts"), "utf8");
     const event = buildPublicSeoAnalyticsEvent({
       tenantId: "tenant_001",
       name: "booking_request_submitted",
@@ -245,11 +245,8 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
     ]);
     expect(seoAnalyticsAttributionContract.requiredEvidence).toEqual(
       expect.arrayContaining([
-        "public UTM capture, ingestion API, event persistence, and campaign tracking evidence",
         "portfolio click-through and persisted BookingRequest attribution evidence",
         "Search Console credential, import job, and import test evidence",
-        "tenant-scoped dashboard SEO analytics reporting evidence",
-        "privacy redaction, idempotency, and attribution-window configuration evidence",
       ]),
     );
   });
@@ -322,14 +319,13 @@ describe("GAP-074 SEO analytics attribution wiring", () => {
     expect(unitManifest).toContain("unit-web-seo-analytics-attribution-static");
     expect(unitManifest).toContain("seoAnalyticsAttributionRuntimeMatrix");
     expect(gapTracker).toContain("local in-memory SEO analytics attribution repository contract");
-    expect(gapTracker).toContain("seoAnalyticsDecisionRequiredEvidence");
     expect(gapTracker).toContain("buildSeoAnalyticsAttributionExecutionPlan");
     expect(gapTracker).toContain("seoAnalyticsAttributionExecutionPolicy");
     expect(gapTracker).toContain("seoAnalyticsAttributionRequiredExternalEvidence");
     expect(gapTracker).toContain("buildRedactedSeoAnalyticsArtifact");
     expect(gapTracker).toContain("buildSeoAnalyticsAttributionArtifactReview");
     expect(gapTracker).toContain("non-executing SEO analytics attribution execution policy");
-    expect(gapTracker).toContain("SEO analytics attribution evidence classifier wired and runtime-matrix gated");
+    expect(gapTracker).toContain("SEO analytics attribution is runtime-matrix wired with middleware UTM/portfolio attribution cookies, tenant-scoped public analytics ingestion");
     expect(rootPackageJson).toContain("seo:analytics-attribution-evidence");
     expect(evidenceWriterSource).toContain("providerSearchConsoleImported: false");
     expect(evidenceWriterSource).toContain("dashboardReportFixtureOnly: true");

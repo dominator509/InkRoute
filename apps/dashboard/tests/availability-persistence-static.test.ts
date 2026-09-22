@@ -62,11 +62,13 @@ describe("dashboard availability persistence contract", () => {
     expect(first.status).toBe("ready");
     expect(duplicate.status).toBe("duplicate");
     expect(repository.state.transactions).toHaveLength(1);
-    expect(repository.state.transactions[0]).toMatchObject({
+    const transaction = repository.state.transactions[0];
+    if (!transaction) throw new Error("expected one availability transaction");
+    expect(transaction).toMatchObject({
       tenantId: "tenant_demo",
       action: "create_availability_window",
     });
-    expect(repository.state.transactions[0].writes.length).toBeGreaterThan(0);
+    expect(transaction.writes.length).toBeGreaterThan(0);
 
     await expect(
       executeAvailabilityMutation(

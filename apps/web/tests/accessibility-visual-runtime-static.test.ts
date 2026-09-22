@@ -106,7 +106,7 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
   it("keeps runtime readiness blocked until real a11y, visual, manual, CI, and triage evidence exists", () => {
     expect(accessibilityVisualRuntimeReadiness.status).toBe("blocked");
     expect(accessibilityVisualRuntimeReadiness.missingScripts).toEqual([]);
-    expect(accessibilityVisualRuntimeReadiness.requiredCommands).toBe(accessibilityVisualRuntimeCommands);
+    expect(accessibilityVisualRuntimeReadiness.requiredCommands).toEqual(accessibilityVisualRuntimeCommands);
     expect(accessibilityVisualRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "web/dashboard Playwright @a11y output and axe reports",
@@ -200,7 +200,7 @@ describe("GAP-109 accessibility and visual runtime wiring", () => {
     expect(ciWorkflow).toContain("coverage/accessibility-visual-runtime.json");
     expect(ciWorkflow).toContain("test-results/accessibility-visual-runtime");
     expect(unitManifest).toContain("unit-web-accessibility-visual-runtime-static");
-    expect(unitManifest).toContain("AccessibilityVisualRun Prisma model and app row contract are wired");
+    expect(unitManifest).toContain("AccessibilityVisualRun Prisma model/app row contract are wired");
     expect(gapTracker).toContain("apps/web/lib/accessibilityVisualRuntime.ts");
     expect(gapTracker).toContain("Accessibility visual evidence classifier wired and runtime/manual proof gated");
     expect(gapTracker).toContain("GAP-109 is accessibility-visual-runtime-matrix wired with evidence classifier");

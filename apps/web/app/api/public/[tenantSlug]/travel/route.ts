@@ -68,7 +68,7 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
     }
 
     const local = buildLocalPublicContentResponse(tenantSlug, tenant, "travelStops");
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, travelStops: local.travelStops.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, travelStops: local.data.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
   } catch (error) {
     if (!isPublicContentDatabaseUnavailable(error)) throw error;
 
@@ -100,6 +100,6 @@ export async function GET(request: Request, context: { params: Promise<{ tenantS
         { status: 503, headers: publicContentNoStoreHeaders },
       );
     }
-    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, travelStops: local.travelStops.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
+    return NextResponse.json({ ok: true, data: local ? { ...local, query: { limit: query.data.limit }, travelStops: local.data.slice(0, query.data.limit) } : local }, { headers: publicContentNoStoreHeaders });
   }
 }

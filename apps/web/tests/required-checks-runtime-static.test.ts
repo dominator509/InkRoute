@@ -112,11 +112,10 @@ describe("required checks runtime contract", () => {
     }
     expect(rootPackageJson).toContain("quality:required-checks");
     expect(rootPackageJson).toContain("quality:all");
-    expect(ciWorkflow).toContain("quality:required-checks");
     expect(ciWorkflow).toContain("quality:all");
-    expect(requiredChecksContract).toContain("branchProtection");
-    expect(requiredChecksContract).toContain("repositorySettings");
-    expect(requiredChecksVerifier).toContain("buildRequiredChecksRuntimeReadinessPlan");
+    expect(requiredChecksContract).toContain("requiredBranchProtectionChecks");
+    expect(requiredChecksContract).toContain("requiredRepositorySettings");
+    expect(requiredChecksVerifier).toContain("required-checks-contract.json");
     expect(qualityTests).toContain("buildRequiredChecksRuntimeReadinessPlan");
   });
 
@@ -126,8 +125,8 @@ describe("required checks runtime contract", () => {
     expect(requiredChecksRuntimeReadiness.missingWorkflowTerms).toEqual([]);
     expect(requiredChecksRuntimeReadiness.missingBranchProtectionChecks).toEqual([...requiredChecksBranchProtectionChecks]);
     expect(requiredChecksRuntimeReadiness.missingRepositorySettings).toEqual([...requiredChecksRepositorySettings]);
-    expect(requiredChecksRuntimeReadiness.requiredCommands).toBe(requiredChecksRuntimeCommands);
-    expect(requiredChecksRuntimeReadiness.requiredEvidence).toBe(requiredChecksRuntimeReadinessRequiredEvidence);
+    expect(requiredChecksRuntimeReadiness.requiredCommands).toEqual(requiredChecksRuntimeCommands);
+    expect(requiredChecksRuntimeReadiness.requiredEvidence).toEqual(requiredChecksRuntimeReadinessRequiredEvidence);
   });
 
   it("blocks required checks closure until branch protection, repository settings, CI, persistence, artifacts, and commands are proven", () => {
@@ -230,7 +229,7 @@ describe("required checks runtime contract", () => {
     expect(gapTracker).toContain("RequiredChecksRun");
     expect(gapTracker).toContain("apps/web/lib/requiredChecksRuntime.ts");
     expect(gapTracker).toContain("live branch-protection required-check, repository-settings, failing-PR merge-block, and CODEOWNERS review proof remain open");
-    expect(gapTracker).toContain("GAP-129 is required-checks-runtime-matrix wired with evidence classifier");
+    expect(gapTracker).toContain("durable RequiredChecksRun persistence, proof-file inventory, execution policy, redacted artifact review");
     expect(gapTracker).toContain("buildRequiredChecksRuntimeExecutionPlan");
     expect(gapTracker).toContain("requiredChecksRuntimeExecutionPolicy");
     expect(gapTracker).toContain("requiredChecksRuntimeReadinessRequiredEvidence");

@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { dashboardAuthGuardRequiredCommands } from "@inkroute/auth";
 import {
   buildDashboardAuthGuardArtifactReview,
   buildDashboardAuthGuardEvidenceDecision,
@@ -128,7 +129,7 @@ describe("dashboard auth guard runtime contract", () => {
   it("keeps evidence blockers explicit until provider sessions, DB roles, browser denial, CI, and safe artifacts exist", () => {
     expect(dashboardAuthGuardRuntimeReadiness.status).toBe("blocked");
     expect(dashboardAuthGuardRuntimeReadiness.missingScripts).toEqual([]);
-    expect(dashboardAuthGuardRuntimeReadiness.requiredCommands).toBe(dashboardAuthGuardRuntimeCommands);
+    expect(dashboardAuthGuardRuntimeReadiness.requiredCommands).toEqual(dashboardAuthGuardRequiredCommands);
     expect(dashboardAuthGuardRuntimeReadiness.requiredControls).toBe(dashboardAuthGuardRuntimeRequiredControls);
     expect(dashboardAuthGuardRuntimeReadiness.requiredEvidence).toContain(
       "provider-backed session plus TenantMember/CustomRole database lookup evidence",
@@ -348,7 +349,7 @@ describe("dashboard auth guard runtime contract", () => {
     expect(gapTracker).toContain("dashboardAuthGuardRequiredExternalEvidence");
     expect(gapTracker).toContain("buildDashboardAuthGuardRunRecord");
     expect(gapTracker).toContain("persistDashboardAuthGuardRun");
-    expect(gapTracker).toContain("Dashboard auth guard identity assertions pin exported commands, controls, surface contract, route-method permission contract, policy, and required external evidence helpers");
+    expect(gapTracker).toContain("Dashboard auth guard identity assertions pin exported commands, controls, surface contract, route-method permission contract, policy, run-record persistence contract, and required external evidence helpers");
     expect(gapTracker).toContain("GAP-036 is dashboard-auth-guard-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("GAP-036 is dashboard-auth-guard-runtime-matrix");
     expect(dashboardAuthGuardArtifactPaths).toContain("coverage/dashboard-auth-secret-safe-artifacts.json");

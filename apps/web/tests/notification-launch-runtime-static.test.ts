@@ -29,6 +29,7 @@ import {
   buildRedactedNotificationLaunchArtifact,
   persistNotificationLaunchRun,
 } from "../lib/notificationLaunchRuntime";
+import { notificationLaunchEvidenceRequiredControls } from "@inkroute/notifications";
 import { notificationTenantIsolationRequiredControls } from "../lib/notificationTenantIsolationContract";
 import { notificationWebhookReplayRequiredControls } from "../lib/notificationWebhookReplayContract";
 
@@ -221,7 +222,7 @@ describe("notification launch runtime contract", () => {
     expect(webhookReplayContract).toContain("Raw webhook body must be available");
     expect(webhookReplayContract).toContain("Provider webhook replay detected; reject before side effects.");
     expect(messageReadTest).toContain("body/provider/contact redaction");
-    expect(templateReadTest).toContain("notification template read RBAC");
+    expect(templateReadTest).toContain("guards template reads with RBAC, tenant scope, and no-store cache policy");
     expect(emailWebhook).toContain("webhook");
     expect(smsWebhook).toContain("webhook");
     expect(emailWebhook).toContain("PROVIDER_EMAIL_WEBHOOK_RECONCILIATION_NOT_CONFIGURED");
@@ -244,9 +245,14 @@ describe("notification launch runtime contract", () => {
   it("keeps notification provider blockers explicit until provider evidence exists", () => {
     expect(notificationLaunchRuntimeReadiness.status).toBe("blocked");
     expect(notificationLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(notificationLaunchRuntimeReadiness.requiredCommands).toBe(notificationLaunchRuntimeCommands);
-    expect(notificationLaunchRuntimeReadiness.requiredControls).toBe(notificationLaunchRuntimeControls);
-    expect(notificationLaunchRuntimeReadiness.requiredEvidence).toBe(notificationLaunchRequiredEvidence);
+    expect(notificationLaunchRuntimeReadiness.requiredCommands).toEqual(notificationLaunchRuntimeCommands);
+    expect(notificationLaunchRuntimeReadiness.requiredControls).toEqual(notificationLaunchEvidenceRequiredControls);
+    expect(notificationLaunchRuntimeReadiness.requiredEvidence).toEqual([
+      "Resend, Twilio, and Expo provider sandbox/device send evidence",
+      "signed webhook verification and replay rejection evidence",
+      "redacted artifact and privacy review evidence",
+      "GitHub Actions notification launch evidence",
+    ]);
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "queue worker retry, idempotency, and dead-letter evidence",
     );
@@ -256,7 +262,6 @@ describe("notification launch runtime contract", () => {
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "preference center, unsubscribe, STOP, quiet-hours, and rate-limit evidence",
     );
-    expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain("redacted artifact and privacy review evidence");
     expect(notificationLaunchRuntimeReadiness.requiredEvidence).not.toContain(
       "tenant-scoped NotificationDelivery, ProviderEvent, and MessageThread persistence evidence",
     );
@@ -480,7 +485,7 @@ describe("notification launch runtime contract", () => {
     expect(gapTracker).toContain("GAP-010 is notification-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildNotificationLaunchDecisionRequiredEvidence");
-    expect(gapTracker).toContain("notificationLaunchRequiredEvidence");
+    expect(gapTracker).toContain("GAP-010 is notification-launch-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("buildNotificationLaunchExecutionPlan");
     expect(gapTracker).toContain("notificationLaunchLocalCommands/notificationLaunchExternalCommands");
     expect(gapTracker).toContain("notificationLaunchExecutionPolicy");

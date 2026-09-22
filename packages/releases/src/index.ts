@@ -1917,3 +1917,37 @@ export const demoRollbackPlan = createRollbackPlan(demoReleaseCandidate, "0.11.0
 export const demoGithubWorkflowPlan = buildGithubReleaseWorkflowPlan();
 export const demoReleaseHealthChecks = buildReleaseHealthChecks(demoReleaseCandidate);
 export const demoReleaseNotesMarkdown = createReleaseNotes(demoReleaseCandidate);
+
+export interface MobileOtaRollbackContractInput {
+  readonly runtimeVersion: string;
+  readonly channel: string;
+  readonly currentUpdateId: string | null;
+  readonly previousCompatibleUpdateId: string | null;
+  readonly redactedDeviceReceipts: number;
+  readonly failedReceipts: number;
+  readonly rollbackRepublishCommandRecorded: boolean;
+  readonly easProjectConfigured: boolean;
+}
+
+export interface MobileOtaRollbackContract extends MobileOtaRollbackContractInput {
+  readonly rollbackReady: boolean;
+  readonly blockers: readonly string[];
+}
+
+export function buildMobileOtaRollbackContract(input: MobileOtaRollbackContractInput): MobileOtaRollbackContract {
+  const blockers: string[] = [];
+  if (!input.previousCompatibleUpdateId) {
+    blockers.push("Previous compatible update ID must be recorded before rollback.");
+  }
+  if (!input.rollbackRepublishCommandRecorded) {
+    blockers.push("Rollback republish command must be recorded before rollback execution.");
+  }
+  if (!input.easProjectConfigured) {
+    blockers.push("EAS project must be configured before rollback.");
+  }
+  return {
+    ...input,
+    rollbackReady: blockers.length === 0,
+    blockers,
+  };
+}

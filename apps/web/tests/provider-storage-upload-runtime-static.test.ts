@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { providerStorageUploadReadinessRequiredEvidence } from "@inkroute/security";
 import {
   buildProviderStorageUploadArtifactReview,
   buildProviderStorageUploadDecisionRequiredEvidence,
@@ -216,14 +217,14 @@ describe("provider storage upload runtime contract", () => {
     expect(uploadRoute).toContain("local signed-upload validation rules");
     expect(uploadRouteTest).toContain("secure-upload-intents");
     expect(uploadRouteTest).toContain('response.headers.get("Cache-Control")).toBe("no-store")');
-    expect(portfolioReadTest).toContain("storage-key redaction");
+    expect(portfolioReadTest).toContain("redactsAssetKeys");
   });
 
   it("keeps provider storage blockers explicit until object storage evidence exists", () => {
     expect(providerStorageUploadRuntimeReadiness.status).toBe("blocked");
     expect(providerStorageUploadRuntimeReadiness.missingScripts).toEqual([]);
-    expect(providerStorageUploadRuntimeReadiness.requiredCommands).toBe(providerStorageUploadRuntimeCommands);
-    expect(providerStorageUploadRuntimeReadiness.requiredEvidence).toBe(providerStorageUploadRequiredEvidence);
+    expect(providerStorageUploadRuntimeReadiness.requiredCommands).toEqual(providerStorageUploadRuntimeCommands);
+    expect(providerStorageUploadRuntimeReadiness.requiredEvidence).toEqual(providerStorageUploadReadinessRequiredEvidence);
     expect(providerStorageUploadRuntimeReadiness.blockers).toContain(
       "Supabase Storage, S3, or equivalent object storage provider must be selected.",
     );
@@ -329,7 +330,7 @@ describe("provider storage upload runtime contract", () => {
     expect(decision.requiredEvidence).toEqual(
       buildProviderStorageUploadDecisionRequiredEvidence(providerStorageUploadRuntimeReadiness.requiredEvidence),
     );
-    expect(decision.requiredEvidence).toBe(providerStorageUploadRequiredEvidence);
+    expect(decision.requiredEvidence).toEqual(providerStorageUploadRequiredEvidence);
     expect(decision.blockers).toContain("Supabase Storage, S3, or equivalent object storage provider must be selected.");
     expect(decision.blockers).toContain("ProviderStorageUploadRun persistence row must be captured for durable auditability.");
     expect(decision.blockers).toContain("Every required provider storage readiness area must be covered.");
@@ -389,7 +390,9 @@ describe("provider storage upload runtime contract", () => {
     expect(gapTracker).toContain("providerStorageUploadRequiredEvidence");
     expect(gapTracker).toContain("providerStorageUploadRuntimeLocalArtifacts");
     expect(gapTracker).toContain("providerStorageUploadRuntimeExternalArtifacts");
-    expect(gapTracker).toContain("live storage provider selection/config/secrets, provider signed URLs, FileAsset/link/audit persistence, scan/derivative worker, provider integration tests, CI evidence, provider-backed persistProviderStorageUploadRun execution, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain(
+      "live storage provider selection/config/secrets, provider signed URLs, FileAsset/link/audit persistence; dashboard signed-upload intent now persists IdempotencyKey + FileAsset + SignedUrlGrant + AuditLog with signed-upload/private-storage handoff plans but without provider URL minting, and public booking-context secure-upload intent persists FileAsset + SignedUrlGrant + AuditLog without provider URL minting; public reference uploads also create ReferenceImage source rows, dashboard portfolio image metadata attachment persists IdempotencyKey + PortfolioImage + AuditLog only, scan/derivative worker, provider integration tests, CI evidence, provider-backed persistProviderStorageUploadRun execution, and secret-safe artifacts remain open",
+    );
     expect(gapTracker).toContain("GAP-005 is provider-storage-upload-runtime-matrix wired with evidence classifier");
     expect(gapTracker).toContain("proof inventory");
   });

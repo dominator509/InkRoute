@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { GET as previewNotifications } from "../app/api/public/[tenantSlug]/notification-previews/route";
 import { POST as createMessage } from "../app/api/public/[tenantSlug]/messages/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 function messageRequest(body: unknown, clientIp: string): NextRequest {
   return new NextRequest("https://local.test/api/public/inkroute-demo/messages", {
@@ -45,12 +46,12 @@ describe("notification and messaging route boundaries", () => {
       status: "provider-gated",
       gapIds: ["GAP-061", "GAP-062", "GAP-063", "GAP-064", "GAP-065"],
     });
-    expect(payload.data.productionBoundary.note).toContain("does not queue or send");
+    expect(payload.data.productionBoundary.note).toContain("provider dispatch, durable queue writes, and live sends remain evidence-gated");
   });
 
   it("fail-closes production notification previews instead of returning static render payloads", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await previewNotifications(new NextRequest("https://local.test/api/public/inkroute-demo/notification-previews"), {
@@ -70,7 +71,7 @@ describe("notification and messaging route boundaries", () => {
       expect(payload.error.gapIds).toContain("GAP-065");
       expect(payload.productionBoundary.staticNotificationPreviewDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
@@ -175,7 +176,7 @@ describe("notification and messaging route boundaries", () => {
 
   it("fail-closes production public messages instead of saving local runtime messages", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await createMessage(
@@ -202,7 +203,7 @@ describe("notification and messaging route boundaries", () => {
       expect(payload.error.gapIds).toContain("GAP-064");
       expect(payload.productionBoundary.localMessagePersistenceDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 

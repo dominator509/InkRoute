@@ -115,8 +115,14 @@ describe("payment automated test runtime contract", () => {
   it("keeps Stripe CLI, DB reconciliation, E2E, tenant isolation, replay, CI, and artifact blockers explicit", () => {
     expect(paymentAutomationRuntimeReadiness.status).toBe("blocked");
     expect(paymentAutomationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(paymentAutomationRuntimeReadiness.requiredCommands).toBe(paymentAutomationRuntimeCommands);
-    expect(paymentAutomationRuntimeReadiness.requiredEvidence).toBe(paymentAutomationDecisionRequiredEvidence);
+    expect(paymentAutomationRuntimeReadiness.requiredCommands).toEqual(paymentAutomationRuntimeCommands);
+    expect(paymentAutomationRuntimeReadiness.requiredEvidence).toEqual([
+      "payment helper, route-boundary, and Stripe signature test output",
+      "Stripe CLI lifecycle transcript for checkout success/failure/expiration/refund/dispute/replay",
+      "seeded DB reconciliation, tenant isolation, and idempotent replay test output",
+      "Playwright/dashboard E2E evidence for booking-to-paid, refund/no-show/dispute, receipt, and export flows",
+      "CI payment test job configuration and retained artifacts",
+    ]);
     expect(paymentAutomationRuntimeReadiness.blockers).not.toContain("Stripe SDK signature verification tests must pass.");
     expect(paymentAutomationRuntimeReadiness.blockers).toContain("Stripe CLI lifecycle tests must cover checkout completed, failed payment, expired checkout, refund, dispute, invalid signature, and replay.");
     expect(paymentAutomationRuntimeReadiness.blockers).toContain("DB reconciliation tests must prove Deposit, Payment, Refund, BookingStateEvent, PaymentAuditLog, and IdempotencyKey writes.");

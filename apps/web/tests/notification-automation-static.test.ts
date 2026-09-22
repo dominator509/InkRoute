@@ -90,14 +90,12 @@ describe("GAP-069 notification automation contract", () => {
   });
 
   it("reports real execution blockers instead of claiming unrun evidence", () => {
-    expect(notificationAutomatedTestContract.ready).toBe(false);
+    expect(notificationAutomatedTestContract.status).toBe("blocked");
     expect(notificationAutomatedTestContract.requiredSuites).toEqual(
       expect.arrayContaining([
         "notification queue integration tests",
-        "provider sandbox email tests",
-        "provider sandbox SMS tests",
-        "provider sandbox push receipt tests",
-        "retention/export/delete integration tests",
+        "provider sandbox email/SMS/push receipt tests",
+        "dashboard template and message Playwright smoke tests",
       ]),
     );
     expect(notificationAutomatedTestContract.requiredEvidence).toBe(notificationAutomatedTestReadinessRequiredEvidence);

@@ -660,7 +660,6 @@ const routeReadiness = buildDomainAuthorizationRouteEvidencePlan({
   crossTenantDenialTestsPassed: false,
   fieldRedactionRouteTestsPassed: false,
   authorizationAuditRowsPersisted: false,
-  authorizationAuditRowsSigned: false,
   csrfSessionBindingTestsPassed: false,
   sessionRevocationTestsPassed: false,
   providerBackedSessionTestsPassed: false,
@@ -674,7 +673,16 @@ export const domainAuthorizationRuntimeReadiness = {
   requiredCommands: domainAuthorizationRuntimeCommands,
   requiredEvidence: domainAuthorizationEvidenceFlags,
   requiredControls: domainAuthorizationRuntimeControls,
-} satisfies DomainAuthorizationEvidenceDecision & { missingScripts: readonly string[] };
+  // NOTE: this is a route-readiness snapshot, not a DomainAuthorizationEvidenceDecision
+  // (the decision shape is produced by buildDomainAuthorizationEvidenceDecision).
+} satisfies {
+  status: "ready" | "blocked";
+  blockers: readonly string[];
+  missingScripts: readonly string[];
+  requiredCommands: typeof domainAuthorizationRuntimeCommands;
+  requiredEvidence: typeof domainAuthorizationEvidenceFlags;
+  requiredControls: typeof domainAuthorizationRuntimeControls;
+};
 
 
 

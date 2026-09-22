@@ -338,12 +338,12 @@ Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` chain successfully.
 - `pnpm handoff:all` PASS (`0`)
 - `pnpm quality:all` PASS (`0`)
 - `pnpm typecheck` PASS (`0`)
-- `pnpm test:unit` PASS (`0`) — 14 files, 43 tests passed
+- `pnpm test:unit` PASS (`0`) ï¿½ 14 files, 43 tests passed
 - `pnpm test:manifest` PASS (`0`)
 - `pnpm --filter @inkroute/web build` PASS (`0`)
 - `pnpm --filter @inkroute/dashboard build` PASS (`0`)
 
-Evidence artifact: `docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log`.
+Evidence artifact: docs/workspace/manifests/workspace-prompt-run-2026-06-06-4.log (log not retained in repo).
 
 Current verification status: command chain now green under the same existing production-blocking landscape reported by runtime readiness (`126` production blockers across `133` gap rows).
 ### Verification status (2026-06-06 rerun at 15:27:54Z)
@@ -359,7 +359,7 @@ Current verification status: command chain now green under the same existing pro
   - `pnpm test:manifest` PASS (`{"ok":true,"manifestCount":7,"requiredFileCount":15,"declaredSuites":28}`)
   - `pnpm --filter @inkroute/web build` PASS (`0`)
   - `pnpm --filter @inkroute/dashboard build` PASS (`0`)
-- Exact command output captured in `docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log`.
+- Exact command output captured in docs/workspace/manifests/workspace-prompt-run-2026-06-06-plan.log (log not retained in repo).
 - Lockfile status: `pnpm-lock.yaml` exists and is tracked.
 - Remaining production blockers: still tracked in `GAP_TRACKER.md` (`GAP-132` and other Phase 17/18 gaps).
 ### Verification status (2026-06-06 rerun at 15:34:26Z)
@@ -377,7 +377,7 @@ Executed full `docs/workspace/CODEX_WORKSPACE_PROMPT.md` chain from `C:\dev\InkR
 - `pnpm --filter @inkroute/web build` PASS (`0`) after rerun with quoted scope.
 - `pnpm --filter @inkroute/dashboard build` PASS (`0`) after rerun with quoted scope.
 
-Evidence file: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log`.
+Evidence file: docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-34-26Z.log (log not retained in repo).
 
 Lockfile status: `pnpm-lock.yaml` exists at repo root and is tracked (already present from prior successful install).
 
@@ -434,7 +434,7 @@ Executed via `docs/workspace/CODEX_WORKSPACE_PROMPT.md`:
 - `pnpm --filter "@inkroute/web" build` PASS (`0`)
 - `pnpm --filter "@inkroute/dashboard" build` PASS (`0`)
 
-Log artifact: `docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log`.
+Log artifact: docs/workspace/manifests/workspace-prompt-run-2026-06-06T08-58-20.log (log not retained in repo).
 
 Current verification status after this run:
 - Command chain is green on runtime/typecheck/unit/tests/build.
@@ -446,16 +446,16 @@ Current verification status after this run:
 Executed full prompt chain from docs/workspace/CODEX_WORKSPACE_PROMPT.md with exact command outputs preserved in
 docs/workspace/manifests/workspace-prompt-run-2026-06-06T09-06-38.log.
 
-- corepack enable — PASS
-- pnpm install — PASS
-- pnpm workspace:all — PASS
-- pnpm handoff:all — FAIL (1; gap evidence audit still reports 126 blocking items)
-- pnpm quality:all — FAIL (1; gap evidence audit still reports 126 blocking items)
-- pnpm typecheck — PASS
-- pnpm test:unit — PASS (14 passed,   failed)
-- pnpm test:manifest — PASS
-- pnpm --filter @inkroute/web build — PASS
-- pnpm --filter @inkroute/dashboard build — PASS
+- corepack enable ï¿½ PASS
+- pnpm install ï¿½ PASS
+- pnpm workspace:all ï¿½ PASS
+- pnpm handoff:all ï¿½ FAIL (1; gap evidence audit still reports 126 blocking items)
+- pnpm quality:all ï¿½ FAIL (1; gap evidence audit still reports 126 blocking items)
+- pnpm typecheck ï¿½ PASS
+- pnpm test:unit ï¿½ PASS (14 passed,   failed)
+- pnpm test:manifest ï¿½ PASS
+- pnpm --filter @inkroute/web build ï¿½ PASS
+- pnpm --filter @inkroute/dashboard build ï¿½ PASS
 
 Open production evidence blockers recorded in GAP_TRACKER.md and runtime readiness remains 
 eeds-attention.

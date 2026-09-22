@@ -23,7 +23,9 @@ import {
   domainEventAuditRuntimeProofFiles,
   domainEventAuditRuntimeReadiness,
   domainEventAuditRunPersistenceContract,
+  type DomainEventAuditTransactionClient,
 } from "../lib/domainEventAuditRuntime";
+import { domainEventAuditTransactionRequiredCommands, domainEventAuditTransactionRequiredControls, domainEventAuditTransactionRequiredEvidence } from "@inkroute/booking";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -101,9 +103,15 @@ describe("domain event and audit transaction runtime contract", () => {
   it("keeps transaction evidence blocked until atomic writes, idempotency, denials, DB, CI, and safe artifacts exist", () => {
     expect(domainEventAuditRuntimeReadiness.status).toBe("blocked");
     expect(domainEventAuditRuntimeReadiness.missingScripts).toEqual([]);
-    expect(domainEventAuditRuntimeReadiness.requiredCommands).toBe(domainEventAuditRuntimeCommands);
-    expect(domainEventAuditRuntimeReadiness.requiredControls).toBe(domainEventAuditRuntimeControls);
-    expect(domainEventAuditRuntimeReadiness.requiredEvidence).toBe(domainEventAuditEvidenceFlags);
+    expect(domainEventAuditRuntimeReadiness.requiredCommands).toEqual(domainEventAuditTransactionRequiredCommands);
+    expect(domainEventAuditRuntimeReadiness.requiredControls).toEqual(domainEventAuditTransactionRequiredControls);
+    expect(domainEventAuditRuntimeReadiness.requiredEvidence).toEqual([
+      "booking/payment package test and typecheck evidence",
+      "atomic booking/payment state, event, audit, and payment-audit persistence evidence",
+      "idempotency persistence and replay original-result evidence",
+      "provider rollback, invalid-transition denial, and cross-tenant denial evidence",
+      "database integration, CI, and secret-safe artifact evidence",
+    ]);
     expect(domainEventAuditRuntimeReadiness.blockers).not.toContain(
       "Booking/payment lifecycle services must execute writes inside Prisma transactions.",
     );
@@ -228,7 +236,7 @@ describe("domain event and audit transaction runtime contract", () => {
     const calls: string[] = [];
     let completedResult: unknown = null;
     const repository: Parameters<typeof executeDomainEventAuditLifecycleTransaction>[0] = {
-      async $transaction<T>(callback) {
+      async $transaction<T>(callback: (tx: DomainEventAuditTransactionClient) => Promise<T>): Promise<T> {
         return callback({
           idempotencyKey: {
             async findUnique() {
@@ -380,8 +388,8 @@ describe("domain event and audit transaction runtime contract", () => {
     expect(unitManifest).toContain("DomainEventAuditRun Prisma model and app row contract");
     expect(gapTracker).toContain("apps/web/lib/domainEventAuditRuntime.ts");
     expect(gapTracker).toContain("persistDomainEventAuditRun upsert seam");
-    expect(gapTracker).toContain("GAP-024 is domain-event-audit-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("live Prisma transaction services, provider-backed persistDomainEventAuditRun execution, tenant-scoped repositories, booking/payment atomicity tests, BookingStateEvent/AuditLog/PaymentAuditLog persistence, idempotency persistence, replay original-result behavior, provider rollback integration, invalid-transition denial, cross-tenant denial, database evidence, CI evidence, and secret-safe artifacts remain open");
+    expect(gapTracker).toContain("Evidence classifier wired and transaction-evidence-gated");
+    expect(gapTracker).toContain("provider-backed persistDomainEventAuditRun execution");
     expect(gapTracker).toContain("proof inventory");
     expect(gapTracker).toContain("buildDomainEventAuditExecutionPlan");
     expect(gapTracker).toContain("domainEventAuditExecutionPolicy");

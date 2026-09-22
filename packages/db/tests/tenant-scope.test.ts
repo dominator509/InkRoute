@@ -24,11 +24,12 @@ describe("tenant scope helpers", () => {
 
   it("adds tenantId to mutation data and asserts expected tenant scope", () => {
     const scoped = withTenantData({ tenantId: "tenant_a", actorUserId: "user_1" }, { status: "open" });
+    const whereScoped = withTenantWhere({ tenantId: "tenant_a" }, { status: "active" });
 
     expect(scoped.data).toEqual({ status: "open", tenantId: "tenant_a" });
     expect(() => assertTenantScopedWhere(scoped, "tenant_b")).toThrow("tenantId scope");
     expect(() => assertTenantScopedData(scoped, "tenant_b")).toThrow("tenantId scope");
-    expect(() => assertTenantScopedWhere(scoped, "tenant_a")).not.toThrow();
+    expect(() => assertTenantScopedWhere(whereScoped, "tenant_a")).not.toThrow();
     expect(() => assertTenantScopedData(scoped, "tenant_a")).not.toThrow();
   });
 

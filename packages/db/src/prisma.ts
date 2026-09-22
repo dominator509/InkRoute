@@ -1,6 +1,10 @@
 interface PrismaRuntimeClient {
   [delegate: string]: any;
   $transaction<T>(operation: (tx: PrismaRuntimeClient) => Promise<T>): Promise<T>;
+  $transaction<T>(
+    operation: (tx: PrismaRuntimeClient) => Promise<T>,
+    options?: { isolationLevel?: string; maxWait?: number; timeout?: number },
+  ): Promise<T>;
 }
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaRuntimeClient };

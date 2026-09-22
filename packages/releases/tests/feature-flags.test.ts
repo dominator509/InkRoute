@@ -728,7 +728,12 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toBe(releasePersistenceRbacReadinessRequiredEvidence);
+    expect(plan.requiredEvidence).toEqual([
+      "dashboard static route test and dashboard typecheck evidence",
+      "tenant-scoped RBAC, mismatch rejection, and membership lookup evidence",
+      "provider credential gate, previous-state metadata, and optimistic concurrency evidence",
+      "approval state machine, rendered dashboard workflow, orchestration hook, and DB-backed route evidence",
+    ]);
     expect(plan.blockers).toEqual(
       expect.arrayContaining([
         "Missing @inkroute/releases typecheck script.",
@@ -888,7 +893,7 @@ describe("release and feature flag governance", () => {
 
     expect(plan.status).toBe("blocked");
     expect(plan.missingScripts).toEqual(["typecheck"]);
-    expect(plan.requiredEvidence).toBe(releaseLaunchControlEvidenceRequiredEvidence);
+    expect(plan.requiredEvidence).toEqual(releaseLaunchControlEvidenceRequiredEvidence);
     expect(plan.blockers).toContain("GitHub preview, staging, and production protected environments must be configured.");
     expect(plan.blockers).toContain("Incident-linked rollback drill must pass for web, dashboard, mobile OTA, database, and flags.");
     expect(plan.blockers).toContain("Feature-flag kill-switch drill must pass.");

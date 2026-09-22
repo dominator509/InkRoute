@@ -117,8 +117,12 @@ describe("mobile push runtime contract", () => {
     expect(mobilePushRuntimeReadiness.status).toBe("blocked");
     expect(mobilePushRuntimeReadiness.provider).toBe("expo");
     expect(mobilePushRuntimeReadiness.missingScripts).toEqual([]);
-    expect(mobilePushRuntimeReadiness.requiredCommands).toBe(mobilePushRuntimeCommands);
-    expect(mobilePushRuntimeReadiness.requiredEvidence).toBe(mobilePushDecisionRequiredEvidence);
+    expect(mobilePushRuntimeReadiness.requiredCommands).toEqual(mobilePushRuntimeCommands);
+    expect(mobilePushRuntimeReadiness.requiredEvidence).toEqual([
+      "Expo project, secret, APNs, and FCM configuration evidence",
+      "Expo delivery worker, receipt polling, and invalid-token suppression evidence",
+      "foreground/background/tap-navigation iOS and Android device QA evidence",
+    ]);
     expect(mobilePushRuntimeReadiness.blockers).toContain("Expo project id must be configured before push delivery.");
     expect(mobilePushRuntimeReadiness.blockers).not.toContain("Tenant/user/device-scoped push token persistence must be available.");
     expect(mobilePushRuntimeReadiness.blockers).not.toContain("Push opt-out persistence must be available before sending.");

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import sitemap from "../app/sitemap";
 import { GET as getSeoPreview } from "../app/api/public/[tenantSlug]/seo-preview/route";
 import { GET as getSitemapPreview } from "../app/api/public/[tenantSlug]/sitemap-preview/route";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 describe("SEO app routes", () => {
   it("renders sitemap entries from public SEO routes without noindex entries", () => {
@@ -44,7 +45,7 @@ describe("SEO app routes", () => {
 
   it("fail-closes production sitemap preview instead of returning static demo metadata", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await getSitemapPreview(new Request("https://inkroute.example/api/public/inkroute-demo/sitemap-preview"), {
@@ -63,13 +64,13 @@ describe("SEO app routes", () => {
       expect(payload.productionBoundary.staticDemoPreviewDisabled).toBe(true);
       expect(payload.productionBoundary.gapIds).toContain("GAP-006");
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
   it("fail-closes production SEO preview instead of returning static demo metadata", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
 
     try {
       const response = await getSeoPreview(new Request("https://inkroute.example/api/public/inkroute-demo/seo-preview"), {
@@ -88,7 +89,7 @@ describe("SEO app routes", () => {
       expect(payload.productionBoundary.staticDemoPreviewDisabled).toBe(true);
       expect(payload.productionBoundary.gapIds).toContain("GAP-006");
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 

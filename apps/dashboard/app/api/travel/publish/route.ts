@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
     ? { ...stop, ...(body.previousStop as Record<string, unknown>), tenantId } as TravelStop
     : undefined;
   const changedFieldNames = Array.isArray(body?.changedFieldNames) ? body.changedFieldNames.map(String) : undefined;
+  const idempotencyKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey : undefined;
+  const rollbackReason = typeof body?.rollbackReason === "string" ? body.rollbackReason : undefined;
 
   const plan = buildTravelPublishMutationPlan({
     tenantId,
@@ -97,14 +99,14 @@ export async function POST(request: NextRequest) {
     actorId: actor.actorUserId,
     action: action as TravelPublishMutationAction,
     stop,
-    previousStop,
-    idempotencyKey: typeof body?.idempotencyKey === "string" ? body.idempotencyKey : undefined,
+    ...(previousStop !== undefined ? { previousStop } : {}),
+    ...(idempotencyKey !== undefined ? { idempotencyKey } : {}),
     consentedWaitlistClientIds: Array.isArray(body?.consentedWaitlistClientIds)
       ? body.consentedWaitlistClientIds.map(String)
       : [],
-    changedFieldNames,
+    ...(changedFieldNames !== undefined ? { changedFieldNames } : {}),
     providerActionsSucceeded: body?.providerActionsSucceeded !== false,
-    rollbackReason: typeof body?.rollbackReason === "string" ? body.rollbackReason : undefined,
+    ...(rollbackReason !== undefined ? { rollbackReason } : {}),
   });
 
   if (plan.status === "blocked") {

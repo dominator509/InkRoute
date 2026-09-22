@@ -43,12 +43,12 @@ describe("dashboard privacy request route static contract", () => {
     expect(routeSource).toContain("DATABASE_UNAVAILABLE");
     expect(routeSource).toContain("Implement verified export/delete/rectification workers");
     expect(routeSource).toContain("Capture sanitized log/error evidence, attorney approval, dashboard build/typecheck, route tests, and CI evidence.");
-    expect(pageSource).toContain("POST /api/security/privacy-requests");
+    expect(pageSource).toContain("PrivacyRequestActionPanel");
     expect(pageSource).toContain("PrivacyRequestActionPanel");
     expect(actionPanelSource).toContain('fetch("/api/security/privacy-requests"');
     expect(actionPanelSource).toContain("Submit privacy access draft");
     expect(actionPanelSource).toContain("Production durable privacy workers, audit persistence, storage export/delete, and attorney-reviewed policy text remain evidence-gated.");
-    expect(pageSource).toContain("privacy workers");
-    expect(pageSource).toContain("audit persistence");
+    expect(pageSource).toContain("privacy workflows");
+    expect(pageSource).toContain("audit logs");
   });
 });

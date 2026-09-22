@@ -139,7 +139,7 @@ describe("availability persistence runtime contract", () => {
   it("keeps transaction, persisted conflict, concurrent hold, tenant isolation, seeded DB, and CI blockers explicit", () => {
     expect(availabilityPersistenceRuntimeReadiness.status).toBe("blocked");
     expect(availabilityPersistenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(availabilityPersistenceRuntimeReadiness.requiredCommands).toBe(availabilityPersistenceRuntimeCommands);
+    expect(availabilityPersistenceRuntimeReadiness.requiredCommands).toEqual(availabilityPersistenceRuntimeCommands);
     expect(availabilityPersistenceRuntimeReadiness.requiredEvidence).toEqual([
       "persisted conflict detection and concurrent hold rejection evidence",
       "seeded Postgres tenant isolation and availability lifecycle integration test output",

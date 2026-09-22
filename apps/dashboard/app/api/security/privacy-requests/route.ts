@@ -30,7 +30,6 @@ type DemoPrivacyRequest = {
 };
 
 const requestTypes: PrivacyRequestType[] = ["access", "export", "rectification", "deletion", "restriction"];
-const demoTenantId = "demo-studio-alpha";
 const inMemoryPrivacyRequests: DemoPrivacyRequest[] = [];
 const rateLimitBuckets = new Map<string, { windowStart: number; count: number }>();
 const noStoreHeaders = { "Cache-Control": "no-store" } as const;
@@ -388,7 +387,7 @@ export async function POST(request: NextRequest) {
     {
       ok: true,
       data: {
-        tenantId: demoTenantId,
+        tenantId: actor.tenantId,
         actor: {
           userId: actor.actorUserId,
           role: actor.role,

@@ -83,7 +83,7 @@ function extractCurrency(payload: Record<string, unknown>): "usd" | undefined {
 
 export function verifyStripeWebhookMoneyMatch(input: {
   providerAmountCents?: number;
-  providerCurrency?: "usd";
+  providerCurrency?: string;
   expected?: StripeWebhookExpectedMoney;
 }): StripeWebhookMoneyMatchDecision {
   if (!input.expected) {

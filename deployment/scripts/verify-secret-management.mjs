@@ -12,7 +12,11 @@ const forbiddenSecretPatterns = [
   /rk_live_[A-Za-z0-9]+/,
   /postgres(?:ql)?:\/\/(?!USER:PASSWORD@HOST)[^"<>\s]+/i,
   /gh[pousr]_[A-Za-z0-9_]{20,}/,
-  /vercel_[A-Za-z0-9_]{20,}/i,
+  // "vercel_" prefix matched case-insensitively, but the token body must contain
+  // at least one lowercase letter or digit: this keeps SCREAMING_SNAKE variable
+  // names such as VERCEL_DASHBOARD_PROJECT_ID from false-positive matching
+  // while still catching realistic token material.
+  /[Vv][Ee][Rr][Cc][Ee][Ll]_(?=[A-Za-z0-9_]*[a-z0-9])[A-Za-z0-9_]{20,}/,
   /xox[baprs]-[A-Za-z0-9-]+/,
   /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/
 ];

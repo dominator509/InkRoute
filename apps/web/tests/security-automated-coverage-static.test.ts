@@ -78,7 +78,7 @@ describe("GAP-103 security automated coverage contract", () => {
         "@inkroute/security package tests must execute and pass with upload, privacy, abuse, header, CSRF, and readiness coverage.",
         "Runtime middleware Vitest suite must pass for web/dashboard CSRF block/allow and shared headers.",
         "Web Playwright security smoke must pass for headers and cookie-authenticated CSRF rejection.",
-        "DB-backed tenant isolation tests must pass for security/privacy/trust routes.",
+        "DB-backed authenticated tenant-isolation tests must pass for privacy, trust, upload, and dashboard boundaries.",
         "Storage provider or emulator negative tests must pass for unsafe upload, private original public denial, signed URL revocation, and derivative exposure.",
         "Security failure-mode fixtures must document upload, privacy, trust, middleware, CSRF, and provider-backed negative cases.",
       ]),
@@ -87,7 +87,7 @@ describe("GAP-103 security automated coverage contract", () => {
       expect.arrayContaining([
         "route, runtime middleware, static wiring, and manifest verification test output",
         "authenticated DB-backed tenant isolation, role-boundary, and privacy workflow integration output",
-        "storage/provider negative tests, coverage artifacts, and documented security failure fixtures",
+        "storage provider negative-test artifacts, coverage bundle, and documented security failure fixtures",
       ]),
     );
   });
@@ -161,8 +161,8 @@ describe("GAP-103 security automated coverage contract", () => {
     expect(ci).toContain("apps/web/tests/security-automated-coverage-static.test.ts");
     expect(ci).toContain("security-automated-coverage-artifacts");
     expect(manifest).toContain("unit-web-security-automated-coverage-static");
-    expect(manifest).toContain("SecurityCoverageRun Prisma model and app row contract are wired");
-    expect(checklist).toContain("security");
+    expect(manifest).toContain("SecurityCoverageRun Prisma model/app row contract are wired");
+    expect(checklist).toContain("sec-upload-hardening");
     expect(tracker).toContain("apps/web/lib/securityAutomatedCoverage.ts");
     expect(tracker).toContain("Security automated coverage evidence classifier wired and execution/provider proof gated");
     expect(tracker).toContain("GAP-103 is security-automated-coverage-matrix wired with evidence classifier");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mobileScreenRegistry, phase6MobileBoundaries } from "@inkroute/mobile-support";
+import { mobileScreenRegistry, phase6HealthChecks, phase6MobileBoundaries } from "@inkroute/mobile-support";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -32,7 +32,7 @@ describe("mobile app contract registry", () => {
     expect(mobileScreenRegistry.find((screen) => screen.id === "offline")?.summary).toContain("shared repository");
     expect(mobileScreenRegistry.find((screen) => screen.id === "offline")?.summary).not.toContain("no durable local store wired yet");
     expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-push")?.detail).toContain(
-      "Expo push registration, opt-out, receipt suppression, tap-routing, and audit contracts are wired locally",
+      "Expo push registration, opt-out, receipt idempotency, invalid-token suppression, tap-routing, and audit contracts are wired locally",
     );
     expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-push")?.detail).not.toContain(
       "Expo push token registration, notification permissions, provider delivery logs, and opt-out compliance are not wired",
@@ -56,7 +56,7 @@ describe("mobile app contract registry", () => {
     expect(appConfig.expo.extra.eas.projectId).toContain("deployment-gated");
     expect(easConfig.build.preview).toMatchObject({ channel: "preview", distribution: "internal" });
     expect(easConfig.build.production).toMatchObject({ channel: "production" });
-    expect(mobileScreenRegistry.find((screen) => screen.id === "ota-updates")?.detail).toContain(
+    expect(phase6HealthChecks.find((check) => check.id === "ota-updates")?.detail).toContain(
       "EAS channel and runtimeVersion placeholders are wired",
     );
     expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-updates")?.detail).toContain(
@@ -65,25 +65,25 @@ describe("mobile app contract registry", () => {
     expect(phase6MobileBoundaries.find((boundary) => boundary.id === "mobile-updates")?.detail).not.toContain(
       "No Expo project ID, channels, runtimeVersion policy, or rollback checks are configured for production",
     );
-    expect(mobileScreenRegistry.find((screen) => screen.id === "ota-updates")?.detail).not.toContain(
+    expect(phase6HealthChecks.find((check) => check.id === "ota-updates")?.detail).not.toContain(
       "EAS Update project/channel/runtimeVersion policy is not connected",
     );
   });
 
   it("keeps crash registry copy aligned with fallback capture wiring", () => {
-    expect(mobileScreenRegistry.find((screen) => screen.id === "crash-capture")?.detail).toContain(
+    expect(phase6HealthChecks.find((check) => check.id === "crash-capture")?.detail).toContain(
       "Sanitized fallback crash capture contract is wired",
     );
-    expect(mobileScreenRegistry.find((screen) => screen.id === "crash-capture")?.detail).not.toContain(
+    expect(phase6HealthChecks.find((check) => check.id === "crash-capture")?.detail).not.toContain(
       "Sentry/mobile fallback capture is documented only",
     );
   });
 
   it("keeps push registry copy aligned with local push contracts", () => {
-    expect(mobileScreenRegistry.find((screen) => screen.id === "push-token")?.detail).toContain(
+    expect(phase6HealthChecks.find((check) => check.id === "push-token")?.detail).toContain(
       "Expo push registration and token persistence contracts are wired",
     );
-    expect(mobileScreenRegistry.find((screen) => screen.id === "push-token")?.detail).not.toContain(
+    expect(phase6HealthChecks.find((check) => check.id === "push-token")?.detail).not.toContain(
       "No Expo push project, notification permission flow, or token persistence exists",
     );
   });

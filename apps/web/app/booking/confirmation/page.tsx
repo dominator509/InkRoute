@@ -252,7 +252,7 @@ async function loadConfirmationState(searchParams: ConfirmationSearchParams): Pr
 export default async function BookingConfirmationPreviewPage({
   searchParams,
 }: {
-  searchParams?: Promise<ConfirmationSearchParams> | ConfirmationSearchParams;
+  searchParams?: Promise<ConfirmationSearchParams>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const confirmation = await loadConfirmationState(resolvedSearchParams);

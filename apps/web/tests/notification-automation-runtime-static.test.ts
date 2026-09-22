@@ -59,8 +59,14 @@ describe("notification automated test runtime contract", () => {
   });
 
   it("keeps queue, provider, Playwright, mobile, persistence, E2E, CI, and artifact blockers explicit", () => {
-    expect(notificationAutomationRuntimeReadiness.ready).toBe(false);
-    expect(notificationAutomationRuntimeReadiness.requiredEvidence).toBe(notificationAutomationDecisionRequiredEvidence);
+    expect(notificationAutomationRuntimeReadiness.status).toBe("blocked");
+    expect(notificationAutomationRuntimeReadiness.requiredEvidence).toEqual([
+      "queue, opt-out, STOP, and retention/export/delete integration test evidence",
+      "dashboard/mobile smoke and Expo device QA evidence",
+      "email, SMS, and push provider sandbox evidence",
+      "booking, deposit, aftercare, and travel notification E2E evidence",
+      "CI Phase 9 notification job and published artifact evidence",
+    ]);
     expect(notificationAutomationRuntimeReadiness.blockers).toContain("Notification queue integration tests must pass.");
     expect(notificationAutomationRuntimeReadiness.blockers).toContain("Email provider sandbox tests must pass.");
     expect(notificationAutomationRuntimeReadiness.blockers).toContain("Travel waitlist notification E2E flow must pass.");

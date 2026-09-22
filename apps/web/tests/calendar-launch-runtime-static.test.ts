@@ -189,8 +189,8 @@ describe("calendar launch runtime contract", () => {
   it("keeps calendar launch blockers explicit until provider/database evidence exists", () => {
     expect(calendarLaunchRuntimeReadiness.status).toBe("blocked");
     expect(calendarLaunchRuntimeReadiness.missingScripts).toEqual([]);
-    expect(calendarLaunchRuntimeReadiness.requiredCommands).toBe(calendarLaunchRuntimeCommands);
-    expect(buildCalendarLaunchDecisionRequiredEvidence(calendarLaunchRuntimeReadiness.requiredEvidence)).toBe(
+    expect(calendarLaunchRuntimeReadiness.requiredCommands).toEqual(calendarLaunchRuntimeCommands);
+    expect(buildCalendarLaunchDecisionRequiredEvidence(calendarLaunchRuntimeReadiness.requiredEvidence)).toEqual(
       calendarLaunchRequiredEvidence,
     );
     expect(calendarLaunchRuntimeReadiness.blockers).toContain("Google OAuth client, redirect URI, and scopes must be configured.");

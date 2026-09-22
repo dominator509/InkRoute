@@ -86,7 +86,9 @@ describe("preference center and unsubscribe contract", () => {
     expect(smsStopped.status).toBe("processed");
     expect(tenantSettings.status).toBe("processed");
     expect(repository.state.preferenceTokens).toHaveLength(1);
-    expect(repository.state.preferenceTokens[0].tokenHash).toMatch(/^pref_hash_/);
+    const firstPreferenceToken = repository.state.preferenceTokens[0];
+    if (!firstPreferenceToken) throw new Error("Expected a preference token to be issued");
+    expect(firstPreferenceToken.tokenHash).toMatch(/^preference_token_/);
     expect(JSON.stringify(repository.state.preferenceTokens)).not.toContain("pref_demo_token");
     expect(repository.state.clientPreferences.length).toBeGreaterThanOrEqual(2);
     expect(repository.state.suppressions.length).toBeGreaterThanOrEqual(2);
@@ -147,7 +149,7 @@ describe("preference center and unsubscribe contract", () => {
     expect(tenantSettings.status).toBe("processed");
     expect(writes.join(" ")).not.toContain("pref_demo_token");
     expect(writes).toEqual(expect.arrayContaining([
-      expect.stringMatching(/^token:pref_hash_/),
+      expect.stringMatching(/^token:preference_token_/),
       "preference:email",
       "suppression:unsubscribe_email",
       "tenant-setting:email",

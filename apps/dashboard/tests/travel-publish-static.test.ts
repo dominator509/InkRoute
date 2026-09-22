@@ -46,6 +46,7 @@ describe("dashboard travel publish contract", () => {
 
   it("executes a local travel publish repository contract for tenant scope, idempotency, waitlist effects, and transactions", async () => {
     const sampleStop = demoTravelStops[0];
+    if (!sampleStop) throw new Error("expected at least one demo travel stop");
     const repository = createInMemoryTravelPublishRepository();
     repository.state.authorizedActorKeys.add(`${sampleStop.tenantId}:${sampleStop.artistId}:operator_demo:publish`);
     repository.state.waitlistClientIds.set(
@@ -71,9 +72,13 @@ describe("dashboard travel publish contract", () => {
     expect(first.status).toBe("ready");
     expect(duplicate.status).toBe("duplicate");
     expect(repository.state.transactions).toHaveLength(1);
-    expect(repository.state.transactions[0].revalidationTags.length).toBeGreaterThan(0);
+    const transaction = repository.state.transactions[0];
+    if (!transaction) throw new Error("expected one travel publish transaction");
+    expect(transaction.revalidationTags.length).toBeGreaterThan(0);
     expect(repository.state.postCommitEffects).toHaveLength(1);
-    expect(repository.state.postCommitEffects[0].notificationJobCount).toBe(2);
+    const postCommitEffect = repository.state.postCommitEffects[0];
+    if (!postCommitEffect) throw new Error("expected one travel publish post-commit effect");
+    expect(postCommitEffect.notificationJobCount).toBe(2);
 
     await expect(
       executeTravelPublishMutation(
@@ -91,6 +96,7 @@ describe("dashboard travel publish contract", () => {
   it("rolls back local travel publish mutations when post-commit effects fail", async () => {
     const samplePlan = dashboardTravelPublishContract.samplePlans[1];
     const sampleStop = demoTravelStops[0];
+    if (!sampleStop) throw new Error("expected at least one demo travel stop");
     const repository = createInMemoryTravelPublishRepository();
     repository.state.authorizedActorKeys.add(`${sampleStop.tenantId}:${sampleStop.artistId}:operator_demo:update`);
     repository.state.previousStops.set(`${sampleStop.tenantId}:${sampleStop.artistId}:${sampleStop.id}`, sampleStop);
@@ -114,7 +120,9 @@ describe("dashboard travel publish contract", () => {
     expect(result.status).toBe("rolled_back");
     expect(repository.state.transactions).toHaveLength(1);
     expect(repository.state.rollbacks).toHaveLength(1);
-    expect(repository.state.rollbacks[0].reason).toBe("TRAVEL_PUBLISH_POST_COMMIT_EFFECT_FAILED");
+    const rollback = repository.state.rollbacks[0];
+    if (!rollback) throw new Error("expected one travel publish rollback");
+    expect(rollback.reason).toBe("TRAVEL_PUBLISH_POST_COMMIT_EFFECT_FAILED");
   });
 
   it("keeps runtime readiness blocked until provider queue, rollback tests, tenant isolation, and E2E proof exist", () => {

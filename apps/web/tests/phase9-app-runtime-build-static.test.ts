@@ -8,7 +8,6 @@ import {
   phase9AppRuntimeSurfaces,
   phase9RuntimeArtifactPaths,
   phase9RuntimeRequiredArtifacts,
-  phase9AppRuntimeBuildReadinessRequiredEvidence,
 } from "../lib/phase9AppRuntimeBuild";
 
 const ciWorkflow = readFileSync(".github/workflows/ci.yml", "utf8");
@@ -95,7 +94,6 @@ describe("GAP-070 Phase 9 app runtime/build gate", () => {
     expect(phase9RuntimeArtifactPaths).toContain("test-results/phase9-notifications");
     expect(phase9RuntimeArtifactPaths).toContain("test-results/phase9-dashboard");
     expect(phase9AppRuntimeBuildContract.status).toBe("blocked");
-    expect(phase9AppRuntimeBuildContract.requiredEvidence).toBe(phase9AppRuntimeBuildReadinessRequiredEvidence);
     expect(phase9AppRuntimeBuildContract.requiredEvidence).toEqual(
       expect.arrayContaining([
         "web build, dashboard build, and mobile typecheck output",

@@ -63,9 +63,9 @@ describe("GAP-102 security middleware runtime contract", () => {
     expect(securityMiddlewareRuntimeContract.readiness.status).toBe("blocked");
     expect(securityMiddlewareRuntimeContract.readiness.blockers).toEqual(
       expect.arrayContaining([
-        "Browser smoke tests must verify web security headers on rendered routes.",
-        "Browser smoke tests must verify dashboard security headers on rendered routes.",
-        "Production deployment must prove HSTS is emitted only over HTTPS.",
+        "Browser smoke tests must prove web pages emit CSP, nosniff, referrer, permissions policy, and production-gated HSTS headers.",
+        "Browser smoke tests must prove dashboard pages emit CSP, nosniff, referrer, permissions policy, and production-gated HSTS headers.",
+        "Production HTTPS deployment must verify HSTS is enabled only where preload policy is safe.",
         "Provider webhook CSRF bypass rules must be reviewed so signed callbacks bypass CSRF without weakening public mutations.",
         "Runtime route integration tests must cover web/dashboard middleware headers and CSRF decisions.",
       ]),
@@ -323,7 +323,11 @@ describe("GAP-102 security middleware runtime contract", () => {
     expect(serialized).toContain('"tenantId":"tenant_demo"');
     expect(serialized).toContain('"entityType":"SecurityMiddlewareEvidence"');
     expect(serialized).toContain('"action":"security.middleware.evidence.persisted"');
-    expect(serialized).not.toContain("redacted-dashboard-smoke.json");
+    // The operational evidence row keeps the raw object key so the artifact can
+    // be located; the AuditLog metadata must carry the redacted form instead.
+    expect(JSON.stringify(writes[0])).toContain("redacted-dashboard-smoke.json");
+    expect(JSON.stringify(writes[1])).not.toContain("redacted-dashboard-smoke.json");
+    expect(JSON.stringify(writes[1])).toContain("[REDACTED]");
   });
 
   it("redacts GAP-102 CSRF, cookie, session, webhook, and artifact evidence before review", () => {

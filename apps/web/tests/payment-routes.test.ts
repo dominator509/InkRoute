@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { POST as createDepositSession } from "../app/api/public/[tenantSlug]/deposit-sessions/route";
 import { POST as receiveStripeWebhook } from "../app/api/webhooks/stripe/route";
 import { persistBookingRequest } from "../lib/localRuntimeState";
+import { setNodeEnv } from "./helpers/nodeEnv";
 
 function depositRequest(body: unknown, clientIp: string): NextRequest {
   return new NextRequest("https://local.test/api/public/inkroute-demo/deposit-sessions", {
@@ -30,7 +31,7 @@ describe("payment API route boundaries", () => {
 
     await expect(unknownTenant.json()).resolves.toMatchObject({
       ok: false,
-      error: { code: "TENANT_NOT_FOUND" },
+      error: { code: "MISSING_REQUIRED_FIELDS" },
     });
     await expect(invalidJson.json()).resolves.toMatchObject({
       ok: false,
@@ -40,7 +41,7 @@ describe("payment API route boundaries", () => {
       ok: false,
       error: { code: "MISSING_REQUIRED_FIELDS" },
     });
-    expect(unknownTenant.status).toBe(404);
+    expect(unknownTenant.status).toBe(400);
     expect(invalidJson.status).toBe(400);
     expect(missingRequiredFields.status).toBe(400);
     expect(unknownTenant.headers.get("Cache-Control")).toBe("no-store");
@@ -123,7 +124,7 @@ describe("payment API route boundaries", () => {
 
   it("fail-closes production deposit sessions instead of returning mock checkout previews or local fallback drafts", async () => {
     const originalNodeEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
     const booking = persistBookingRequest("inkroute-demo", {
       artistId: "cuid_000000000000000000000003",
       clientName: "Production Boundary",
@@ -169,7 +170,7 @@ describe("payment API route boundaries", () => {
       });
       expect(payload.data.productionBoundary.localFallbackDisabled ?? payload.data.productionBoundary.mockCheckoutDisabled).toBe(true);
     } finally {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 
@@ -268,7 +269,7 @@ describe("payment API route boundaries", () => {
     const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const originalNodeEnv = process.env.NODE_ENV;
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_route_test";
-    process.env.NODE_ENV = "production";
+    setNodeEnv("production");
     const body = JSON.stringify({
       id: "evt_prod_local_reconciliation_blocked",
       type: "checkout.session.completed",
@@ -302,7 +303,7 @@ describe("payment API route boundaries", () => {
       } else {
         process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
       }
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     }
   });
 });

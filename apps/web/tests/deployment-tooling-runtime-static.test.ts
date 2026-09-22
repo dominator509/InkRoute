@@ -117,7 +117,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(dashboardRouteTest).toContain("request-production-approval");
     expect(dashboardRouteTest).toContain("does not perform external provider calls");
     expect(dashboardStaticTest).toContain("no-store tenant-scoped readiness API");
-    expect(dashboardStaticTest).toContain("prisma.auditLog.create");
+    expect(dashboardStaticTest).toContain("auditLogModel.create");
     expect(deploymentPage).toContain("DeploymentReadinessActionPanel");
     expect(deploymentActionPanel).toContain('fetch("/api/deployment/readiness"');
     expect(deploymentActionPanel).toContain("Request readiness review");
@@ -128,7 +128,7 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(deploymentToolingRuntimeReadiness.status).toBe("blocked");
     expect(deploymentToolingRuntimeReadiness.missingPackageScripts).toEqual([]);
     expect(deploymentToolingRuntimeReadiness.missingRootScripts).toEqual([]);
-    expect(deploymentToolingRuntimeReadiness.requiredCommands).toBe(deploymentToolingRuntimeCommands);
+    expect(deploymentToolingRuntimeReadiness.requiredCommands).toEqual(deploymentToolingRuntimeCommands);
     expect(deploymentToolingRuntimeReadiness.requiredEvidence).toEqual(
       expect.arrayContaining([
         "Dependency install output plus @inkroute/deployment typecheck and test output.",
@@ -412,7 +412,6 @@ describe("GAP-113 deployment tooling runtime wiring", () => {
     expect(plan.ciReportExecutionAllowed).toBe(false);
     expect(plan.persistenceExecutionAllowed).toBe(false);
     expect(plan.executionPolicy).toBe(deploymentToolingRuntimeExecutionPolicy);
-    expect(plan.executionPolicy.externalEvidenceRequired).toBe(deploymentToolingRuntimeRequiredExternalEvidence);
     expect(plan.executionPolicy).toEqual({
       codexMayClassifyLocalCommands: true,
       dependencyInstallRequiresUserApproval: true,

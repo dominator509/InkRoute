@@ -23,6 +23,7 @@ import {
   deploymentLaunchEvidenceSurfaceContract,
   persistDeploymentLaunchEvidenceRun,
 } from "../lib/deploymentLaunchEvidenceRuntime";
+import { deploymentLaunchEvidenceRequiredEvidence } from "@inkroute/deployment";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -93,11 +94,11 @@ describe("deployment launch evidence runtime contract", () => {
     expect(deploymentTests).toContain("buildDeploymentLaunchEvidencePlan");
     expect(dashboardReadinessRoute).toContain("release:read");
     expect(dashboardReadinessRoute).toContain("no-store");
-    expect(dashboardReadinessRoute).toContain("AuditLog");
+    expect(dashboardReadinessRoute).toContain("auditLog");
     expect(dashboardDeploymentPage).toContain("DeploymentReadinessActionPanel");
     expect(deploymentReadinessActionPanel).toContain('fetch("/api/deployment/readiness"');
     expect(deploymentReadinessActionPanel).toContain("Request readiness review");
-    expect(dashboardReadinessTest).toContain("secret-name-only redaction metadata");
+    expect(dashboardReadinessTest).toContain("redactedFields");
     expect(deploymentDocs).toContain("Deployment");
     expect(releaseGovernanceWorkflow).toContain("workflow_dispatch");
   });
@@ -105,8 +106,8 @@ describe("deployment launch evidence runtime contract", () => {
   it("keeps deployment launch evidence blocked until provider, environment, mobile, rollback, Sentry, CI, and safe artifacts exist", () => {
     expect(deploymentLaunchEvidenceRuntimeReadiness.status).toBe("blocked");
     expect(deploymentLaunchEvidenceRuntimeReadiness.missingScripts).toEqual([]);
-    expect(deploymentLaunchEvidenceRuntimeReadiness.requiredCommands).toBe(deploymentLaunchEvidenceRuntimeCommands);
-    expect(deploymentLaunchEvidenceRuntimeReadiness.requiredEvidence).toBe(deploymentLaunchEvidenceFlags);
+    expect(deploymentLaunchEvidenceRuntimeReadiness.requiredCommands).toEqual(deploymentLaunchEvidenceRuntimeCommands);
+    expect(deploymentLaunchEvidenceRuntimeReadiness.requiredEvidence).toEqual(deploymentLaunchEvidenceRequiredEvidence);
     expect(deploymentLaunchEvidenceRuntimeReadiness.blockers).toContain(
       "Vercel web and dashboard projects must be configured with redacted project evidence.",
     );

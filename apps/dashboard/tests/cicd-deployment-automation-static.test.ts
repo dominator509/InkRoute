@@ -19,7 +19,7 @@ import {
   cicdDeploymentAutomationRequiredExternalEvidence,
 } from "../lib/cicdDeploymentAutomation";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const workflow = readFileSync(join(root, ".github/workflows/release-governance.yml"), "utf8");
 const ci = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const deploymentPage = readFileSync(join(root, "apps/dashboard/app/deployment/page.tsx"), "utf8");
@@ -281,7 +281,7 @@ describe("CI/CD deployment automation contract", () => {
     expect(tracker).toContain("GAP-089");
     expect(tracker).toContain("apps/dashboard/lib/cicdDeploymentAutomation.ts");
     expect(tracker).toContain("ReleaseRecord CI-result fields");
-    expect(tracker).toContain("CI/CD deployment automation evidence classifier wired and provider-gated");
+    expect(tracker).toContain("CI/CD deployment automation evidence classifier");
     expect(tracker).toContain("live workflow dispatch proof");
   });
 });

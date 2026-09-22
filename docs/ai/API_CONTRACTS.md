@@ -64,7 +64,7 @@ Dashboard APIs currently use `apps/dashboard/app/api/dashboardAuth.ts` for a hea
 | `POST` | `/api/webhooks/stripe` | Local raw-body parse/interpreter; Stripe signature verification and reconciliation not live |
 | `POST` | `/api/webhooks/email` | Local parse/persist of interpreted events; provider signature verification not live |
 | `POST` | `/api/webhooks/sms` | Local parse/persist and STOP boundary; provider signature verification not live |
-| `POST` | `/api/webhooks/sentry` | Sentry signature-required webhook boundary; verifies `SENTRY_WEBHOOK_SECRET`, persists provider delivery/idempotency + audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence/provider proof |
+| `POST` | `/api/webhooks/sentry` | Sentry signature-required webhook boundary (gated); verifies `SENTRY_WEBHOOK_SECRET`, persists provider delivery/idempotency + audit reconciliation when tenant ownership is available, and fails closed in production without durable persistence/provider proof |
 
 ## Booking State Rules
 

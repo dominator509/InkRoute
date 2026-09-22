@@ -134,6 +134,7 @@ export const providerEnvironmentRuntimeLocalArtifacts = [
   "coverage/provider-environment-runtime.json",
   "coverage/provider-environment-verifier.json",
   "coverage/provider-redacted-handoff-labels.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "test-results/provider-environment-runtime",
 ] as const satisfies readonly ProviderEnvironmentRuntimeArtifact[];
 
@@ -146,6 +147,7 @@ export const providerEnvironmentRuntimeExternalArtifacts = [
   "coverage/provider-sentry-release-smoke-redacted.json",
   "coverage/provider-github-environment-protection-redacted.json",
   "coverage/provider-secret-store-destinations-redacted.json",
+  "coverage/provider-redacted-handoff-packet.json",
   "coverage/provider-environment-ci-run-redacted.json",
 ] as const satisfies readonly ProviderEnvironmentRuntimeArtifact[];
 
@@ -295,6 +297,7 @@ export function buildProviderEnvironmentRunData(input: ProviderEnvironmentRunRec
     githubEnvironmentProtectionsConfigured: input.githubEnvironmentProtectionsConfigured,
     secretStoreDestinationsConfigured: input.secretStoreDestinationsConfigured,
     redactedEvidenceLabelsRecorded: input.redactedEvidenceLabelsRecorded,
+    redactedHandoffPacketCaptured: input.redactedHandoffPacketCaptured,
     ciProviderEnvironmentArtifactsCaptured: input.ciProviderEnvironmentArtifactsCaptured,
     redactedHandoffArtifactPath: input.redactedHandoffArtifactPath ?? null,
     ciRunUrl: input.ciRunUrl ?? null,

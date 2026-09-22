@@ -49,9 +49,9 @@ const dashboardRouteMethodPermissionRead: Record<string, Permission> = {
 const mutatingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 function normalizeDashboardRouteSegment(pathname: string): string {
-  const segments = pathname
-    .split("?")[0]
-    .split("#")[0]
+  const withoutQuery = pathname.split("?")[0] ?? pathname;
+  const withoutHash = withoutQuery.split("#")[0] ?? withoutQuery;
+  const segments = withoutHash
     .split("/")
     .filter(Boolean)
     .map((segment) => segment.toLowerCase());
@@ -156,17 +156,26 @@ function isProductionEnv() {
   return process.env.NODE_ENV === "production";
 }
 
-export function resolveDashboardActor(request: NextRequest): DashboardActorContext {
+type HeaderGetter = Pick<Headers, "get">;
+
+/**
+ * Resolve the dashboard actor from demo auth headers, with the same reduced-privilege
+ * local fallback the middleware uses. Server components (which only see `headers()`)
+ * must resolve the actor identically to the middleware, otherwise the middleware and
+ * the layout disagree and owner-header requests 404 at render time.
+ */
+export function resolveDashboardActorFromHeaders(headers: HeaderGetter): DashboardActorContext {
   const tenantId = normalizeHeaderValue(
-    request.headers.get("x-tenant-id") ??
-      request.headers.get("x-dashboard-tenant-id") ??
-      request.headers.get("x-demo-tenant-id"),
+    headers.get("x-tenant-id") ??
+      headers.get("x-dashboard-tenant-id") ??
+      headers.get("x-demo-tenant-id"),
   );
 
-  const actorUserId = normalizeHeaderValue(
-    request.headers.get("x-user-id") ?? request.headers.get("x-dashboard-user-id") ?? FALLBACK_ACTOR_ID,
-  );
-  const role = normalizeRole(request.headers.get("x-user-role") ?? request.headers.get("x-dashboard-role"));
+  const actorUserId =
+    normalizeHeaderValue(
+      headers.get("x-user-id") ?? headers.get("x-dashboard-user-id"),
+    ) ?? FALLBACK_ACTOR_ID;
+  const role = normalizeRole(headers.get("x-user-role") ?? headers.get("x-dashboard-role"));
 
   if (tenantId) {
     return {
@@ -187,6 +196,10 @@ export function resolveDashboardActor(request: NextRequest): DashboardActorConte
     role,
     source: "local-fallback",
   };
+}
+
+export function resolveDashboardActor(request: NextRequest): DashboardActorContext {
+  return resolveDashboardActorFromHeaders(request.headers);
 }
 
 export function getLocalDashboardActor(): DashboardActorContext {
@@ -247,7 +260,9 @@ export function buildDashboardAuthGuardRunRecord(input: {
   method: string;
 }): DashboardAuthGuardRunRecord {
   const method = input.method.toUpperCase();
-  const decisionStatus = input.guard.decision.status;
+  // The guard only omits `decision` when it rejects the request before evaluating
+  // authorization (CSRF failure), which is recorded as a denial in the audit run.
+  const decisionStatus: DashboardAuthGuardDecisionStatus = input.guard.decision?.status ?? "permission_denied";
 
   return {
     tenantId: input.actor.tenantId,

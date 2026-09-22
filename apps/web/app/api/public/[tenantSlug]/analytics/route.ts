@@ -6,6 +6,7 @@ import {
   buildPublicSeoAnalyticsEvent,
   persistSeoAnalyticsAttribution,
   redactAnalyticsPayload,
+  type SeoAnalyticsAttributionPersistenceRepository,
 } from "../../../../../lib/seoAnalyticsAttribution";
 
 const allowedEvents = new Set<AnalyticsEventName>([
@@ -95,7 +96,13 @@ export async function POST(request: Request, context: { params: Promise<{ tenant
 
   if (tenant.status === "database") {
     try {
-      await persistSeoAnalyticsAttribution(prisma, { event, idempotencyKey });
+      // The prisma runtime proxy exposes model delegates dynamically through index
+      // signatures, which don't satisfy the repository's named members statically;
+      // narrow it here (analyticsEvent.create / campaign.upsert exist at runtime).
+      await persistSeoAnalyticsAttribution(prisma as unknown as SeoAnalyticsAttributionPersistenceRepository, {
+        event,
+        idempotencyKey,
+      });
       return NextResponse.json(
         {
           ok: true,

@@ -66,7 +66,7 @@ export function buildMobileApiClientRequestPlan(
     method: request.method,
     path: request.path,
     online: session.online,
-    idempotencyKey: request.idempotencyKey,
+    ...(request.idempotencyKey !== undefined ? { idempotencyKey: request.idempotencyKey } : {}),
   });
 }
 
@@ -100,7 +100,7 @@ export async function mobileApiFetch<T>(
       Accept: "application/json",
       "Content-Type": "application/json",
     },
-    body: request.body === undefined ? undefined : JSON.stringify(request.body),
+    body: request.body === undefined ? null : JSON.stringify(request.body),
   });
 
   if (!response.ok) {

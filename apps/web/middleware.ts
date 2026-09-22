@@ -90,15 +90,32 @@ function applySecurityHeaders(response: NextResponse, request: NextRequest): Nex
   return applyTelemetryHeaders(applyAttributionCookies(applyCanonicalHeaders(response, request), request), request);
 }
 
+const loopbackHostnames = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function isLoopbackRequestHost(host: string): boolean {
+  const normalized = host.toLowerCase().trim();
+  // Strip an optional :port suffix, tolerating bracketed IPv6 ("[::1]:3000").
+  const hostname = normalized.startsWith("[")
+    ? normalized.slice(1, normalized.indexOf("]"))
+    : normalized.replace(/:\d+$/, "");
+  return loopbackHostnames.has(hostname);
+}
+
 export function middleware(request: NextRequest) {
+  const requestHost = request.headers.get("host") ?? request.nextUrl.host;
   const canonical = evaluatePublicCanonicalRequest({
-    host: request.headers.get("host") ?? request.nextUrl.host,
+    host: requestHost,
     path: request.nextUrl.pathname,
     protocol: requestUsesHttps(request) ? "https" : "http",
     method: request.method,
   });
 
-  if (canonical.shouldRedirect) {
+  // Loopback hosts (local dev, CI smoke tests) are explicitly allowed development
+  // origins: never 308 them to the public canonical domain. The canonical host is
+  // unreachable from here, and redirect-chasing clients (notably Playwright's
+  // webServer readiness check, which follows redirects) would hang forever
+  // waiting for a response that can never arrive.
+  if (canonical.shouldRedirect && !isLoopbackRequestHost(requestHost)) {
     const destination = new URL(canonical.destinationPath, `https://${canonical.policy.canonicalHost}`);
     return applySecurityHeaders(NextResponse.redirect(destination, canonical.statusCode), request);
   }

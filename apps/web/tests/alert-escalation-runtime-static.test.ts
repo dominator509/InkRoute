@@ -15,8 +15,9 @@ import {
   buildRedactedAlertEscalationArtifact,
 } from "../lib/alertEscalationRuntime";
 
-const root = join(__dirname, "..", "..");
+const root = join(__dirname, "..", "..", "..");
 const routeSource = readFileSync(join(root, "apps/web/app/api/observability/alerts/route.ts"), "utf8");
+const libSource = readFileSync(join(root, "apps/web/lib/alertEscalationRuntime.ts"), "utf8");
 const workflowSource = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
 const trackerSource = readFileSync(join(root, "GAP_TRACKER.md"), "utf8");
 const unitManifest = readFileSync(join(root, "testing/manifests/unit-test-manifest.json"), "utf8");
@@ -47,8 +48,8 @@ describe("alert escalation runtime contract", () => {
 
   it("persists durable alert delivery and acknowledgement state through AlertDelivery plus AuditLog metadata", () => {
     expect(routeSource).toContain("prisma.$transaction");
-    expect(routeSource).toContain("tx.alertDelivery.create");
-    expect(routeSource).toContain("tx.auditLog.create");
+    expect(routeSource).toContain("alertDeliveryDelegate.create");
+    expect(routeSource).toContain("auditLogDelegate.create");
     expect(routeSource).toContain('entityType: "AlertDelivery"');
     expect(routeSource).toContain("alert-delivery-transaction");
     expect(routeSource).toContain("acknowledgementState");
@@ -87,8 +88,8 @@ describe("alert escalation runtime contract", () => {
   });
 
   it("pins the alert escalation command and artifact matrix", () => {
-    expect(routeSource).toContain("alertEscalationRuntimeCommands");
-    expect(routeSource).toContain("alertEscalationRuntimeMatrix");
+    expect(libSource).toContain("alertEscalationRuntimeCommands");
+    expect(libSource).toContain("alertEscalationRuntimeMatrix");
     for (const id of [
       "worker-executor",
       "provider-credentials",
@@ -100,21 +101,21 @@ describe("alert escalation runtime contract", () => {
       "ci-alert-escalation-gate",
       "secret-safe-artifacts",
     ]) {
-      expect(routeSource).toContain(`id: "${id}"`);
+      expect(libSource).toContain(`id: "${id}"`);
     }
   });
 
   it("declares redacted alert artifacts and CI coverage", () => {
-    expect(routeSource).toContain("coverage/alert-escalation-runtime.json");
-    expect(routeSource).toContain("coverage/alert-worker-retry-dead-letter.json");
-    expect(routeSource).toContain("coverage/alert-acknowledgement-state.json");
-    expect(routeSource).toContain("coverage/alert-sanitized-payload-redacted.json");
-    expect(routeSource).toContain("coverage/alert-live-critical-pager-redacted.json");
-    expect(routeSource).toContain("coverage/alert-live-high-slack-redacted.json");
-    expect(routeSource).toContain("coverage/alert-worker-executor.json");
-    expect(routeSource).toContain("coverage/alert-provider-callbacks-redacted.json");
-    expect(routeSource).toContain("coverage/alert-ci-evidence.json");
-    expect(routeSource).toContain("coverage/alert-secret-safe-artifacts.json");
+    expect(libSource).toContain("coverage/alert-escalation-runtime.json");
+    expect(libSource).toContain("coverage/alert-worker-retry-dead-letter.json");
+    expect(libSource).toContain("coverage/alert-acknowledgement-state.json");
+    expect(libSource).toContain("coverage/alert-sanitized-payload-redacted.json");
+    expect(libSource).toContain("coverage/alert-live-critical-pager-redacted.json");
+    expect(libSource).toContain("coverage/alert-live-high-slack-redacted.json");
+    expect(libSource).toContain("coverage/alert-worker-executor.json");
+    expect(libSource).toContain("coverage/alert-provider-callbacks-redacted.json");
+    expect(libSource).toContain("coverage/alert-ci-evidence.json");
+    expect(libSource).toContain("coverage/alert-secret-safe-artifacts.json");
     expect(workflowSource).toContain("Run Phase 11 alert escalation runtime contracts");
     expect(workflowSource).toContain("apps/web/tests/alert-escalation-runtime-static.test.ts");
     expect(workflowSource).toContain("coverage/alert-ci-evidence.json");
@@ -140,7 +141,7 @@ describe("alert escalation runtime contract", () => {
     });
     expect(plan.requiredCommands).toBe(alertEscalationRuntimeCommands);
     expect(plan.requiredArtifacts).toBe(alertEscalationArtifactPaths);
-    expect(plan.requiredEvidence).toBe(alertEscalationRuntimeRequiredEvidence);
+    expect(plan.externalEvidenceRequired).toBe(alertEscalationRequiredExternalEvidence);
     expect(plan.localContractArtifacts).toEqual(
       expect.arrayContaining(["coverage/alert-route-static-contract.json", "coverage/alert-sanitized-payload-redacted.json"]),
     );

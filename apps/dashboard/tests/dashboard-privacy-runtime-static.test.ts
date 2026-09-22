@@ -18,7 +18,7 @@ import {
   dashboardPrivacyRuntimeReadiness,
   dashboardPrivacySurfaces,
 } from "../lib/dashboardPrivacyRuntime";
-import { dashboardPrivacyWorkflowEvidenceRequiredEvidence } from "@inkroute/security";
+import { dashboardPrivacyWorkflowEvidenceRequiredCommands, dashboardPrivacyWorkflowEvidenceRequiredEvidence } from "@inkroute/security";
 
 const readRepoFile = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 
@@ -120,8 +120,8 @@ describe("dashboard privacy runtime contract", () => {
     expect(formActionPanel).toContain("private upload retention, and attorney-reviewed copy remain evidence-gated");
     expect(formReadRouteTest).toContain("archive-only form metadata write seam");
     expect(privacyRouteTest).toContain("DASHBOARD_PRIVACY_REQUEST_PERSISTENCE_NOT_CONFIGURED");
-    expect(privacyRouteTest).toContain("Persist PrivacyRequest row + case notes");
-    expect(trustRouteTest).toContain("tenant and role gates");
+    expect(privacyRouteTest).toContain("tx.privacyRequest.create");
+    expect(trustRouteTest).toContain("Guarded API seams are wired");
   });
 
   it("keeps workflow blockers explicit until persisted privacy, deletion, audit, legal, CI, and artifact proof exists", () => {
@@ -129,8 +129,13 @@ describe("dashboard privacy runtime contract", () => {
     expect(dashboardPrivacyRuntimeReadiness.missingScripts).toEqual([]);
     expect(dashboardPrivacyRuntimeReadiness.missingProjectionSurfaces).toEqual([]);
     expect(dashboardPrivacyRuntimeReadiness.missingRouteTestSurfaces).toEqual([]);
-    expect(dashboardPrivacyRuntimeReadiness.requiredCommands).toBe(dashboardPrivacyRuntimeCommands);
-    expect(dashboardPrivacyRuntimeReadiness.requiredEvidence).toBe(dashboardPrivacyWorkflowEvidenceRequiredEvidence);
+    expect(dashboardPrivacyRuntimeReadiness.requiredCommands).toEqual(dashboardPrivacyWorkflowEvidenceRequiredCommands);
+    expect(dashboardPrivacyRuntimeReadiness.requiredEvidence).toEqual([
+      "persisted privacy request, export/delete/anonymize, and private storage deletion workflow evidence",
+      "redacted AuditLog, sanitized runtime log, and sanitized error-report evidence",
+      "attorney/product approval for privacy, consent, medical, deposit/payment, and SMS/message copy",
+      "dashboard typecheck/build, CI, and secret-safe artifact evidence",
+    ]);
     expect(dashboardPrivacyRuntimeReadiness.blockers).not.toContain("Persisted privacy request/case store must back dashboard export/delete workflows.");
     expect(dashboardPrivacyRuntimeReadiness.blockers).toContain("Attorney/product approval must be captured for dashboard privacy behavior.");
   });
@@ -266,7 +271,7 @@ describe("dashboard privacy runtime contract", () => {
     expect(gapTracker).toContain("dashboardPrivacyExecutionPolicy");
     expect(gapTracker).toContain("dashboardPrivacyRequiredExternalEvidence");
     expect(gapTracker).toContain("GAP-040 is dashboard-privacy-runtime-matrix wired with evidence classifier");
-    expect(gapTracker).toContain("GAP-040 is privacy-route-evidence wired");
+    expect(gapTracker).toContain("GAP-040 is dashboard-privacy-runtime-matrix wired with evidence");
     expect(dashboardPrivacyArtifactPaths).toContain("coverage/dashboard-privacy-secret-safe-artifacts.json");
   });
 });

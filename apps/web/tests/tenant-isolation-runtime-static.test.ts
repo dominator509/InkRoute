@@ -1,6 +1,7 @@
 ﻿import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { tenantIsolationRepositoryRequiredControls, tenantIsolationRepositoryRequiredEvidence } from "@inkroute/db";
 import {
   buildRedactedTenantIsolationArtifact,
   buildTenantIsolationArtifactReview,
@@ -103,9 +104,9 @@ describe("tenant isolation runtime contract", () => {
   it("keeps repository evidence blocked until database, repository, denial, audit, cleanup, CI, and safe artifacts exist", () => {
     expect(tenantIsolationRuntimeReadiness.status).toBe("blocked");
     expect(tenantIsolationRuntimeReadiness.missingScripts).toEqual([]);
-    expect(tenantIsolationRuntimeReadiness.requiredCommands).toBe(tenantIsolationRuntimeCommands);
-    expect(tenantIsolationRuntimeReadiness.requiredControls).toBe(tenantIsolationRuntimeControls);
-    expect(tenantIsolationRuntimeReadiness.requiredEvidence).toBe(tenantIsolationEvidenceFlags);
+    expect(tenantIsolationRuntimeReadiness.requiredCommands).toEqual(tenantIsolationRuntimeCommands);
+    expect(tenantIsolationRuntimeReadiness.requiredControls).toEqual(tenantIsolationRepositoryRequiredControls);
+    expect(tenantIsolationRuntimeReadiness.requiredEvidence).toEqual(tenantIsolationRepositoryRequiredEvidence);
     expect(tenantIsolationRuntimeReadiness.blockers).toContain(
       "Tenant-scoped repository/service adoption evidence must be captured before tenant isolation readiness.",
     );
